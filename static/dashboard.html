@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
   <style>
     :root{
       --bg:#F6F8FB;
@@ -19,40 +20,70 @@
       --border:#E6EAF2;
       --primary:#1E4FD6;
       --primaryHover:#1A43B7;
-      --accent:#C7A457;
       --radius:16px;
 
       --okBg:#E8F5E9;
       --okText:#2E7D32;
       --badBg:#FFEBEE;
       --badText:#C62828;
-
-      --chipBg:#F1F4FA;
     }
 
-    body{ background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; }
-    .wrap{ max-width:1180px; margin:0 auto; padding:0 18px; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    }
 
+    .wrap{
+      max-width:1180px;
+      margin:0 auto;
+      padding:0 18px;
+    }
+
+    /* ✅ HEADER NORMAL (NO FIJO) */
     header{
-      position:sticky; top:0;
-      background:rgba(246,248,251,.85);
-      backdrop-filter: blur(10px);
+      position: static;
+      background:#fff;
       border-bottom:1px solid var(--border);
-      z-index:10;
     }
-    .nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
-    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px; }
-    .brand-badge{
-      width:34px; height:34px; border-radius:10px;
+
+    .nav{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:14px 0;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:800;
+    }
+
+    .logo{
+      width:34px;
+      height:34px;
+      border-radius:10px;
       background:linear-gradient(135deg,var(--primary),#6D8BFF);
-      display:inline-flex; align-items:center; justify-content:center;
-      color:#fff; font-weight:800;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
     }
-    .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+    .right{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
     .chip{
-      background:var(--chipBg);
+      background:#F1F4FA;
       border:1px solid var(--border);
-      padding:8px 10px;
+      padding:8px 12px;
       border-radius:999px;
       font-weight:700;
       font-size:13px;
@@ -60,403 +91,286 @@
     }
 
     .btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 12px; border-radius:12px;
-      font-weight:800; text-decoration:none;
+      padding:10px 14px;
+      border-radius:12px;
       border:1px solid var(--border);
-      background:#fff; color:var(--text);
+      background:#fff;
+      font-weight:800;
       cursor:pointer;
     }
-    .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
-    .btn.primary:hover{ background:var(--primaryHover); border-color:var(--primaryHover); }
-    .btn.ghost{ background:transparent; }
-    .btn.danger{ border-color:rgba(198,40,40,.35); color:var(--badText); background:#fff; }
 
-    main{ padding:22px 0 38px; }
-    h1{ font-size:26px; margin:0; }
-    .sub{ color:var(--muted); margin:6px 0 0; }
+    .btn.primary{
+      background:var(--primary);
+      color:#fff;
+      border-color:var(--primary);
+    }
+
+    .btn.primary:hover{
+      background:var(--primaryHover);
+    }
+
+    .btn.danger{
+      color:var(--badText);
+      border-color:rgba(198,40,40,.4);
+    }
+
+    main{
+      padding:26px 0 40px;
+    }
+
+    h1{ margin:0; font-size:26px; }
+    .sub{ color:var(--muted); margin-top:6px; }
 
     .grid{
       display:grid;
-      grid-template-columns: 420px 1fr;
-      gap:14px;
-      margin-top:16px;
+      grid-template-columns:420px 1fr;
+      gap:16px;
+      margin-top:18px;
       align-items:start;
     }
+
     .card{
       background:var(--card);
       border:1px solid var(--border);
       border-radius:var(--radius);
       padding:18px;
-      box-shadow: 0 10px 24px rgba(11,18,32,.05);
+      box-shadow:0 8px 20px rgba(11,18,32,.05);
     }
-    .card h2{ font-size:16px; margin:0 0 10px; }
-    .muted{ color:var(--muted); font-size:13px; }
 
-    .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .card h2{ font-size:16px; margin:0 0 10px; }
+
+    label{
+      font-weight:700;
+      font-size:13px;
+      color:var(--muted);
+    }
+
     input, select{
       background:#fff !important;
-      border:1px solid var(--border) !important;
       border-radius:12px !important;
+      border:1px solid var(--border) !important;
     }
-    label{ font-weight:700; font-size:13px; color:var(--muted); }
+
+    .row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
 
     .status{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px;
+      display:inline-block;
+      padding:6px 10px;
       border-radius:999px;
-      font-weight:900;
+      font-weight:800;
       font-size:12px;
-      border:1px solid var(--border);
-      width: fit-content;
     }
-    .status.ok{ background:var(--okBg); color:var(--okText); border-color:rgba(46,125,50,.25); }
-    .status.bad{ background:var(--badBg); color:var(--badText); border-color:rgba(198,40,40,.25); }
 
-    .table{
+    .ok{ background:var(--okBg); color:var(--okText); }
+    .bad{ background:var(--badBg); color:var(--badText); }
+
+    table{
       width:100%;
       border-collapse:separate;
       border-spacing:0;
+      border-radius:14px;
       overflow:hidden;
-      border-radius:14px;
       border:1px solid var(--border);
     }
-    .table th, .table td{
-      padding:12px 12px;
-      border-bottom:1px solid var(--border);
+
+    th, td{
+      padding:12px;
       font-size:13px;
+      border-bottom:1px solid var(--border);
+      background:#fff;
       vertical-align:top;
-      background:#fff;
     }
-    .table th{ color:var(--muted); font-weight:800; background:#FBFCFF; }
-    .table tr:last-child td{ border-bottom:none; }
+
+    th{
+      background:#FBFCFF;
+      font-weight:800;
+      color:var(--muted);
+    }
+
+    tr:last-child td{ border-bottom:none; }
+
     .addr{ font-weight:800; }
+
     details{
-      background:#fff;
       border:1px solid var(--border);
-      border-radius:14px;
-      padding:10px 12px;
-      margin-top:10px;
+      border-radius:12px;
+      padding:10px;
+      margin-top:8px;
+      background:#fff;
     }
-    summary{ cursor:pointer; font-weight:800; color:var(--text); }
+
+    summary{ font-weight:800; cursor:pointer; }
+
     .alert{
+      font-size:13px;
+      color:var(--muted);
       border-left:3px solid var(--border);
       padding-left:10px;
-      margin:8px 0;
-      color:var(--muted);
+      margin-top:6px;
+    }
+
+    .msg{
+      margin-top:10px;
+      font-weight:800;
       font-size:13px;
     }
 
-    .msg{ margin-top:10px; font-weight:800; font-size:13px; }
-
-    @media (max-width: 980px){
+    @media(max-width:980px){
       .grid{ grid-template-columns:1fr; }
     }
   </style>
 </head>
+
 <body>
-  <header>
-    <div class="wrap nav">
-      <div class="brand">
-        <span class="brand-badge">⚖</span>
-        <span>Lexia360</span>
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <div class="logo">⚖</div>
+      <span>Lexia360</span>
+    </div>
+    <div class="right">
+      <span class="chip" id="userChip">Cargando…</span>
+      <a class="btn" href="/static/index.html">Inicio</a>
+      <button class="btn danger" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Panel de control</h1>
+  <p class="sub">Alta de inmuebles y validación legal automática.</p>
+
+  <div class="grid">
+    <!-- FORMULARIO -->
+    <section class="card">
+      <h2>Nuevo inmueble</h2>
+
+      <label>Dirección</label>
+      <input id="direccion" />
+
+      <div class="row">
+        <div>
+          <label>Municipio</label>
+          <input id="municipio" />
+        </div>
+        <div>
+          <label>Comunidad Autónoma</label>
+          <input id="comunidad" />
+        </div>
       </div>
-      <div class="right">
-        <span class="chip" id="chipUser">Cargando sesión…</span>
-        <a class="btn ghost" href="/static/index.html">Inicio</a>
-        <button class="btn danger" onclick="logout()">Cerrar sesión</button>
+
+      <div class="row">
+        <div>
+          <label>Renta propuesta (€)</label>
+          <input id="renta" type="number" />
+        </div>
+        <div>
+          <label>Renta anterior</label>
+          <input id="rentaAnterior" type="number" />
+        </div>
       </div>
-    </div>
-  </header>
 
-  <main class="wrap">
-    <div>
-      <h1>Panel</h1>
-      <p class="sub">Alta de inmuebles, semáforo legal y alertas (MVP). Estilo claro y auditable.</p>
-    </div>
+      <button class="btn primary" style="width:100%;margin-top:12px" onclick="crearInmueble()">
+        Guardar inmueble
+      </button>
 
-    <div class="grid">
-      <!-- FORM -->
-      <section class="card">
-        <h2>Nuevo inmueble</h2>
-        <p class="muted">Introduce los datos mínimos. Al guardar, ejecutamos reglas 1–4 y generamos alertas.</p>
+      <div id="formMsg" class="msg"></div>
+    </section>
 
-        <div style="margin-top:12px;">
-          <label>Dirección</label>
-          <input id="direccion" type="text" placeholder="Calle, número, piso…" />
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Municipio</label>
-            <input id="municipio" type="text" placeholder="Madrid, Barcelona…" />
-          </div>
-          <div>
-            <label>Comunidad Autónoma</label>
-            <input id="comunidad" type="text" placeholder="Comunidad de Madrid…" />
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Código Postal (opcional)</label>
-            <input id="cp" type="text" placeholder="28001" />
-          </div>
-          <div>
-            <label>Superficie m² (opcional)</label>
-            <input id="m2" type="number" min="0" placeholder="80" />
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Tipo arrendador</label>
-            <select id="tipoArrendador">
-              <option value="persona_fisica">Persona física</option>
-              <option value="persona_juridica">Persona jurídica</option>
-            </select>
-          </div>
-          <div>
-            <label>Tipo arrendamiento</label>
-            <select id="tipoArrendamiento">
-              <option value="vivienda_habitual">Vivienda habitual</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Renta propuesta (€)</label>
-            <input id="renta" type="number" min="0" step="0.01" placeholder="1200" />
-          </div>
-          <div>
-            <label>Renta anterior (opcional)</label>
-            <input id="rentaAnterior" type="number" min="0" step="0.01" placeholder="1100" />
-          </div>
-        </div>
-
-        <button class="btn primary" style="width:100%; margin-top:14px;" onclick="crearInmueble()">
-          Guardar y ejecutar reglas
-        </button>
-
-        <div id="formMsg" class="msg"></div>
-      </section>
-
-      <!-- LIST -->
-      <section class="card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-          <div>
-            <h2 style="margin:0;">Mis inmuebles</h2>
-            <p class="muted" style="margin:6px 0 0;">Semáforo y alertas por inmueble (última ejecución).</p>
-          </div>
-          <button class="btn" onclick="cargarInmuebles()">Actualizar</button>
-        </div>
-
-        <div style="margin-top:12px;">
-          <table class="table">
-            <thead>
-              <tr>
-                <th style="width:42%;">Inmueble</th>
-                <th style="width:14%;">Renta</th>
-                <th style="width:18%;">Semáforo</th>
-                <th>Detalle</th>
-              </tr>
-            </thead>
-            <tbody id="rows">
-              <tr><td colspan="4" class="muted">Cargando…</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-      </section>
-    </div>
-  </main>
-
-  <script>
-    const apiUrl = window.location.origin;
-
-    function token() {
-      return localStorage.getItem("token");
-    }
-
-    function logout() {
-      localStorage.removeItem("token");
-      window.location.href = "/static/index.html";
-    }
-
-    async function api(path, options = {}) {
-      const t = token();
-      if (!t) throw new Error("NO_TOKEN");
-      const headers = options.headers || {};
-      headers["Authorization"] = `Bearer ${t}`;
-      options.headers = headers;
-      const res = await fetch(`${apiUrl}${path}`, options);
-      const data = await res.json().catch(() => ({}));
-      return { res, data };
-    }
-
-    async function cargarSesion() {
-      try {
-        const { res, data } = await api("/me");
-        if (!res.ok) throw new Error(data.detail || "TOKEN_INVALID");
-        document.getElementById("chipUser").textContent = data.email;
-      } catch (e) {
-        document.getElementById("chipUser").textContent = "Sesión inválida";
-        setTimeout(() => logout(), 700);
-      }
-    }
-
-    function badgeSemaforo(semaforo) {
-      if (semaforo === "ROJO") return `<span class="status bad">🔴 ROJO</span>`;
-      if (semaforo === "VERDE") return `<span class="status ok">🟢 VERDE</span>`;
-      return `<span class="status">—</span>`;
-    }
-
-    function renderDetalle(item) {
-      const r = item.resultados || {};
-      const a = item.alertas || [];
-
-      const rows = [];
-      rows.push(`<div class="muted"><b>Duración mínima:</b> ${r.duracion_minima_anios ?? "—"} años</div>`);
-      rows.push(`<div class="muted"><b>Zona tensionada:</b> ${r.zona_tensionada === true ? "Sí" : (r.zona_tensionada === false ? "No" : "—")}</div>`);
-      rows.push(`<div class="muted"><b>Renta máxima (MVP):</b> ${r.renta_maxima_mvp ?? "—"}</div>`);
-      rows.push(`<div class="muted"><b>Fianza mínima:</b> ${r.fianza_minima ?? "—"}€</div>`);
-
-      const alertsHtml = a.length
-        ? a.map(x => `<div class="alert">${escapeHtml(x)}</div>`).join("")
-        : `<div class="muted">Sin alertas.</div>`;
-
-      return `
-        <details>
-          <summary>Ver detalle</summary>
-          <div style="margin-top:10px;">
-            ${rows.join("")}
-          </div>
-          <div style="margin-top:10px;">
-            <div style="font-weight:800; margin-bottom:6px;">Alertas</div>
-            ${alertsHtml}
-          </div>
-        </details>
-      `;
-    }
-
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    async function cargarInmuebles() {
-      const tbody = document.getElementById("rows");
-      tbody.innerHTML = `<tr><td colspan="4" class="muted">Cargando…</td></tr>`;
-
-      try {
-        const { res, data } = await api("/inmuebles");
-        if (!res.ok) throw new Error(data.detail || "Error cargando inmuebles");
-
-        if (!Array.isArray(data) || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="4" class="muted">Aún no tienes inmuebles. Crea el primero.</td></tr>`;
-          return;
-        }
-
-        tbody.innerHTML = data.map(item => `
+    <!-- LISTA -->
+    <section class="card">
+      <h2>Mis inmuebles</h2>
+      <table>
+        <thead>
           <tr>
-            <td>
-              <div class="addr">${escapeHtml(item.direccion || "—")}</div>
-              <div class="muted">${escapeHtml(item.municipio || "—")}, ${escapeHtml(item.comunidad_autonoma || "—")}</div>
-            </td>
-            <td>${item.renta_propuesta ?? "—"}€</td>
-            <td>${badgeSemaforo(item.semaforo)}</td>
-            <td>${renderDetalle(item)}</td>
+            <th>Dirección</th>
+            <th>Renta</th>
+            <th>Estado</th>
+            <th>Detalle</th>
           </tr>
-        `).join("");
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="4">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</main>
 
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="4" class="muted">Error: ${escapeHtml(e.message || "No se pudo cargar")}</td></tr>`;
-        if ((e.message || "").includes("Token inválido") || (e.message || "").includes("NO_TOKEN")) {
-          setTimeout(() => logout(), 800);
-        }
-      }
-    }
+<script>
+const api = window.location.origin;
 
-    async function crearInmueble() {
-      const msg = document.getElementById("formMsg");
-      msg.style.color = "crimson";
-      msg.textContent = "";
+function logout(){
+  localStorage.removeItem("token");
+  location.href="/static/index.html";
+}
 
-      const direccion = document.getElementById("direccion").value.trim();
-      const municipio = document.getElementById("municipio").value.trim();
-      const comunidad_autonoma = document.getElementById("comunidad").value.trim();
-      const codigo_postal = document.getElementById("cp").value.trim() || null;
+function token(){
+  return localStorage.getItem("token");
+}
 
-      const m2Raw = document.getElementById("m2").value;
-      const superficie_m2 = m2Raw ? parseInt(m2Raw, 10) : null;
+async function request(path, options={}){
+  options.headers = options.headers || {};
+  options.headers.Authorization = `Bearer ${token()}`;
+  const res = await fetch(api+path, options);
+  const data = await res.json();
+  return {res,data};
+}
 
-      const tipo_arrendador = document.getElementById("tipoArrendador").value;
-      const tipo_arrendamiento = document.getElementById("tipoArrendamiento").value;
+async function cargarUsuario(){
+  const {data} = await request("/me");
+  document.getElementById("userChip").textContent = data.email;
+}
 
-      const rentaRaw = document.getElementById("renta").value;
-      const renta_propuesta = rentaRaw ? parseFloat(rentaRaw) : NaN;
+async function cargarInmuebles(){
+  const {data} = await request("/inmuebles");
+  const rows = document.getElementById("rows");
+  if(!data.length){
+    rows.innerHTML="<tr><td colspan='4'>Sin inmuebles</td></tr>";
+    return;
+  }
+  rows.innerHTML = data.map(i=>`
+    <tr>
+      <td class="addr">${i.direccion}</td>
+      <td>${i.renta_propuesta}€</td>
+      <td>${i.semaforo==="VERDE" ? "<span class='status ok'>VERDE</span>" : "<span class='status bad'>ROJO</span>"}</td>
+      <td>
+        <details>
+          <summary>Ver</summary>
+          ${(i.alertas||[]).map(a=>`<div class="alert">${a}</div>`).join("")}
+        </details>
+      </td>
+    </tr>
+  `).join("");
+}
 
-      const rentaAntRaw = document.getElementById("rentaAnterior").value;
-      const renta_anterior = rentaAntRaw ? parseFloat(rentaAntRaw) : null;
+async function crearInmueble(){
+  const msg=document.getElementById("formMsg");
+  msg.textContent="";
+  const payload={
+    direccion:direccion.value,
+    municipio:municipio.value,
+    comunidad_autonoma:comunidad.value,
+    renta_propuesta:Number(renta.value),
+    renta_anterior:Number(rentaAnterior.value)||null,
+    tipo_arrendamiento:"vivienda_habitual",
+    tipo_arrendador:"persona_fisica"
+  };
+  const {res,data}=await request("/inmuebles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  if(!res.ok){ msg.textContent=data.detail||"Error"; return;}
+  msg.style.color="green"; msg.textContent="Inmueble creado";
+  cargarInmuebles();
+}
 
-      if (!direccion || !municipio || !comunidad_autonoma || !Number.isFinite(renta_propuesta)) {
-        msg.textContent = "Completa dirección, municipio, comunidad y renta propuesta.";
-        return;
-      }
-
-      const payload = {
-        direccion,
-        municipio,
-        comunidad_autonoma,
-        codigo_postal,
-        superficie_m2,
-        tipo_arrendamiento,
-        tipo_arrendador,
-        renta_propuesta,
-        renta_anterior
-      };
-
-      try {
-        const { res, data } = await api("/inmuebles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          msg.textContent = data.detail || "Error al crear inmueble.";
-          return;
-        }
-
-        msg.style.color = "green";
-        msg.textContent = "✅ Inmueble creado. Reglas ejecutadas.";
-        // limpia lo básico
-        document.getElementById("direccion").value = "";
-        document.getElementById("municipio").value = "";
-        document.getElementById("comunidad").value = "";
-        document.getElementById("cp").value = "";
-        document.getElementById("m2").value = "";
-        document.getElementById("renta").value = "";
-        document.getElementById("rentaAnterior").value = "";
-
-        await cargarInmuebles();
-
-      } catch (e) {
-        msg.textContent = "No se pudo conectar con el servidor.";
-      }
-    }
-
-    // init
-    (async () => {
-      await cargarSesion();
-      await cargarInmuebles();
-    })();
-  </script>
+(async()=>{
+  await cargarUsuario();
+  await cargarInmuebles();
+})();
+</script>
 </body>
 </html>
 
