@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel Lexia360 ⚖️</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <style>
+    :root{--bg:#f9f9f9;--sec:#fff;--text:#1f2b3f;--accent:#c6a664;--accent2:#b39150;--gray:#e3e3e3;}
+    body{background:var(--bg);color:var(--text);font-family:Inter,Poppins,sans-serif;margin:0}
+    header{background:var(--sec);box-shadow:0 2px 5px rgba(0,0,0,.05);padding:1.2rem 2rem;display:flex;justify-content:space-between;align-items:center}
+    header h2{margin:0;font-weight:800}
+    header button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;cursor:pointer}
+    header button:hover{background:var(--accent2)}
+    main{max-width:900px;margin:2rem auto;padding:2rem;background:var(--sec);border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,.05)}
+    .card{border:1px solid var(--gray);padding:1.5rem;border-radius:12px;margin-bottom:1.5rem}
+    .status{padding:10px;border-radius:8px;font-weight:700;display:inline-block}
+    .ok{background:#e8f5e9;color:#2e7d32}
+    .error{background:#ffebee;color:#c62828}
+  </style>
+</head>
+<body>
+  <header>
+    <h2>⚖️ Lexia360</h2>
+    <button onclick="logout()">Cerrar sesión</button>
+  </header>
+
+  <main>
+    <h3>Bienvenido/a, <span id="userName">...</span> 👋</h3>
+
+    <div class="card">
+      <h4>📊 Estado del sistema</h4>
+      <p id="statusMessage">Cargando…</p>
+    </div>
+
+    <div class="card">
+      <h4>🔐 Sesión</h4>
+      <p id="sessionInfo">Cargando…</p>
+    </div>
+  </main>
+
+  <script>
+    const apiUrl = window.location.origin;
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/static/index.html";
+    }
+
+    async function loadDashboard() {
+      const token = localStorage.getItem("token");
+      const statusEl = document.getElementById("statusMessage");
+      const sessionEl = document.getElementById("sessionInfo");
+
+      if (!token) {
+        statusEl.innerHTML = `<span class="status error">🔒 No autenticado</span>`;
+        setTimeout(() => window.location.href = "/static/index.html", 800);
+        return;
+      }
+
+      // status público
+      try {
+        const sRes = await fetch(`${apiUrl}/status`);
+        const sData = await sRes.json();
+        if (sRes.ok) {
+          statusEl.innerHTML = `<span class="status ok">🟢 Servidor activo</span><br>${sData.mensaje}<br>Usuarios: ${sData.usuarios_registrados}`;
+        } else {
+          statusEl.innerHTML = `<span class="status error">🔴 Error</span><br>${sData.detail || ""}`;
+        }
+      } catch {
+        statusEl.innerHTML = `<span class="status error">⚠️ Sin conexión</span>`;
+      }
+
+      // sesión protegida
+      try {
+        const res = await fetch(`${apiUrl}/me`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          sessionEl.innerHTML = `<span class="status error">🔴 Sesión inválida</span><br>${data.detail || ""}`;
+          localStorage.removeItem("token");
+          setTimeout(() => window.location.href = "/static/index.html", 800);
+          return;
+        }
+
+        document.getElementById("userName").textContent = data.email;
+        sessionEl.innerHTML = `<span class="status ok">✅ Autenticado</span><br>Email: <b>${data.email}</b><br>Rol: ${data.rol}`;
+      } catch {
+        sessionEl.innerHTML = `<span class="status error">⚠️ No se pudo validar la sesión</span>`;
+      }
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
