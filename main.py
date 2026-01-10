@@ -23,12 +23,15 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("❌ Falta DATABASE_URL")
 
+# Render a veces da postgres:// (psycopg2 necesita postgresql+psycopg2://)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("❌ Falta SECRET_KEY")
+
+# ✅ Endpoint temporal para hacerte admin
 ADMIN_BOOTSTRAP_SECRET = os.getenv("ADMIN_BOOTSTRAP_SECRET", "")
 
 ALGORITHM = "HS256"
@@ -36,7 +39,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# Password hashing (NO bcrypt)
+# ✅ Password hashing (sin límite 72 bytes)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -104,8 +107,7 @@ class RuleRun(SQLModel, table=True):
     version: str = APP_VERSION
     creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    # ✅ clave para auditoría / histórico
-    fecha_analisis: date
+    fecha_analisis: date  # ✅ auditoría / histórico
 
     resultados_json: str
     alertas_json: str
@@ -213,7 +215,6 @@ def find_zona_tensionada(
     comunidad_autonoma: str,
     fecha: date
 ) -> ZonaTensionada | None:
-    # Normalizamos mínimamente (sin cambiar tu dato guardado)
     mun = municipio.strip()
     ca = comunidad_autonoma.strip()
 
@@ -240,12 +241,12 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados: dict = {}
     alertas: list[str] = []
 
-    # 1) Duración mínima (simplificada MVP)
+    # 1) Duración mínima (MVP)
     duracion = 5 if inmueble.tipo_arrendador == "persona_fisica" else 7
     resultados["duracion_minima_anios"] = duracion
     alertas.append(f"Duración mínima aplicable: {duracion} años.")
 
-    # 2) Zona tensionada (DB, por fecha)
+    # 2) Zona tensionada (DB por fecha)
     zona = find_zona_tensionada(session, inmueble.municipio, inmueble.comunidad_autonoma, fecha_analisis)
     zona_tensionada = zona is not None
     resultados["zona_tensionada"] = zona_tensionada
@@ -271,7 +272,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
         resultados["renta_maxima_mvp"] = None
         alertas.append("Renta inicial libre (régimen general, MVP).")
 
-    # 4) Fianza (vivienda habitual = 1 mes, simplificado)
+    # 4) Fianza (MVP 1 mensualidad)
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
@@ -346,15 +347,20 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
 @app.get("/me")
+def me(user: Usuario = Depends(get_current_user)):
+    return {
+        "id_usuario": user.id_usuario,
+        "email": user.email,
+        "rol": user.rol,
+        "version": APP_VERSION
+    }
+
+
+# ============================================================
+# TEMP ADMIN BOOTSTRAP (REMOVE AFTER)
+# ============================================================
 @app.post("/admin/bootstrap")
 def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
-    """
-    Endpoint temporal para convertir TU usuario en admin.
-    Requiere:
-      - estar logueado (Bearer token)
-      - pasar ?secret=...
-      - que ADMIN_BOOTSTRAP_SECRET exista
-    """
     if not ADMIN_BOOTSTRAP_SECRET:
         raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET no está configurado en el servidor")
 
@@ -371,9 +377,6 @@ def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
         session.commit()
 
     return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
-
-def me(user: Usuario = Depends(get_current_user)):
-    return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
 
 
 # ============================================================
@@ -474,7 +477,7 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
         session.add(run)
         session.commit()
 
-        out = {
+        return {
             "mensaje": "✅ Inmueble creado y reglas ejecutadas",
             "fecha_analisis": str(fecha_analisis),
             "inmueble": {
@@ -488,8 +491,6 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
             "alertas": alertas,
             "version": APP_VERSION,
         }
-
-    return out
 
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
@@ -523,4 +524,4 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
                 "alertas": alertas,
             })
 
-    return out
+        return out
