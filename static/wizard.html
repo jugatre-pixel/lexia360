@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lexia360 • Crear Perfil Legal</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
+  <style>
+    :root{
+      --bg:#F6F8FB;
+      --card:#FFFFFF;
+      --text:#0B1220;
+      --muted:#5B677A;
+      --border:#E6EAF2;
+      --primary:#1E4FD6;
+      --primaryHover:#1A43B7;
+      --radius:16px;
+
+      --okBg:#E8F5E9;
+      --okText:#2E7D32;
+      --badBg:#FFEBEE;
+      --badText:#C62828;
+      --warnBg:#FFF8E1;
+      --warnText:#8D6E00;
+    }
+
+    body{ margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:0 18px; }
+
+    header{ position: static; background:#fff; border-bottom:1px solid var(--border); }
+    .nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.2px; }
+    .logo{
+      width:34px; height:34px; border-radius:10px;
+      background:linear-gradient(135deg,var(--primary),#6D8BFF);
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:900;
+    }
+    .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .chip{
+      background:#F1F4FA;
+      border:1px solid var(--border);
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 14px; border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff; color:var(--text);
+      font-weight:900; text-decoration:none; cursor:pointer;
+    }
+    .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
+    .btn.primary:hover{ background:var(--primaryHover); border-color:var(--primaryHover); }
+    .btn.danger{ border-color:rgba(198,40,40,.35); color:var(--badText); background:#fff; }
+
+    main{ padding:24px 0 40px; }
+    h1{ margin:0; font-size:26px; }
+    .sub{ margin:6px 0 0; color:var(--muted); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 340px;
+      gap:14px;
+      margin-top:16px;
+      align-items:start;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:0 10px 24px rgba(11,18,32,.05);
+    }
+
+    .progress-wrap{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; margin:12px 0 6px;
+    }
+    .progress{
+      width:100%; height:10px; border-radius:999px;
+      background:#EEF2FA; overflow:hidden; border:1px solid var(--border);
+    }
+    .bar{
+      height:100%; width:0%;
+      background:linear-gradient(90deg,var(--primary),#6D8BFF);
+      border-radius:999px; transition:width .25s ease;
+    }
+    .stepchip{
+      white-space:nowrap;
+      font-weight:900; font-size:12px;
+      color:var(--muted);
+      background:#F1F4FA;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px 10px;
+    }
+
+    label{ font-weight:800; font-size:13px; color:var(--muted); }
+    input, select{
+      background:#fff !important;
+      border:1px solid var(--border) !important;
+      border-radius:12px !important;
+    }
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+    .actions{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+
+    .msg{
+      margin-top:10px;
+      font-weight:900;
+      font-size:13px;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:999px;
+      font-weight:900;
+      border:1px solid var(--border);
+      width: fit-content;
+    }
+    .badge.ok{ background:var(--okBg); color:var(--okText); border-color:rgba(46,125,50,.25); }
+    .badge.bad{ background:var(--badBg); color:var(--badText); border-color:rgba(198,40,40,.25); }
+    .badge.warn{ background:var(--warnBg); color:var(--warnText); border-color:rgba(141,110,0,.25); }
+
+    .kpi{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:12px;
+    }
+    .kpi .item{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+    }
+    .kpi .t{ font-weight:900; font-size:12px; color:var(--muted); }
+    .kpi .v{ font-weight:900; margin-top:4px; }
+
+    .alert{
+      border-left:3px solid var(--border);
+      padding-left:10px;
+      margin:8px 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    @media(max-width: 980px){
+      .grid{ grid-template-columns:1fr; }
+      .row{ grid-template-columns:1fr; }
+      .kpi{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <div class="logo">⚖</div>
+      <span>Lexia360</span>
+    </div>
+    <div class="right">
+      <span class="chip" id="chipUser">Sesión…</span>
+      <a class="btn" href="/static/dashboard.html">Panel</a>
+      <button class="btn danger" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Crear Perfil Legal del Inmueble</h1>
+  <p class="sub">4 pasos: identificación → contexto → economía → resultado.</p>
+
+  <div class="progress-wrap">
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="stepchip" id="stepchip">Paso 1/4</div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <div id="step1">
+        <h2 style="margin:0 0 6px;">1) Identificación</h2>
+        <p class="sub" style="margin:0 0 14px;">Asociaremos el análisis a este inmueble para poder actualizarlo y mantener histórico.</p>
+
+        <label>Dirección</label>
+        <input id="direccion" type="text" placeholder="Calle, número, piso…" />
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Municipio</label>
+            <input id="municipio" type="text" placeholder="Madrid, Barcelona…" />
+          </div>
+          <div>
+            <label>Comunidad Autónoma</label>
+            <input id="comunidad" type="text" placeholder="Comunidad de Madrid…" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Código postal (opcional)</label>
+            <input id="cp" type="text" placeholder="28001" />
+          </div>
+          <div>
+            <label>Superficie m² (opcional)</label>
+            <input id="m2" type="number" min="0" placeholder="80" />
+          </div>
+        </div>
+
+        <p class="hint">Tip: el municipio se usa para determinar zona tensionada (MVP). Luego añadiremos dataset oficial y versionado.</p>
+      </div>
+
+      <div id="step2" style="display:none;">
+        <h2 style="margin:0 0 6px;">2) Contexto</h2>
+        <p class="sub" style="margin:0 0 14px;">La normativa aplica reglas distintas según el perfil del arrendador.</p>
+
+        <div class="row">
+          <div>
+            <label>Tipo de arrendador</label>
+            <select id="tipoArrendador">
+              <option value="persona_fisica">Persona física</option>
+              <option value="persona_juridica">Persona jurídica</option>
+            </select>
+            <p class="hint">Afecta a la duración mínima del contrato (MVP).</p>
+          </div>
+
+          <div>
+            <label>Tipo de arrendamiento</label>
+            <select id="tipoArrendamiento" disabled>
+              <option value="vivienda_habitual">Vivienda habitual</option>
+            </select>
+            <p class="hint">En esta fase trabajamos solo vivienda habitual.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="step3" style="display:none;">
+        <h2 style="margin:0 0 6px;">3) Economía</h2>
+        <p class="sub" style="margin:0 0 14px;">Calcularemos semáforo y alertas con los datos facilitados.</p>
+
+        <div class="row">
+          <div>
+            <label>Renta propuesta (€)</label>
+            <input id="renta" type="number" min="0" step="0.01" placeholder="1200" />
+          </div>
+          <div>
+            <label>Renta anterior (opcional)</label>
+            <input id="rentaAnterior" type="number" min="0" step="0.01" placeholder="1100" />
+          </div>
+        </div>
+
+        <p class="hint">Si no existe renta anterior, el análisis se adapta.</p>
+      </div>
+
+      <div id="step4" style="display:none;">
+        <h2 style="margin:0 0 6px;">4) Resultado</h2>
+        <p class="sub" style="margin:0 0 14px;">Guardaremos el inmueble y ejecutaremos el motor normativo (MVP).</p>
+
+        <div id="preResult">
+          <div class="badge warn">🟡 Listo para ejecutar • Revisa y confirma</div>
+          <div class="kpi">
+            <div class="item">
+              <div class="t">Inmueble</div>
+              <div class="v" id="kpiInmueble">—</div>
+            </div>
+            <div class="item">
+              <div class="t">Renta propuesta</div>
+              <div class="v" id="kpiRenta">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="result" style="display:none;">
+          <div id="badgeWrap"></div>
+
+          <p class="sub" id="executive" style="margin:12px 0 0;"></p>
+
+          <div class="kpi">
+            <div class="item">
+              <div class="t">Zona tensionada</div>
+              <div class="v" id="kpiZona">—</div>
+            </div>
+            <div class="item">
+              <div class="t">Duración mínima</div>
+              <div class="v" id="kpiDuracion">—</div>
+            </div>
+            <div class="item">
+              <div class="t">Renta máxima (MVP)</div>
+              <div class="v" id="kpiMax">—</div>
+            </div>
+            <div class="item">
+              <div class="t">Fianza mínima</div>
+              <div class="v" id="kpiFianza">—</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="font-weight:900;">Alertas</div>
+            <div id="alerts"></div>
+          </div>
+
+          <div class="actions" style="margin-top:14px;">
+            <a class="btn" href="/static/dashboard.html">Volver al panel</a>
+            <button class="btn" onclick="goToStep(1)">Crear otro perfil</button>
+            <button class="btn primary" onclick="openAssistant()">🤖 Preguntar al asistente</button>
+          </div>
+
+          <p class="hint" style="margin-top:12px;">Resultado orientativo (motor automatizado). Próxima fase: dataset oficial de zonas tensionadas y versionado.</p>
+        </div>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <div class="actions">
+        <button class="btn" id="backBtn" onclick="prev()">Volver</button>
+        <button class="btn primary" id="nextBtn" onclick="next()">Siguiente</button>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h3 style="margin:0 0 8px; font-weight:900;">Qué estás creando</h3>
+      <p style="margin:0; color:var(--muted); font-size:13px;">
+        Un Perfil Legal del Inmueble: diagnóstico con semáforo, parámetros clave y alertas.
+      </p>
+      <ul style="margin:10px 0 0; padding-left:18px; color:var(--muted); font-size:13px;">
+        <li>Auditable por ejecución</li>
+        <li>Preparado para reanálisis</li>
+        <li>Base para IA y documentos Pro</li>
+      </ul>
+    </aside>
+  </div>
+</main>
+
+<script>
+  const apiUrl = window.location.origin;
+  const steps = [1,2,3,4];
+  let currentStep = 1;
+  let creating = false;
+
+  function tkn(){ return localStorage.getItem("token"); }
+
+  function logout(){
+    localStorage.removeItem("token");
+    window.location.href = "/static/index.html";
+  }
+
+  function setMsg(text, ok=false){
+    const el = document.getElementById("msg");
+    el.style.color = ok ? "green" : "crimson";
+    el.textContent = text || "";
+  }
+
+  function setProgress(step){
+    const pct = ((step-1) / (steps.length-1)) * 100;
+    document.getElementById("bar").style.width = pct + "%";
+    document.getElementById("stepchip").textContent = `Paso ${step}/4`;
+
+    for (const s of steps){
+      document.getElementById("step"+s).style.display = (s===step) ? "block" : "none";
+    }
+
+    document.getElementById("backBtn").style.visibility = (step===1) ? "hidden" : "visible";
+
+    const nextBtn = document.getElementById("nextBtn");
+    nextBtn.style.display = "inline-flex";
+
+    if (step < 4){
+      nextBtn.textContent = "Siguiente";
+      nextBtn.disabled = false;
+    } else {
+      nextBtn.textContent = "Guardar y ejecutar";
+      nextBtn.disabled = false;
+      hydrateReview();
+    }
+  }
+
+  function goToStep(step){
+    currentStep = step;
+    setMsg("");
+    if (step < 4){
+      document.getElementById("result").style.display = "none";
+      document.getElementById("preResult").style.display = "block";
+      creating = false;
+    }
+    setProgress(step);
+  }
+
+  function prev(){ if (currentStep>1) goToStep(currentStep-1); }
+
+  async function next(){
+    setMsg("");
+    if (currentStep === 1){
+      const err = validateStep1();
+      if (err) return setMsg(err);
+      return goToStep(2);
+    }
+    if (currentStep === 2){
+      const err = validateStep2();
+      if (err) return setMsg(err);
+      return goToStep(3);
+    }
+    if (currentStep === 3){
+      const err = validateStep3();
+      if (err) return setMsg(err);
+      return goToStep(4);
+    }
+    if (currentStep === 4){
+      return await submit();
+    }
+  }
+
+  function validateStep1(){
+    const direccion = document.getElementById("direccion").value.trim();
+    const municipio = document.getElementById("municipio").value.trim();
+    const comunidad = document.getElementById("comunidad").value.trim();
+    if (!direccion) return "Introduce la dirección.";
+    if (!municipio) return "Introduce el municipio.";
+    if (!comunidad) return "Introduce la comunidad autónoma.";
+    return null;
+  }
+  function validateStep2(){
+    const tipoArrendador = document.getElementById("tipoArrendador").value;
+    if (!tipoArrendador) return "Selecciona el tipo de arrendador.";
+    return null;
+  }
+  function validateStep3(){
+    const rentaRaw = document.getElementById("renta").value;
+    const renta = rentaRaw ? parseFloat(rentaRaw) : NaN;
+    if (!Number.isFinite(renta) || renta <= 0) return "Introduce una renta propuesta válida.";
+    const ra = document.getElementById("rentaAnterior").value;
+    if (ra){
+      const rentaAnt = parseFloat(ra);
+      if (!Number.isFinite(rentaAnt) || rentaAnt <= 0) return "La renta anterior debe ser un número válido o dejarse vacía.";
+    }
+    return null;
+  }
+
+  function hydrateReview(){
+    const direccion = document.getElementById("direccion").value.trim();
+    const municipio = document.getElementById("municipio").value.trim();
+    const comunidad = document.getElementById("comunidad").value.trim();
+    const renta = parseFloat(document.getElementById("renta").value);
+
+    document.getElementById("kpiInmueble").textContent = `${direccion} • ${municipio}, ${comunidad}`;
+    document.getElementById("kpiRenta").textContent = `${renta.toFixed(2)} €`;
+  }
+
+  async function parseResponse(res){
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) return await res.json();
+    const txt = await res.text();
+    return { detail: txt };
+  }
+
+  async function api(path, options = {}){
+    const token = tkn();
+    if (!token) throw new Error("NO_TOKEN");
+
+    const headers = options.headers ? {...options.headers} : {};
+    headers["Authorization"] = `Bearer ${token}`;
+    options.headers = headers;
+
+    const res = await fetch(`${apiUrl}${path}`, options);
+    const data = await parseResponse(res);
+    return { res, data };
+  }
+
+  async function loadUser(){
+    try{
+      if (!tkn()) return logout();
+      const {res, data} = await api("/me");
+      if (!res.ok) return logout();
+      document.getElementById("chipUser").textContent = data.email;
+    } catch {
+      return logout();
+    }
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function renderResult(payload){
+    const resultados = payload.resultados || {};
+    const alertas = payload.alertas || [];
+    const sem = resultados.semaforo || "—";
+
+    const badgeWrap = document.getElementById("badgeWrap");
+    if (sem === "VERDE"){
+      badgeWrap.innerHTML = `<div class="badge ok">🟢 VERDE • Cumple (MVP)</div>`;
+    } else if (sem === "ROJO"){
+      badgeWrap.innerHTML = `<div class="badge bad">🔴 ROJO • Riesgo detectado (MVP)</div>`;
+    } else {
+      badgeWrap.innerHTML = `<div class="badge warn">🟡 —</div>`;
+    }
+
+    const zona = resultados.zona_tensionada === true ? "Sí" : (resultados.zona_tensionada === false ? "No" : "—");
+    document.getElementById("kpiZona").textContent = zona;
+    document.getElementById("kpiDuracion").textContent = (resultados.duracion_minima_anios ?? "—") + " años";
+    document.getElementById("kpiMax").textContent = resultados.renta_maxima_mvp == null ? "—" : `${resultados.renta_maxima_mvp} €`;
+    document.getElementById("kpiFianza").textContent = resultados.fianza_minima == null ? "—" : `${resultados.fianza_minima} €`;
+
+    const inm = payload.inmueble || {};
+    const msg = zona === "Sí"
+      ? `Según los datos facilitados, el inmueble en ${escapeHtml(inm.municipio || "")} se considera zona tensionada (MVP). Revisa los límites de renta y alertas.`
+      : `Según los datos facilitados, no se detecta zona tensionada (MVP). Revisa parámetros y alertas para confirmar cumplimiento.`;
+    document.getElementById("executive").textContent = msg;
+
+    const alertsEl = document.getElementById("alerts");
+    alertsEl.innerHTML = alertas.length
+      ? alertas.map(a => `<div class="alert">${escapeHtml(a)}</div>`).join("")
+      : `<div class="hint">Sin alertas.</div>`;
+
+    document.getElementById("preResult").style.display = "none";
+    document.getElementById("result").style.display = "block";
+  }
+
+  async function submit(){
+    if (creating) return;
+    creating = true;
+    setMsg("");
+
+    const direccion = document.getElementById("direccion").value.trim();
+    const municipio = document.getElementById("municipio").value.trim();
+    const comunidad_autonoma = document.getElementById("comunidad").value.trim();
+    const codigo_postal = document.getElementById("cp").value.trim() || null;
+
+    const m2Raw = document.getElementById("m2").value;
+    const superficie_m2 = m2Raw ? parseInt(m2Raw, 10) : null;
+
+    const tipo_arrendador = document.getElementById("tipoArrendador").value;
+    const tipo_arrendamiento = "vivienda_habitual";
+
+    const renta_propuesta = parseFloat(document.getElementById("renta").value);
+    const rentaAntRaw = document.getElementById("rentaAnterior").value;
+    const renta_anterior = rentaAntRaw ? parseFloat(rentaAntRaw) : null;
+
+    const body = {
+      direccion,
+      municipio,
+      comunidad_autonoma,
+      codigo_postal,
+      superficie_m2,
+      tipo_arrendamiento,
+      tipo_arrendador,
+      renta_propuesta,
+      renta_anterior
+    };
+
+    const btn = document.getElementById("nextBtn");
+    btn.disabled = true;
+    btn.textContent = "Ejecutando…";
+
+    try{
+      const {res, data} = await api("/inmuebles", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok){
+        setMsg(`No se pudo ejecutar (HTTP ${res.status}): ${data.detail || "Error"}`);
+        btn.disabled = false;
+        btn.textContent = "Guardar y ejecutar";
+        creating = false;
+        return;
+      }
+
+      setMsg("✅ Perfil legal generado.", true);
+      renderResult(data);
+
+      document.getElementById("nextBtn").style.display = "none";
+      document.getElementById("backBtn").style.display = "none";
+    } catch(e){
+      if ((e.message || "").includes("NO_TOKEN")){
+        logout();
+        return;
+      }
+      setMsg("Error de conexión con el servidor.");
+      btn.disabled = false;
+      btn.textContent = "Guardar y ejecutar";
+      creating = false;
+    }
+  }
+
+  function openAssistant(){
+    alert("Asistente IA: lo activamos en la siguiente fase con gating Free/Pro.");
+  }
+
+  (async () => {
+    await loadUser();
+    goToStep(1);
+  })();
+</script>
+</body>
+</html>
