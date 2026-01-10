@@ -1,7 +1,7 @@
 import os
 import json
 import traceback
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +16,7 @@ from sqlmodel import SQLModel, Field, Session, select, create_engine
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v5-detached-fix"
+APP_VERSION = "lexia360-v6-zonas-bd"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -32,13 +32,11 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
-# DB engine
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
 # Password hashing (NO bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-# OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -55,7 +53,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Log server-side errors to Render logs
 @app.middleware("http")
 async def catch_exceptions(request: Request, call_next):
     try:
@@ -64,7 +61,6 @@ async def catch_exceptions(request: Request, call_next):
         traceback.print_exc()
         raise
 
-# Static
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
@@ -77,7 +73,7 @@ class Usuario(SQLModel, table=True):
     nombre: str
     email: str = Field(index=True)
     hashed_password: str
-    rol: str = "cliente"
+    rol: str = "cliente"  # "cliente" | "admin"
 
 
 class Inmueble(SQLModel, table=True):
@@ -90,8 +86,8 @@ class Inmueble(SQLModel, table=True):
     codigo_postal: str | None = None
     superficie_m2: int | None = None
 
-    tipo_arrendamiento: str = "vivienda_habitual"  # MVP
-    tipo_arrendador: str = "persona_fisica"        # persona_fisica / persona_juridica
+    tipo_arrendamiento: str = "vivienda_habitual"
+    tipo_arrendador: str = "persona_fisica"  # persona_fisica / persona_juridica
 
     renta_propuesta: float
     renta_anterior: float | None = None
@@ -106,8 +102,26 @@ class RuleRun(SQLModel, table=True):
     version: str = APP_VERSION
     creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # ✅ clave para auditoría / histórico
+    fecha_analisis: date
+
     resultados_json: str
     alertas_json: str
+
+
+class ZonaTensionada(SQLModel, table=True):
+    id_zona: int | None = Field(default=None, primary_key=True)
+
+    comunidad_autonoma: str = Field(index=True)
+    municipio: str = Field(index=True)
+
+    fecha_inicio: date
+    fecha_fin: date | None = None  # null => vigente
+
+    fuente_oficial: str
+    activo: bool = True
+
+    creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ============================================================
@@ -129,6 +143,15 @@ class InmuebleCreate(BaseModel):
     tipo_arrendador: str = "persona_fisica"
     renta_propuesta: float
     renta_anterior: float | None = None
+
+
+class ZonaCreate(BaseModel):
+    comunidad_autonoma: str
+    municipio: str
+    fecha_inicio: date
+    fecha_fin: date | None = None
+    fuente_oficial: str
+    activo: bool = True
 
 
 # ============================================================
@@ -167,35 +190,72 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
-    # ✅ expire_on_commit=False evita objetos "detached" tras commits
     with Session(engine, expire_on_commit=False) as session:
         user = session.exec(select(Usuario).where(Usuario.email == email)).first()
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no existe")
         return user
 
+def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
+    if user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No autorizado (admin)")
+    return user
+
 
 # ============================================================
-# RULE ENGINE (MVP)
+# ZONAS TENSIONADAS (DB)
 # ============================================================
-ZONAS_TENSIONADAS_MVP = {"Madrid", "Barcelona", "Valencia"}  # placeholder
+def find_zona_tensionada(
+    session: Session,
+    municipio: str,
+    comunidad_autonoma: str,
+    fecha: date
+) -> ZonaTensionada | None:
+    # Normalizamos mínimamente (sin cambiar tu dato guardado)
+    mun = municipio.strip()
+    ca = comunidad_autonoma.strip()
 
-def evaluar_reglas(inmueble: Inmueble) -> tuple[dict, list[str]]:
+    zona = session.exec(
+        select(ZonaTensionada)
+        .where(ZonaTensionada.municipio == mun)
+        .where(ZonaTensionada.comunidad_autonoma == ca)
+        .where(ZonaTensionada.fecha_inicio <= fecha)
+        .where(
+            (ZonaTensionada.fecha_fin == None) |
+            (ZonaTensionada.fecha_fin >= fecha)
+        )
+        .where(ZonaTensionada.activo == True)
+        .order_by(ZonaTensionada.fecha_inicio.desc())
+    ).first()
+
+    return zona
+
+
+# ============================================================
+# RULE ENGINE (MVP+)
+# ============================================================
+def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -> tuple[dict, list[str]]:
     resultados: dict = {}
     alertas: list[str] = []
 
-    # 1) Duración mínima (simplificada)
+    # 1) Duración mínima (simplificada MVP)
     duracion = 5 if inmueble.tipo_arrendador == "persona_fisica" else 7
     resultados["duracion_minima_anios"] = duracion
     alertas.append(f"Duración mínima aplicable: {duracion} años.")
 
-    # 2) Zona tensionada (MVP por municipio)
-    zona_tensionada = inmueble.municipio.strip() in ZONAS_TENSIONADAS_MVP
+    # 2) Zona tensionada (DB, por fecha)
+    zona = find_zona_tensionada(session, inmueble.municipio, inmueble.comunidad_autonoma, fecha_analisis)
+    zona_tensionada = zona is not None
     resultados["zona_tensionada"] = zona_tensionada
+    resultados["zona_tensionada_fuente"] = zona.fuente_oficial if zona else None
+    resultados["fecha_analisis"] = str(fecha_analisis)
+
     if zona_tensionada:
-        alertas.append("El inmueble está en zona tensionada (MVP). Se aplican limitaciones específicas.")
+        alertas.append("El inmueble está en zona tensionada (según dataset cargado).")
+        if zona and zona.fuente_oficial:
+            alertas.append(f"Fuente oficial: {zona.fuente_oficial}")
     else:
-        alertas.append("El inmueble NO está en zona tensionada (MVP).")
+        alertas.append("El inmueble NO está en zona tensionada (según dataset cargado).")
 
     # 3) Renta (MVP)
     if zona_tensionada:
@@ -209,7 +269,7 @@ def evaluar_reglas(inmueble: Inmueble) -> tuple[dict, list[str]]:
         resultados["renta_maxima_mvp"] = None
         alertas.append("Renta inicial libre (régimen general, MVP).")
 
-    # 4) Fianza (vivienda habitual = 1 mes)
+    # 4) Fianza (vivienda habitual = 1 mes, simplificado)
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
@@ -241,7 +301,13 @@ def head_root():
 def status():
     with Session(engine, expire_on_commit=False) as session:
         users_count = len(session.exec(select(Usuario)).all())
-        return {"status": "✅ OK", "usuarios_registrados": users_count, "version": APP_VERSION}
+        zonas_count = len(session.exec(select(ZonaTensionada)).all())
+        return {
+            "status": "✅ OK",
+            "usuarios_registrados": users_count,
+            "zonas_tensionadas": zonas_count,
+            "version": APP_VERSION
+        }
 
 
 # ============================================================
@@ -260,6 +326,7 @@ def register(payload: RegisterPayload):
             nombre=payload.nombre,
             email=payload.email,
             hashed_password=get_password_hash(payload.password),
+            rol="cliente"
         )
         session.add(user)
         session.commit()
@@ -282,18 +349,82 @@ def me(user: Usuario = Depends(get_current_user)):
 
 
 # ============================================================
+# ROUTES (ZONAS TENSIONADAS - PUBLIC HELPERS)
+# ============================================================
+@app.get("/zonas-tensionadas/check")
+def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = None):
+    f = fecha or date.today()
+    with Session(engine, expire_on_commit=False) as session:
+        zona = find_zona_tensionada(session, municipio, comunidad_autonoma, f)
+        return {
+            "municipio": municipio,
+            "comunidad_autonoma": comunidad_autonoma,
+            "fecha": str(f),
+            "zona_tensionada": zona is not None,
+            "fuente_oficial": zona.fuente_oficial if zona else None
+        }
+
+
+# ============================================================
+# ROUTES (ADMIN - ZONAS TENSIONADAS)
+# ============================================================
+@app.post("/admin/zonas-tensionadas")
+def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
+    with Session(engine, expire_on_commit=False) as session:
+        z = ZonaTensionada(
+            comunidad_autonoma=payload.comunidad_autonoma.strip(),
+            municipio=payload.municipio.strip(),
+            fecha_inicio=payload.fecha_inicio,
+            fecha_fin=payload.fecha_fin,
+            fuente_oficial=payload.fuente_oficial.strip(),
+            activo=payload.activo
+        )
+        session.add(z)
+        session.commit()
+        session.refresh(z)
+
+        return {
+            "ok": True,
+            "id_zona": z.id_zona,
+            "comunidad_autonoma": z.comunidad_autonoma,
+            "municipio": z.municipio,
+            "fecha_inicio": str(z.fecha_inicio),
+            "fecha_fin": str(z.fecha_fin) if z.fecha_fin else None,
+            "fuente_oficial": z.fuente_oficial,
+            "activo": z.activo
+        }
+
+@app.get("/admin/zonas-tensionadas")
+def listar_zonas(admin: Usuario = Depends(require_admin)):
+    with Session(engine, expire_on_commit=False) as session:
+        zonas = session.exec(
+            select(ZonaTensionada).order_by(ZonaTensionada.comunidad_autonoma, ZonaTensionada.municipio)
+        ).all()
+        return [{
+            "id_zona": z.id_zona,
+            "comunidad_autonoma": z.comunidad_autonoma,
+            "municipio": z.municipio,
+            "fecha_inicio": str(z.fecha_inicio),
+            "fecha_fin": str(z.fecha_fin) if z.fecha_fin else None,
+            "fuente_oficial": z.fuente_oficial,
+            "activo": z.activo,
+        } for z in zonas]
+
+
+# ============================================================
 # ROUTES (INMUEBLES) - PROTECTED
 # ============================================================
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
-    # ✅ expire_on_commit=False + response dentro => NO detached error
+    fecha_analisis = date.today()
+
     with Session(engine, expire_on_commit=False) as session:
         inm = Inmueble(
             id_usuario=user.id_usuario,
-            direccion=payload.direccion,
-            municipio=payload.municipio,
-            comunidad_autonoma=payload.comunidad_autonoma,
-            codigo_postal=payload.codigo_postal,
+            direccion=payload.direccion.strip(),
+            municipio=payload.municipio.strip(),
+            comunidad_autonoma=payload.comunidad_autonoma.strip(),
+            codigo_postal=(payload.codigo_postal.strip() if payload.codigo_postal else None),
             superficie_m2=payload.superficie_m2,
             tipo_arrendamiento=payload.tipo_arrendamiento,
             tipo_arrendador=payload.tipo_arrendador,
@@ -304,10 +435,11 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
         session.commit()
         session.refresh(inm)
 
-        resultados, alertas = evaluar_reglas(inm)
+        resultados, alertas = evaluar_reglas(session, inm, fecha_analisis)
 
         run = RuleRun(
             id_inmueble=inm.id_inmueble,
+            fecha_analisis=fecha_analisis,
             resultados_json=json.dumps(resultados, ensure_ascii=False),
             alertas_json=json.dumps(alertas, ensure_ascii=False),
         )
@@ -316,6 +448,7 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
 
         out = {
             "mensaje": "✅ Inmueble creado y reglas ejecutadas",
+            "fecha_analisis": str(fecha_analisis),
             "inmueble": {
                 "id_inmueble": inm.id_inmueble,
                 "direccion": inm.direccion,
@@ -355,9 +488,11 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
                 "comunidad_autonoma": inm.comunidad_autonoma,
                 "renta_propuesta": inm.renta_propuesta,
                 "semaforo": resultados.get("semaforo") if resultados else None,
+                "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
+                "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
+                "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente") if resultados else None,
                 "resultados": resultados,
                 "alertas": alertas,
             })
 
     return out
-
