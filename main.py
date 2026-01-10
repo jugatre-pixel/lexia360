@@ -1,7 +1,6 @@
 import os
 import traceback
 from datetime import datetime, timedelta, timezone
-import hashlib
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +11,8 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from sqlmodel import SQLModel, Field, Session, select, create_engine
 
+
+APP_VERSION = "lexia360-v3-pbkdf2"  # <- para verificar deploy en /version
 
 # ------------------------------------------------------------
 # 🌐 APP
@@ -25,7 +26,6 @@ async def catch_exceptions(request: Request, call_next):
     except Exception:
         traceback.print_exc()
         raise
-
 
 # ------------------------------------------------------------
 # 🌍 CORS
@@ -64,11 +64,12 @@ if not SECRET_KEY:
     raise RuntimeError("❌ Falta SECRET_KEY")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# ✅ A PRUEBA DE 72 BYTES: PBKDF2 (NO BCRYPT)
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # ------------------------------------------------------------
 # 📦 MODELOS
@@ -93,43 +94,26 @@ class RegisterPayload(BaseModel):
 @app.on_event("startup")
 def on_startup():
     SQLModel.metadata.create_all(engine)
-
+    print("✅ STARTUP OK ->", APP_VERSION)
 
 # ------------------------------------------------------------
-# 🔐 PASSWORD (BLINDADO)
+# 🔧 HELPERS
 # ------------------------------------------------------------
-def normalize_password(password: str) -> str:
-    """
-    Convierte cualquier password en un hash SHA-256 fijo (32 bytes)
-    para que bcrypt NUNCA reciba más de 72 bytes.
-    """
+def validate_password(password: str):
     if len(password) < 8:
-        raise HTTPException(
-            status_code=400,
-            detail="La contraseña debe tener al menos 8 caracteres"
-        )
-
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
 
 def get_password_hash(password: str) -> str:
-    safe_password = normalize_password(password)
-    return pwd_context.hash(safe_password)
+    # pbkdf2_sha256 no tiene el límite de 72 bytes
+    return pwd_context.hash(password)
 
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    safe_password = normalize_password(plain_password)
-    return pwd_context.verify(safe_password, hashed_password)
-
-
-# ------------------------------------------------------------
-# 🔐 JWT HELPERS
-# ------------------------------------------------------------
 def create_access_token(email: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
     try:
@@ -146,13 +130,16 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
             raise HTTPException(status_code=401, detail="Usuario no existe")
         return user
 
-
 # ------------------------------------------------------------
 # 🚀 ROUTES
 # ------------------------------------------------------------
+@app.get("/version")
+def version():
+    return {"version": APP_VERSION}
+
 @app.get("/")
 def root():
-    return {"mensaje": "Lexia360 API OK 🚀", "static": "/static/index.html"}
+    return {"mensaje": "Lexia360 API OK 🚀", "static": "/static/index.html", "version": APP_VERSION}
 
 @app.head("/")
 def head_root():
@@ -162,17 +149,14 @@ def head_root():
 def status():
     with Session(engine) as session:
         users = session.exec(select(Usuario)).all()
-        return {
-            "status": "✅ OK",
-            "usuarios_registrados": len(users)
-        }
+        return {"status": "✅ OK", "usuarios_registrados": len(users), "version": APP_VERSION}
 
 @app.post("/register")
 def register(payload: RegisterPayload):
+    validate_password(payload.password)
+
     with Session(engine) as session:
-        existing = session.exec(
-            select(Usuario).where(Usuario.email == payload.email)
-        ).first()
+        existing = session.exec(select(Usuario).where(Usuario.email == payload.email)).first()
         if existing:
             raise HTTPException(status_code=400, detail="El usuario ya existe")
 
@@ -184,25 +168,20 @@ def register(payload: RegisterPayload):
         session.add(user)
         session.commit()
 
-    return {"mensaje": "✅ Registro completado"}
+    return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
     with Session(engine) as session:
-        user = session.exec(
-            select(Usuario).where(Usuario.email == form.username)
-        ).first()
+        user = session.exec(select(Usuario).where(Usuario.email == form.username)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
     token = create_access_token(user.email)
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
-    return {
-        "id_usuario": user.id_usuario,
-        "email": user.email,
-        "rol": user.rol
-    }
+    return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
+
 
