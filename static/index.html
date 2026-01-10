@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lexia360 ⚖️</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <style>
+    :root{--bg:#F8F8F8;--sec:#EAEAEA;--text:#1F2B3F;--muted:#4A4A4A;--accent:#C6A664;--accent2:#b39150;}
+    body{background:var(--bg);color:var(--text);font-family:Inter,Poppins,sans-serif;margin:0}
+    nav{background:#fff;padding:1rem 2rem;box-shadow:0 2px 6px rgba(0,0,0,.05);display:flex;justify-content:space-between;align-items:center}
+    nav h2{margin:0;font-weight:700}
+    nav a{color:var(--text);text-decoration:none;font-weight:500;margin-left:1rem}
+    main{max-width:520px;margin:5rem auto;background:var(--sec);padding:2.5rem;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,.1)}
+    input{background:#fff;border:1px solid #ccc;padding:10px;border-radius:6px;width:100%;margin:8px 0}
+    button{background:var(--accent);color:#fff;font-weight:700;border:none;padding:10px;width:100%;border-radius:8px;cursor:pointer}
+    button:hover{background:var(--accent2)}
+    .hidden{display:none}
+    footer{text-align:center;font-size:.9rem;color:var(--muted);margin:4rem 0 1rem}
+    .message{text-align:center;font-size:.95rem;margin-top:.75rem}
+  </style>
+</head>
+<body>
+  <nav>
+    <h2>⚖️ Lexia360</h2>
+    <div>
+      <a href="#" onclick="showForm('loginForm');return false;">Iniciar sesión</a>
+      <a href="#" onclick="showForm('registerForm');return false;">Registrarse</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="loginForm">
+      <h3>Acceso a tu cuenta</h3>
+      <p style="color:var(--muted)">Introduce tus datos para continuar</p>
+      <input type="email" id="loginEmail" placeholder="Correo electrónico" />
+      <input type="password" id="loginPassword" placeholder="Contraseña" />
+      <button onclick="login()">Entrar</button>
+      <div id="loginMessage" class="message"></div>
+    </section>
+
+    <section id="registerForm" class="hidden">
+      <h3>Crear cuenta</h3>
+      <p style="color:var(--muted)">Únete a Lexia360</p>
+      <input type="text" id="regNombre" placeholder="Nombre completo" />
+      <input type="email" id="regEmail" placeholder="Correo electrónico" />
+      <input type="password" id="regPassword" placeholder="Contraseña (mín 8, máx 72 bytes)" />
+      <button onclick="register()">Registrarme</button>
+      <div id="registerMessage" class="message"></div>
+    </section>
+  </main>
+
+  <footer>© 2026 Lexia360</footer>
+
+  <script>
+    const apiUrl = window.location.origin;
+
+    function showForm(formId) {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("registerForm").classList.add("hidden");
+      document.getElementById(formId).classList.remove("hidden");
+      document.getElementById("loginMessage").textContent = "";
+      document.getElementById("registerMessage").textContent = "";
+    }
+
+    async function register() {
+      const nombre = document.getElementById("regNombre").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value;
+
+      const msg = document.getElementById("registerMessage");
+      msg.textContent = "";
+      msg.style.color = "crimson";
+
+      if (!nombre || !email || !password) {
+        msg.textContent = "Completa todos los campos.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${apiUrl}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, email, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          msg.style.color = "green";
+          msg.textContent = data.mensaje || "✅ Registro completado. Ahora inicia sesión.";
+          setTimeout(() => showForm("loginForm"), 1000);
+        } else {
+          msg.textContent = data.detail || "Error al registrar.";
+        }
+      } catch {
+        msg.textContent = "⚠️ No se pudo conectar con el servidor.";
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const msg = document.getElementById("loginMessage");
+      msg.textContent = "";
+      msg.style.color = "crimson";
+
+      if (!email || !password) {
+        msg.textContent = "Introduce email y contraseña.";
+        return;
+      }
+
+      const formData = new URLSearchParams();
+      formData.append("username", email);
+      formData.append("password", password);
+
+      try {
+        const res = await fetch(`${apiUrl}/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.access_token) {
+          localStorage.setItem("token", data.access_token);
+          window.location.href = "/static/dashboard.html";
+        } else {
+          msg.textContent = data.detail || "❌ Credenciales incorrectas.";
+        }
+      } catch {
+        msg.textContent = "⚠️ No se pudo conectar con el servidor.";
+      }
+    }
+  </script>
+</body>
+</html>
