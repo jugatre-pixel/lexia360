@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
 
   <style>
@@ -28,145 +27,28 @@
       --badText:#C62828;
     }
 
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
-      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-    }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    .wrap{ max-width:1180px; margin:0 auto; padding:0 18px; }
 
-    .wrap{
-      max-width:1180px;
-      margin:0 auto;
-      padding:0 18px;
-    }
+    header{ position:static; background:#fff; border-bottom:1px solid var(--border); }
+    .nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:900; }
+    .logo{ width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),#6D8BFF); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }
 
-    /* ✅ HEADER NORMAL (NO FIJO) */
-    header{
-      position: static;
-      background:#fff;
-      border-bottom:1px solid var(--border);
-    }
+    .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .chip{ background:#F1F4FA; border:1px solid var(--border); padding:8px 12px; border-radius:999px; font-weight:800; font-size:13px; color:var(--muted); }
 
-    .nav{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:14px 0;
-    }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; font-weight:900; cursor:pointer; text-decoration:none; color:var(--text); }
+    .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
+    .btn.primary:hover{ background:var(--primaryHover); border-color:var(--primaryHover); }
+    .btn.danger{ color:var(--badText); border-color:rgba(198,40,40,.35); background:#fff; }
 
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-weight:800;
-    }
-
-    .logo{
-      width:34px;
-      height:34px;
-      border-radius:10px;
-      background:linear-gradient(135deg,var(--primary),#6D8BFF);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:#fff;
-    }
-
-    .right{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    .chip{
-      background:#F1F4FA;
-      border:1px solid var(--border);
-      padding:8px 12px;
-      border-radius:999px;
-      font-weight:700;
-      font-size:13px;
-      color:var(--muted);
-    }
-
-    .btn{
-      padding:10px 14px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:#fff;
-      font-weight:800;
-      cursor:pointer;
-    }
-
-    .btn.primary{
-      background:var(--primary);
-      color:#fff;
-      border-color:var(--primary);
-    }
-
-    .btn.primary:hover{
-      background:var(--primaryHover);
-    }
-
-    .btn.danger{
-      color:var(--badText);
-      border-color:rgba(198,40,40,.4);
-    }
-
-    main{
-      padding:26px 0 40px;
-    }
-
+    main{ padding:24px 0 40px; }
     h1{ margin:0; font-size:26px; }
-    .sub{ color:var(--muted); margin-top:6px; }
+    .sub{ margin:6px 0 0; color:var(--muted); }
 
-    .grid{
-      display:grid;
-      grid-template-columns:420px 1fr;
-      gap:16px;
-      margin-top:18px;
-      align-items:start;
-    }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      padding:18px;
-      box-shadow:0 8px 20px rgba(11,18,32,.05);
-    }
-
-    .card h2{ font-size:16px; margin:0 0 10px; }
-
-    label{
-      font-weight:700;
-      font-size:13px;
-      color:var(--muted);
-    }
-
-    input, select{
-      background:#fff !important;
-      border-radius:12px !important;
-      border:1px solid var(--border) !important;
-    }
-
-    .row{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    .status{
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:999px;
-      font-weight:800;
-      font-size:12px;
-    }
-
-    .ok{ background:var(--okBg); color:var(--okText); }
-    .bad{ background:var(--badBg); color:var(--badText); }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:14px; margin-top:16px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:0 10px 24px rgba(11,18,32,.05); }
 
     table{
       width:100%;
@@ -176,7 +58,6 @@
       overflow:hidden;
       border:1px solid var(--border);
     }
-
     th, td{
       padding:12px;
       font-size:13px;
@@ -184,16 +65,13 @@
       background:#fff;
       vertical-align:top;
     }
-
-    th{
-      background:#FBFCFF;
-      font-weight:800;
-      color:var(--muted);
-    }
-
+    th{ background:#FBFCFF; font-weight:900; color:var(--muted); }
     tr:last-child td{ border-bottom:none; }
 
-    .addr{ font-weight:800; }
+    .addr{ font-weight:900; }
+    .status{ display:inline-block; padding:6px 10px; border-radius:999px; font-weight:900; font-size:12px; }
+    .ok{ background:var(--okBg); color:var(--okText); }
+    .bad{ background:var(--badBg); color:var(--badText); }
 
     details{
       border:1px solid var(--border);
@@ -202,25 +80,13 @@
       margin-top:8px;
       background:#fff;
     }
+    summary{ font-weight:900; cursor:pointer; }
+    .alert{ font-size:13px; color:var(--muted); border-left:3px solid var(--border); padding-left:10px; margin-top:6px; }
 
-    summary{ font-weight:800; cursor:pointer; }
+    .msg{ margin-top:10px; font-weight:900; font-size:13px; }
 
-    .alert{
-      font-size:13px;
-      color:var(--muted);
-      border-left:3px solid var(--border);
-      padding-left:10px;
-      margin-top:6px;
-    }
-
-    .msg{
-      margin-top:10px;
-      font-weight:800;
-      font-size:13px;
-    }
-
-    @media(max-width:980px){
-      .grid{ grid-template-columns:1fr; }
+    @media(max-width: 900px){
+      .right{ gap:8px; }
     }
   </style>
 </head>
@@ -233,7 +99,8 @@
       <span>Lexia360</span>
     </div>
     <div class="right">
-      <span class="chip" id="userChip">Cargando…</span>
+      <span class="chip" id="chipUser">Sesión…</span>
+      <a class="btn primary" href="/static/wizard.html">➕ Crear Perfil Legal</a>
       <a class="btn" href="/static/index.html">Inicio</a>
       <button class="btn danger" onclick="logout()">Cerrar sesión</button>
     </div>
@@ -241,136 +108,147 @@
 </header>
 
 <main class="wrap">
-  <h1>Panel de control</h1>
-  <p class="sub">Alta de inmuebles y validación legal automática.</p>
+  <h1>Panel</h1>
+  <p class="sub">Histórico de inmuebles y resultados (última ejecución).</p>
 
   <div class="grid">
-    <!-- FORMULARIO -->
     <section class="card">
-      <h2>Nuevo inmueble</h2>
-
-      <label>Dirección</label>
-      <input id="direccion" />
-
-      <div class="row">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;">
         <div>
-          <label>Municipio</label>
-          <input id="municipio" />
+          <div style="font-weight:900;">Mis inmuebles</div>
+          <div class="sub" style="margin:6px 0 0;">Semáforo y alertas por inmueble.</div>
         </div>
-        <div>
-          <label>Comunidad Autónoma</label>
-          <input id="comunidad" />
-        </div>
+        <button class="btn" onclick="cargarInmuebles()">Actualizar</button>
       </div>
 
-      <div class="row">
-        <div>
-          <label>Renta propuesta (€)</label>
-          <input id="renta" type="number" />
-        </div>
-        <div>
-          <label>Renta anterior</label>
-          <input id="rentaAnterior" type="number" />
-        </div>
+      <div style="margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:42%;">Inmueble</th>
+              <th style="width:14%;">Renta</th>
+              <th style="width:18%;">Semáforo</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="4" style="color:var(--muted);">Cargando…</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      <button class="btn primary" style="width:100%;margin-top:12px" onclick="crearInmueble()">
-        Guardar inmueble
-      </button>
-
-      <div id="formMsg" class="msg"></div>
-    </section>
-
-    <!-- LISTA -->
-    <section class="card">
-      <h2>Mis inmuebles</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Dirección</th>
-            <th>Renta</th>
-            <th>Estado</th>
-            <th>Detalle</th>
-          </tr>
-        </thead>
-        <tbody id="rows">
-          <tr><td colspan="4">Cargando…</td></tr>
-        </tbody>
-      </table>
+      <div id="msg" class="msg"></div>
     </section>
   </div>
 </main>
 
 <script>
-const api = window.location.origin;
+  const apiUrl = window.location.origin;
 
-function logout(){
-  localStorage.removeItem("token");
-  location.href="/static/index.html";
-}
+  function token(){ return localStorage.getItem("token"); }
 
-function token(){
-  return localStorage.getItem("token");
-}
-
-async function request(path, options={}){
-  options.headers = options.headers || {};
-  options.headers.Authorization = `Bearer ${token()}`;
-  const res = await fetch(api+path, options);
-  const data = await res.json();
-  return {res,data};
-}
-
-async function cargarUsuario(){
-  const {data} = await request("/me");
-  document.getElementById("userChip").textContent = data.email;
-}
-
-async function cargarInmuebles(){
-  const {data} = await request("/inmuebles");
-  const rows = document.getElementById("rows");
-  if(!data.length){
-    rows.innerHTML="<tr><td colspan='4'>Sin inmuebles</td></tr>";
-    return;
+  function logout(){
+    localStorage.removeItem("token");
+    window.location.href = "/static/index.html";
   }
-  rows.innerHTML = data.map(i=>`
-    <tr>
-      <td class="addr">${i.direccion}</td>
-      <td>${i.renta_propuesta}€</td>
-      <td>${i.semaforo==="VERDE" ? "<span class='status ok'>VERDE</span>" : "<span class='status bad'>ROJO</span>"}</td>
-      <td>
-        <details>
-          <summary>Ver</summary>
-          ${(i.alertas||[]).map(a=>`<div class="alert">${a}</div>`).join("")}
-        </details>
-      </td>
-    </tr>
-  `).join("");
-}
 
-async function crearInmueble(){
-  const msg=document.getElementById("formMsg");
-  msg.textContent="";
-  const payload={
-    direccion:direccion.value,
-    municipio:municipio.value,
-    comunidad_autonoma:comunidad.value,
-    renta_propuesta:Number(renta.value),
-    renta_anterior:Number(rentaAnterior.value)||null,
-    tipo_arrendamiento:"vivienda_habitual",
-    tipo_arrendador:"persona_fisica"
-  };
-  const {res,data}=await request("/inmuebles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-  if(!res.ok){ msg.textContent=data.detail||"Error"; return;}
-  msg.style.color="green"; msg.textContent="Inmueble creado";
-  cargarInmuebles();
-}
+  async function parseResponse(res){
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) return await res.json();
+    const txt = await res.text();
+    return { detail: txt };
+  }
 
-(async()=>{
-  await cargarUsuario();
-  await cargarInmuebles();
-})();
+  async function api(path, options={}){
+    const t = token();
+    if (!t) throw new Error("NO_TOKEN");
+
+    const headers = options.headers ? {...options.headers} : {};
+    headers["Authorization"] = `Bearer ${t}`;
+    options.headers = headers;
+
+    const res = await fetch(`${apiUrl}${path}`, options);
+    const data = await parseResponse(res);
+    return { res, data };
+  }
+
+  async function cargarUsuario(){
+    try{
+      const {res, data} = await api("/me");
+      if (!res.ok) return logout();
+      document.getElementById("chipUser").textContent = data.email;
+    } catch {
+      logout();
+    }
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function badge(semaforo){
+    if (semaforo === "VERDE") return `<span class="status ok">🟢 VERDE</span>`;
+    if (semaforo === "ROJO") return `<span class="status bad">🔴 ROJO</span>`;
+    return `<span class="status">—</span>`;
+  }
+
+  function renderDetalle(item){
+    const a = item.alertas || [];
+    return `
+      <details>
+        <summary>Ver detalle</summary>
+        ${(a.length ? a : ["Sin alertas"]).map(x => `<div class="alert">${escapeHtml(x)}</div>`).join("")}
+      </details>
+    `;
+  }
+
+  async function cargarInmuebles(){
+    const rows = document.getElementById("rows");
+    const msg = document.getElementById("msg");
+    msg.textContent = "";
+
+    rows.innerHTML = `<tr><td colspan="4" style="color:var(--muted);">Cargando…</td></tr>`;
+
+    try{
+      const {res, data} = await api("/inmuebles");
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+
+      if (!Array.isArray(data) || data.length === 0){
+        rows.innerHTML = `<tr><td colspan="4" style="color:var(--muted);">Aún no tienes inmuebles. Crea uno desde “Crear Perfil Legal”.</td></tr>`;
+        return;
+      }
+
+      rows.innerHTML = data.map(item => `
+        <tr>
+          <td>
+            <div class="addr">${escapeHtml(item.direccion || "—")}</div>
+            <div style="color:var(--muted); font-size:13px;">${escapeHtml(item.municipio || "—")}, ${escapeHtml(item.comunidad_autonoma || "—")}</div>
+          </td>
+          <td>${item.renta_propuesta ?? "—"}€</td>
+          <td>${badge(item.semaforo)}</td>
+          <td>${renderDetalle(item)}</td>
+        </tr>
+      `).join("");
+
+    } catch(e){
+      if ((e.message || "").includes("NO_TOKEN")){
+        return logout();
+      }
+      msg.style.color = "crimson";
+      msg.textContent = "No se pudieron cargar los inmuebles.";
+      rows.innerHTML = `<tr><td colspan="4" style="color:var(--muted);">Error: ${escapeHtml(e.message || "—")}</td></tr>`;
+    }
+  }
+
+  (async () => {
+    await cargarUsuario();
+    await cargarInmuebles();
+  })();
 </script>
 </body>
 </html>
-
