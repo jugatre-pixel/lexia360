@@ -3,96 +3,460 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Panel Lexia360 ⚖️</title>
+  <title>Lexia360 • Panel</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
   <style>
-    :root{--bg:#f9f9f9;--sec:#fff;--text:#1f2b3f;--accent:#c6a664;--accent2:#b39150;--gray:#e3e3e3;}
-    body{background:var(--bg);color:var(--text);font-family:Inter,Poppins,sans-serif;margin:0}
-    header{background:var(--sec);box-shadow:0 2px 5px rgba(0,0,0,.05);padding:1.2rem 2rem;display:flex;justify-content:space-between;align-items:center}
-    header h2{margin:0;font-weight:800}
-    header button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;cursor:pointer}
-    header button:hover{background:var(--accent2)}
-    main{max-width:900px;margin:2rem auto;padding:2rem;background:var(--sec);border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,.05)}
-    .card{border:1px solid var(--gray);padding:1.5rem;border-radius:12px;margin-bottom:1.5rem}
-    .status{padding:10px;border-radius:8px;font-weight:700;display:inline-block}
-    .ok{background:#e8f5e9;color:#2e7d32}
-    .error{background:#ffebee;color:#c62828}
+    :root{
+      --bg:#F6F8FB;
+      --card:#FFFFFF;
+      --text:#0B1220;
+      --muted:#5B677A;
+      --border:#E6EAF2;
+      --primary:#1E4FD6;
+      --primaryHover:#1A43B7;
+      --accent:#C7A457;
+      --radius:16px;
+
+      --okBg:#E8F5E9;
+      --okText:#2E7D32;
+      --badBg:#FFEBEE;
+      --badText:#C62828;
+
+      --chipBg:#F1F4FA;
+    }
+
+    body{ background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; }
+    .wrap{ max-width:1180px; margin:0 auto; padding:0 18px; }
+
+    header{
+      position:sticky; top:0;
+      background:rgba(246,248,251,.85);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+      z-index:10;
+    }
+    .nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px; }
+    .brand-badge{
+      width:34px; height:34px; border-radius:10px;
+      background:linear-gradient(135deg,var(--primary),#6D8BFF);
+      display:inline-flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:800;
+    }
+    .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .chip{
+      background:var(--chipBg);
+      border:1px solid var(--border);
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 12px; border-radius:12px;
+      font-weight:800; text-decoration:none;
+      border:1px solid var(--border);
+      background:#fff; color:var(--text);
+      cursor:pointer;
+    }
+    .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
+    .btn.primary:hover{ background:var(--primaryHover); border-color:var(--primaryHover); }
+    .btn.ghost{ background:transparent; }
+    .btn.danger{ border-color:rgba(198,40,40,.35); color:var(--badText); background:#fff; }
+
+    main{ padding:22px 0 38px; }
+    h1{ font-size:26px; margin:0; }
+    .sub{ color:var(--muted); margin:6px 0 0; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:14px;
+      margin-top:16px;
+      align-items:start;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow: 0 10px 24px rgba(11,18,32,.05);
+    }
+    .card h2{ font-size:16px; margin:0 0 10px; }
+    .muted{ color:var(--muted); font-size:13px; }
+
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    input, select{
+      background:#fff !important;
+      border:1px solid var(--border) !important;
+      border-radius:12px !important;
+    }
+    label{ font-weight:700; font-size:13px; color:var(--muted); }
+
+    .status{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+      border:1px solid var(--border);
+      width: fit-content;
+    }
+    .status.ok{ background:var(--okBg); color:var(--okText); border-color:rgba(46,125,50,.25); }
+    .status.bad{ background:var(--badBg); color:var(--badText); border-color:rgba(198,40,40,.25); }
+
+    .table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border-radius:14px;
+      border:1px solid var(--border);
+    }
+    .table th, .table td{
+      padding:12px 12px;
+      border-bottom:1px solid var(--border);
+      font-size:13px;
+      vertical-align:top;
+      background:#fff;
+    }
+    .table th{ color:var(--muted); font-weight:800; background:#FBFCFF; }
+    .table tr:last-child td{ border-bottom:none; }
+    .addr{ font-weight:800; }
+    details{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px 12px;
+      margin-top:10px;
+    }
+    summary{ cursor:pointer; font-weight:800; color:var(--text); }
+    .alert{
+      border-left:3px solid var(--border);
+      padding-left:10px;
+      margin:8px 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .msg{ margin-top:10px; font-weight:800; font-size:13px; }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h2>⚖️ Lexia360</h2>
-    <button onclick="logout()">Cerrar sesión</button>
+    <div class="wrap nav">
+      <div class="brand">
+        <span class="brand-badge">⚖</span>
+        <span>Lexia360</span>
+      </div>
+      <div class="right">
+        <span class="chip" id="chipUser">Cargando sesión…</span>
+        <a class="btn ghost" href="/static/index.html">Inicio</a>
+        <button class="btn danger" onclick="logout()">Cerrar sesión</button>
+      </div>
+    </div>
   </header>
 
-  <main>
-    <h3>Bienvenido/a, <span id="userName">...</span> 👋</h3>
-
-    <div class="card">
-      <h4>📊 Estado del sistema</h4>
-      <p id="statusMessage">Cargando…</p>
+  <main class="wrap">
+    <div>
+      <h1>Panel</h1>
+      <p class="sub">Alta de inmuebles, semáforo legal y alertas (MVP). Estilo claro y auditable.</p>
     </div>
 
-    <div class="card">
-      <h4>🔐 Sesión</h4>
-      <p id="sessionInfo">Cargando…</p>
+    <div class="grid">
+      <!-- FORM -->
+      <section class="card">
+        <h2>Nuevo inmueble</h2>
+        <p class="muted">Introduce los datos mínimos. Al guardar, ejecutamos reglas 1–4 y generamos alertas.</p>
+
+        <div style="margin-top:12px;">
+          <label>Dirección</label>
+          <input id="direccion" type="text" placeholder="Calle, número, piso…" />
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Municipio</label>
+            <input id="municipio" type="text" placeholder="Madrid, Barcelona…" />
+          </div>
+          <div>
+            <label>Comunidad Autónoma</label>
+            <input id="comunidad" type="text" placeholder="Comunidad de Madrid…" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Código Postal (opcional)</label>
+            <input id="cp" type="text" placeholder="28001" />
+          </div>
+          <div>
+            <label>Superficie m² (opcional)</label>
+            <input id="m2" type="number" min="0" placeholder="80" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Tipo arrendador</label>
+            <select id="tipoArrendador">
+              <option value="persona_fisica">Persona física</option>
+              <option value="persona_juridica">Persona jurídica</option>
+            </select>
+          </div>
+          <div>
+            <label>Tipo arrendamiento</label>
+            <select id="tipoArrendamiento">
+              <option value="vivienda_habitual">Vivienda habitual</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Renta propuesta (€)</label>
+            <input id="renta" type="number" min="0" step="0.01" placeholder="1200" />
+          </div>
+          <div>
+            <label>Renta anterior (opcional)</label>
+            <input id="rentaAnterior" type="number" min="0" step="0.01" placeholder="1100" />
+          </div>
+        </div>
+
+        <button class="btn primary" style="width:100%; margin-top:14px;" onclick="crearInmueble()">
+          Guardar y ejecutar reglas
+        </button>
+
+        <div id="formMsg" class="msg"></div>
+      </section>
+
+      <!-- LIST -->
+      <section class="card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0;">Mis inmuebles</h2>
+            <p class="muted" style="margin:6px 0 0;">Semáforo y alertas por inmueble (última ejecución).</p>
+          </div>
+          <button class="btn" onclick="cargarInmuebles()">Actualizar</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:42%;">Inmueble</th>
+                <th style="width:14%;">Renta</th>
+                <th style="width:18%;">Semáforo</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr><td colspan="4" class="muted">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
     </div>
   </main>
 
   <script>
     const apiUrl = window.location.origin;
 
+    function token() {
+      return localStorage.getItem("token");
+    }
+
     function logout() {
       localStorage.removeItem("token");
       window.location.href = "/static/index.html";
     }
 
-    async function loadDashboard() {
-      const token = localStorage.getItem("token");
-      const statusEl = document.getElementById("statusMessage");
-      const sessionEl = document.getElementById("sessionInfo");
+    async function api(path, options = {}) {
+      const t = token();
+      if (!t) throw new Error("NO_TOKEN");
+      const headers = options.headers || {};
+      headers["Authorization"] = `Bearer ${t}`;
+      options.headers = headers;
+      const res = await fetch(`${apiUrl}${path}`, options);
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    }
 
-      if (!token) {
-        statusEl.innerHTML = `<span class="status error">🔒 No autenticado</span>`;
-        setTimeout(() => window.location.href = "/static/index.html", 800);
-        return;
-      }
-
-      // status público
+    async function cargarSesion() {
       try {
-        const sRes = await fetch(`${apiUrl}/status`);
-        const sData = await sRes.json();
-        if (sRes.ok) {
-          statusEl.innerHTML = `<span class="status ok">🟢 Servidor activo</span><br>${sData.mensaje}<br>Usuarios: ${sData.usuarios_registrados}`;
-        } else {
-          statusEl.innerHTML = `<span class="status error">🔴 Error</span><br>${sData.detail || ""}`;
-        }
-      } catch {
-        statusEl.innerHTML = `<span class="status error">⚠️ Sin conexión</span>`;
-      }
-
-      // sesión protegida
-      try {
-        const res = await fetch(`${apiUrl}/me`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          sessionEl.innerHTML = `<span class="status error">🔴 Sesión inválida</span><br>${data.detail || ""}`;
-          localStorage.removeItem("token");
-          setTimeout(() => window.location.href = "/static/index.html", 800);
-          return;
-        }
-
-        document.getElementById("userName").textContent = data.email;
-        sessionEl.innerHTML = `<span class="status ok">✅ Autenticado</span><br>Email: <b>${data.email}</b><br>Rol: ${data.rol}`;
-      } catch {
-        sessionEl.innerHTML = `<span class="status error">⚠️ No se pudo validar la sesión</span>`;
+        const { res, data } = await api("/me");
+        if (!res.ok) throw new Error(data.detail || "TOKEN_INVALID");
+        document.getElementById("chipUser").textContent = data.email;
+      } catch (e) {
+        document.getElementById("chipUser").textContent = "Sesión inválida";
+        setTimeout(() => logout(), 700);
       }
     }
 
-    loadDashboard();
+    function badgeSemaforo(semaforo) {
+      if (semaforo === "ROJO") return `<span class="status bad">🔴 ROJO</span>`;
+      if (semaforo === "VERDE") return `<span class="status ok">🟢 VERDE</span>`;
+      return `<span class="status">—</span>`;
+    }
+
+    function renderDetalle(item) {
+      const r = item.resultados || {};
+      const a = item.alertas || [];
+
+      const rows = [];
+      rows.push(`<div class="muted"><b>Duración mínima:</b> ${r.duracion_minima_anios ?? "—"} años</div>`);
+      rows.push(`<div class="muted"><b>Zona tensionada:</b> ${r.zona_tensionada === true ? "Sí" : (r.zona_tensionada === false ? "No" : "—")}</div>`);
+      rows.push(`<div class="muted"><b>Renta máxima (MVP):</b> ${r.renta_maxima_mvp ?? "—"}</div>`);
+      rows.push(`<div class="muted"><b>Fianza mínima:</b> ${r.fianza_minima ?? "—"}€</div>`);
+
+      const alertsHtml = a.length
+        ? a.map(x => `<div class="alert">${escapeHtml(x)}</div>`).join("")
+        : `<div class="muted">Sin alertas.</div>`;
+
+      return `
+        <details>
+          <summary>Ver detalle</summary>
+          <div style="margin-top:10px;">
+            ${rows.join("")}
+          </div>
+          <div style="margin-top:10px;">
+            <div style="font-weight:800; margin-bottom:6px;">Alertas</div>
+            ${alertsHtml}
+          </div>
+        </details>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    async function cargarInmuebles() {
+      const tbody = document.getElementById("rows");
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">Cargando…</td></tr>`;
+
+      try {
+        const { res, data } = await api("/inmuebles");
+        if (!res.ok) throw new Error(data.detail || "Error cargando inmuebles");
+
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="muted">Aún no tienes inmuebles. Crea el primero.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.map(item => `
+          <tr>
+            <td>
+              <div class="addr">${escapeHtml(item.direccion || "—")}</div>
+              <div class="muted">${escapeHtml(item.municipio || "—")}, ${escapeHtml(item.comunidad_autonoma || "—")}</div>
+            </td>
+            <td>${item.renta_propuesta ?? "—"}€</td>
+            <td>${badgeSemaforo(item.semaforo)}</td>
+            <td>${renderDetalle(item)}</td>
+          </tr>
+        `).join("");
+
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="muted">Error: ${escapeHtml(e.message || "No se pudo cargar")}</td></tr>`;
+        if ((e.message || "").includes("Token inválido") || (e.message || "").includes("NO_TOKEN")) {
+          setTimeout(() => logout(), 800);
+        }
+      }
+    }
+
+    async function crearInmueble() {
+      const msg = document.getElementById("formMsg");
+      msg.style.color = "crimson";
+      msg.textContent = "";
+
+      const direccion = document.getElementById("direccion").value.trim();
+      const municipio = document.getElementById("municipio").value.trim();
+      const comunidad_autonoma = document.getElementById("comunidad").value.trim();
+      const codigo_postal = document.getElementById("cp").value.trim() || null;
+
+      const m2Raw = document.getElementById("m2").value;
+      const superficie_m2 = m2Raw ? parseInt(m2Raw, 10) : null;
+
+      const tipo_arrendador = document.getElementById("tipoArrendador").value;
+      const tipo_arrendamiento = document.getElementById("tipoArrendamiento").value;
+
+      const rentaRaw = document.getElementById("renta").value;
+      const renta_propuesta = rentaRaw ? parseFloat(rentaRaw) : NaN;
+
+      const rentaAntRaw = document.getElementById("rentaAnterior").value;
+      const renta_anterior = rentaAntRaw ? parseFloat(rentaAntRaw) : null;
+
+      if (!direccion || !municipio || !comunidad_autonoma || !Number.isFinite(renta_propuesta)) {
+        msg.textContent = "Completa dirección, municipio, comunidad y renta propuesta.";
+        return;
+      }
+
+      const payload = {
+        direccion,
+        municipio,
+        comunidad_autonoma,
+        codigo_postal,
+        superficie_m2,
+        tipo_arrendamiento,
+        tipo_arrendador,
+        renta_propuesta,
+        renta_anterior
+      };
+
+      try {
+        const { res, data } = await api("/inmuebles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          msg.textContent = data.detail || "Error al crear inmueble.";
+          return;
+        }
+
+        msg.style.color = "green";
+        msg.textContent = "✅ Inmueble creado. Reglas ejecutadas.";
+        // limpia lo básico
+        document.getElementById("direccion").value = "";
+        document.getElementById("municipio").value = "";
+        document.getElementById("comunidad").value = "";
+        document.getElementById("cp").value = "";
+        document.getElementById("m2").value = "";
+        document.getElementById("renta").value = "";
+        document.getElementById("rentaAnterior").value = "";
+
+        await cargarInmuebles();
+
+      } catch (e) {
+        msg.textContent = "No se pudo conectar con el servidor.";
+      }
+    }
+
+    // init
+    (async () => {
+      await cargarSesion();
+      await cargarInmuebles();
+    })();
   </script>
 </body>
 </html>
+
