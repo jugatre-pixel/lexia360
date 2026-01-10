@@ -22,47 +22,52 @@
       --accent:#C7A457;
       --radius:16px;
     }
-    body{ background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    body{ background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; }
     .wrap{ max-width:1100px; margin:0 auto; padding:0 18px; }
-    header{ position:sticky; top:0; background:rgba(246,248,251,.85); backdrop-filter: blur(10px); border-bottom:1px solid var(--border); z-index:10; }
+
+    header{ position:static; background:#fff; border-bottom:1px solid var(--border); }
     .nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
-    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px; }
-    .brand-badge{ width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),#6D8BFF); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:800; }
-    nav a{ color:var(--muted); text-decoration:none; font-weight:600; margin-left:16px; }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.2px; }
+    .brand-badge{ width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),#6D8BFF); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }
+
+    nav a{ color:var(--muted); text-decoration:none; font-weight:700; margin-left:16px; }
     nav a:hover{ color:var(--text); }
-    .btn{ display:inline-flex; align-items:center; justify-content:center; padding:12px 14px; border-radius:12px; font-weight:700; text-decoration:none; border:1px solid var(--border); background:#fff; color:var(--text); }
+
+    .btn{ display:inline-flex; align-items:center; justify-content:center; padding:12px 14px; border-radius:12px; font-weight:900; text-decoration:none; border:1px solid var(--border); background:#fff; color:var(--text); cursor:pointer; }
     .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
     .btn.primary:hover{ background:var(--primaryHover); border-color:var(--primaryHover); }
-    .hero{ padding:54px 0 24px; }
-    .hero-grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:18px; align-items:stretch; }
-    .hero-card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:26px; box-shadow: 0 10px 24px rgba(11,18,32,.06); }
-    h1{ font-size:40px; margin:0 0 10px; line-height:1.1; }
-    .sub{ color:var(--muted); font-size:16px; margin-bottom:18px; }
-    .trust{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
-    .pill{ border:1px solid var(--border); background:#fff; color:var(--muted); padding:8px 10px; border-radius:999px; font-weight:600; font-size:13px; }
-    .steps{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-top:14px; }
+
+    main{ padding:26px 0 38px; }
+
+    .hero{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; align-items:stretch; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:0 10px 24px rgba(11,18,32,.06); }
+
+    h1{ font-size:40px; margin:0 0 10px; line-height:1.08; }
+    .sub{ color:var(--muted); margin:0 0 14px; font-size:16px; }
+    .trust{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .pill{ border:1px solid var(--border); background:#fff; color:var(--muted); padding:8px 10px; border-radius:999px; font-weight:800; font-size:13px; }
+
+    .steps{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:14px; }
     .step{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px; }
     .step strong{ display:block; margin-bottom:4px; }
-    .grid3{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin:22px 0; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
-    .card h3{ margin:0 0 6px; font-size:16px; }
-    .card p{ margin:0; color:var(--muted); font-size:14px; }
-    .pricing{ display:grid; grid-template-columns: repeat(2,1fr); gap:12px; margin:10px 0 34px; }
-    .price{ background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
-    .tag{ display:inline-flex; gap:8px; align-items:center; font-weight:700; color:var(--text); }
-    .tag .dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); }
-    .price .amount{ font-size:28px; font-weight:800; margin:10px 0; }
-    .price ul{ margin:0; padding-left:18px; color:var(--muted); }
-    footer{ border-top:1px solid var(--border); padding:22px 0 28px; color:var(--muted); font-size:13px; }
-    .auth{ margin-top:14px; }
-    .auth .row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-    .message{ margin-top:10px; font-weight:600; }
+
+    .grid3{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin:18px 0 0; }
+    .mini{ background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+    .mini h3{ margin:0 0 6px; font-size:16px; }
+    .mini p{ margin:0; color:var(--muted); font-size:14px; }
+
+    .auth .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    input{ background:#fff !important; border:1px solid var(--border) !important; border-radius:12px !important; }
+    .message{ margin-top:10px; font-weight:900; font-size:13px; }
+
+    footer{ border-top:1px solid var(--border); padding:22px 0 28px; color:var(--muted); font-size:13px; margin-top:22px; }
+    footer a{ color:inherit; text-decoration:none; font-weight:800; margin-left:12px; }
+
     @media (max-width: 900px){
-      .hero-grid{ grid-template-columns:1fr; }
+      .hero{ grid-template-columns:1fr; }
       h1{ font-size:34px; }
-      .grid3{ grid-template-columns:1fr; }
-      .pricing{ grid-template-columns:1fr; }
       .steps{ grid-template-columns:1fr; }
+      .grid3{ grid-template-columns:1fr; }
       .auth .row{ grid-template-columns:1fr; }
     }
   </style>
@@ -76,7 +81,6 @@
       </div>
       <nav>
         <a href="#como">Cómo funciona</a>
-        <a href="#planes">Planes</a>
         <a href="#acceso">Acceso</a>
         <a class="btn primary" href="#acceso">Empezar</a>
       </nav>
@@ -85,124 +89,92 @@
 
   <main class="wrap">
     <section class="hero">
-      <div class="hero-grid">
-        <div class="hero-card">
-          <h1>Legal inmobiliario en minutos. <br/>Claro, guiado y auditable.</h1>
-          <p class="sub">
-            Crea inmuebles, ejecuta reglas legales y genera un perfil de cumplimiento para vivienda habitual.
-            Diseñado para España, con enfoque europeo (trazabilidad, transparencia y privacidad).
-          </p>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <a class="btn primary" href="#acceso">Crear cuenta</a>
-            <a class="btn" href="#como">Ver cómo funciona</a>
-          </div>
+      <div class="card">
+        <h1>Legal inmobiliario en minutos.<br/>Claro, guiado y auditable.</h1>
+        <p class="sub">
+          Crea un <b>Perfil Legal del Inmueble</b> con semáforo, parámetros clave y alertas.
+          Diseñado para España con enfoque europeo: trazabilidad, claridad y privacidad.
+        </p>
 
-          <div class="trust">
-            <span class="pill">GDPR-ready</span>
-            <span class="pill">Trazabilidad</span>
-            <span class="pill">Semáforo legal</span>
-            <span class="pill">Documentos versionados (próx.)</span>
-          </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="btn primary" href="#acceso">Crear cuenta</a>
+          <a class="btn" href="#como">Ver cómo funciona</a>
+        </div>
 
-          <div id="como" class="steps">
-            <div class="step">
-              <strong>1) Alta del inmueble</strong>
-              <span style="color:var(--muted); font-size:13px;">Dirección, municipio y datos clave.</span>
-            </div>
-            <div class="step">
-              <strong>2) Motor legal</strong>
-              <span style="color:var(--muted); font-size:13px;">Reglas 1–4, alertas y semáforo.</span>
-            </div>
-            <div class="step">
-              <strong>3) Decisión y control</strong>
-              <span style="color:var(--muted); font-size:13px;">Perfil legal claro y accionable.</span>
-            </div>
+        <div class="trust">
+          <span class="pill">Trazabilidad</span>
+          <span class="pill">Semáforo legal</span>
+          <span class="pill">Histórico de análisis</span>
+          <span class="pill">Listo para IA (próx.)</span>
+        </div>
+
+        <div id="como" class="steps">
+          <div class="step">
+            <strong>1) Identifica el inmueble</strong>
+            <span style="color:var(--muted); font-size:13px;">Dirección, municipio y datos clave.</span>
+          </div>
+          <div class="step">
+            <strong>2) Ejecuta reglas</strong>
+            <span style="color:var(--muted); font-size:13px;">Motor normativo + alertas.</span>
+          </div>
+          <div class="step">
+            <strong>3) Decide con claridad</strong>
+            <span style="color:var(--muted); font-size:13px;">Semáforo y acciones recomendadas (próx.).</span>
           </div>
         </div>
 
-        <div class="hero-card" id="acceso">
-          <h2 style="margin:0 0 8px;">Acceso</h2>
-          <p class="sub" style="margin-top:0;">Crea cuenta o inicia sesión.</p>
-
-          <div class="auth">
-            <h3 style="font-size:15px; margin:10px 0;">Registro</h3>
-            <div class="row">
-              <input id="regNombre" type="text" placeholder="Nombre completo" />
-              <input id="regEmail" type="email" placeholder="Correo" />
-            </div>
-            <input id="regPassword" type="password" placeholder="Contraseña (mín 8)" />
-            <button class="btn primary" style="width:100%;" onclick="register()">Crear cuenta</button>
-            <div id="registerMessage" class="message"></div>
-
-            <hr style="border-color:var(--border); margin:18px 0;"/>
-
-            <h3 style="font-size:15px; margin:10px 0;">Iniciar sesión</h3>
-            <input id="loginEmail" type="email" placeholder="Correo" />
-            <input id="loginPassword" type="password" placeholder="Contraseña" />
-            <button class="btn" style="width:100%;" onclick="login()">Entrar</button>
-            <div id="loginMessage" class="message"></div>
+        <div class="grid3">
+          <div class="mini">
+            <h3>Enfocado</h3>
+            <p>Vivienda habitual (fase 1). Crece por módulos sin caos.</p>
           </div>
+          <div class="mini">
+            <h3>Profesional</h3>
+            <p>Resultados estructurados, explicables y auditables.</p>
+          </div>
+          <div class="mini">
+            <h3>Escalable</h3>
+            <p>Preparado para informes PDF, pagos y asistente IA.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="acceso">
+        <h2 style="margin:0 0 6px;">Acceso</h2>
+        <p class="sub" style="margin:0 0 14px;">Crea cuenta o inicia sesión para acceder al panel.</p>
+
+        <div class="auth">
+          <h3 style="font-size:15px; margin:0 0 8px;">Registro</h3>
+          <div class="row">
+            <input id="regNombre" type="text" placeholder="Nombre completo" />
+            <input id="regEmail" type="email" placeholder="Correo" />
+          </div>
+          <input id="regPassword" type="password" placeholder="Contraseña (mín 8)" />
+          <button class="btn primary" style="width:100%;" onclick="register()">Crear cuenta</button>
+          <div id="registerMessage" class="message"></div>
+
+          <hr style="border-color:var(--border); margin:16px 0;"/>
+
+          <h3 style="font-size:15px; margin:0 0 8px;">Iniciar sesión</h3>
+          <input id="loginEmail" type="email" placeholder="Correo" />
+          <input id="loginPassword" type="password" placeholder="Contraseña" />
+          <button class="btn" style="width:100%;" onclick="login()">Entrar</button>
+          <div id="loginMessage" class="message"></div>
 
           <p style="color:var(--muted); font-size:12px; margin-top:12px;">
-            Al continuar aceptas Términos, Privacidad y uso de cookies esenciales.
+            Cookies esenciales para sesión. Documentación legal se añadirá antes del lanzamiento público.
           </p>
-        </div>
-      </div>
-
-      <div class="grid3">
-        <div class="card">
-          <h3>Confianza</h3>
-          <p>Experiencia jurídica, outputs claros, trazabilidad para decisiones y auditorías.</p>
-        </div>
-        <div class="card">
-          <h3>Rapidez</h3>
-          <p>Menos fricción: formulario mínimo, motor de reglas, alertas y semáforo.</p>
-        </div>
-        <div class="card">
-          <h3>Escalable</h3>
-          <p>Arquitectura por módulos: reglas, documentos, pagos, integraciones.</p>
-        </div>
-      </div>
-
-      <h2 id="planes" style="margin:10px 0;">Planes</h2>
-      <p class="sub">Estructura simple al estilo LegalZoom: claro, sin sorpresas.</p>
-
-      <div class="pricing">
-        <div class="price">
-          <div class="tag"><span class="dot"></span> Básico</div>
-          <div class="amount">€19<span style="font-size:14px; color:var(--muted);"> / mes</span></div>
-          <ul>
-            <li>Alta y control de inmuebles</li>
-            <li>Reglas 1–4 + semáforo legal</li>
-            <li>Alertas (MVP)</li>
-          </ul>
-          <div style="margin-top:14px;">
-            <a class="btn primary" href="#acceso">Empezar</a>
-          </div>
-        </div>
-
-        <div class="price" style="border-color:rgba(199,164,87,.45);">
-          <div class="tag"><span class="dot"></span> Pro</div>
-          <div class="amount">€49<span style="font-size:14px; color:var(--muted);"> / mes</span></div>
-          <ul>
-            <li>Todo lo del Básico</li>
-            <li>Documentos y anexos (próx.)</li>
-            <li>Historial legal versionado (próx.)</li>
-          </ul>
-          <div style="margin-top:14px;">
-            <a class="btn primary" href="#acceso">Elegir Pro</a>
-          </div>
         </div>
       </div>
     </section>
 
     <footer>
-      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between;">
-        <span>© 2026 Lexia360 • Europa</span>
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <span>© 2026 Lexia360</span>
         <span>
-          <a href="#" style="color:inherit; text-decoration:none; margin-right:10px;">Privacidad</a>
-          <a href="#" style="color:inherit; text-decoration:none; margin-right:10px;">Términos</a>
-          <a href="#" style="color:inherit; text-decoration:none;">Cookies</a>
+          <a href="#">Privacidad</a>
+          <a href="#">Términos</a>
+          <a href="#">Cookies</a>
         </span>
       </div>
     </footer>
@@ -211,35 +183,41 @@
   <script>
     const apiUrl = window.location.origin;
 
+    function setMsg(id, text, ok=false){
+      const el = document.getElementById(id);
+      el.style.color = ok ? "green" : "crimson";
+      el.textContent = text || "";
+    }
+
+    async function parseResponse(res){
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      if (ct.includes("application/json")) return await res.json();
+      const txt = await res.text();
+      return { detail: txt };
+    }
+
     async function register() {
       const nombre = document.getElementById("regNombre").value.trim();
       const email = document.getElementById("regEmail").value.trim();
       const password = document.getElementById("regPassword").value;
 
-      const msg = document.getElementById("registerMessage");
-      msg.style.color = "crimson";
-      msg.textContent = "";
+      setMsg("registerMessage","");
 
-      if (!nombre || !email || !password) {
-        msg.textContent = "Completa todos los campos.";
-        return;
-      }
-
+      if (!nombre || !email || !password) return setMsg("registerMessage","Completa todos los campos.");
       try {
         const res = await fetch(`${apiUrl}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nombre, email, password })
         });
-        const data = await res.json();
+        const data = await parseResponse(res);
         if (res.ok) {
-          msg.style.color = "green";
-          msg.textContent = data.mensaje || "Registro completado.";
+          setMsg("registerMessage", data.mensaje || "✅ Registro completado. Inicia sesión.", true);
         } else {
-          msg.textContent = data.detail || "Error al registrar.";
+          setMsg("registerMessage", data.detail || "Error al registrar.");
         }
       } catch {
-        msg.textContent = "No se pudo conectar con el servidor.";
+        setMsg("registerMessage","No se pudo conectar con el servidor.");
       }
     }
 
@@ -247,9 +225,7 @@
       const email = document.getElementById("loginEmail").value.trim();
       const password = document.getElementById("loginPassword").value;
 
-      const msg = document.getElementById("loginMessage");
-      msg.style.color = "crimson";
-      msg.textContent = "";
+      setMsg("loginMessage","");
 
       const formData = new URLSearchParams();
       formData.append("username", email);
@@ -261,18 +237,18 @@
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: formData
         });
-        const data = await res.json();
+        const data = await parseResponse(res);
+
         if (res.ok && data.access_token) {
           localStorage.setItem("token", data.access_token);
           window.location.href = "/static/dashboard.html";
         } else {
-          msg.textContent = data.detail || "Credenciales incorrectas.";
+          setMsg("loginMessage", data.detail || "Credenciales incorrectas.");
         }
       } catch {
-        msg.textContent = "No se pudo conectar con el servidor.";
+        setMsg("loginMessage","No se pudo conectar con el servidor.");
       }
     }
   </script>
 </body>
 </html>
-
