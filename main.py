@@ -1,7 +1,7 @@
 import os
+import json
 import traceback
 from datetime import datetime, timedelta, timezone
-import json
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,20 +13,39 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import SQLModel, Field, Session, select, create_engine
 
 
-APP_VERSION = "lexia360-v4-inmuebles"
+# ============================================================
+# CONFIG
+# ============================================================
+APP_VERSION = "lexia360-v5-detached-fix"
 
-# ------------------------------------------------------------
-# 🌐 APP
-# ------------------------------------------------------------
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("❌ Falta DATABASE_URL")
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("❌ Falta SECRET_KEY")
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+
+# DB engine
+engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+
+# Password hashing (NO bcrypt)
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
+# OAuth2
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+# ============================================================
+# APP
+# ============================================================
 app = FastAPI(title="Lexia360")
-
-@app.middleware("http")
-async def catch_exceptions(request: Request, call_next):
-    try:
-        return await call_next(request)
-    except Exception:
-        traceback.print_exc()
-        raise
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,37 +55,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Log server-side errors to Render logs
+@app.middleware("http")
+async def catch_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        traceback.print_exc()
+        raise
+
+# Static
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
-# ------------------------------------------------------------
-# 🧱 DB
-# ------------------------------------------------------------
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("❌ Falta DATABASE_URL")
 
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
-
-engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
-
-# ------------------------------------------------------------
-# 🔐 JWT + PASSWORD (PBKDF2)
-# ------------------------------------------------------------
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("❌ Falta SECRET_KEY")
-
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-# ------------------------------------------------------------
-# 📦 DB MODELS
-# ------------------------------------------------------------
+# ============================================================
+# DB MODELS
+# ============================================================
 class Usuario(SQLModel, table=True):
     id_usuario: int | None = Field(default=None, primary_key=True)
     nombre: str
@@ -101,17 +106,18 @@ class RuleRun(SQLModel, table=True):
     version: str = APP_VERSION
     creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    resultados_json: str  # JSON string
-    alertas_json: str     # JSON string
+    resultados_json: str
+    alertas_json: str
 
 
-# ------------------------------------------------------------
-# 📦 SCHEMAS
-# ------------------------------------------------------------
+# ============================================================
+# SCHEMAS
+# ============================================================
 class RegisterPayload(BaseModel):
     nombre: str
     email: EmailStr
     password: str
+
 
 class InmuebleCreate(BaseModel):
     direccion: str
@@ -125,17 +131,18 @@ class InmuebleCreate(BaseModel):
     renta_anterior: float | None = None
 
 
-# ------------------------------------------------------------
-# ⚙️ STARTUP
-# ------------------------------------------------------------
+# ============================================================
+# STARTUP
+# ============================================================
 @app.on_event("startup")
 def on_startup():
     SQLModel.metadata.create_all(engine)
     print("✅ STARTUP OK ->", APP_VERSION)
 
-# ------------------------------------------------------------
-# 🔧 HELPERS
-# ------------------------------------------------------------
+
+# ============================================================
+# HELPERS (AUTH)
+# ============================================================
 def validate_password(password: str):
     if len(password) < 8:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
@@ -160,28 +167,29 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
-    with Session(engine) as session:
+    # ✅ expire_on_commit=False evita objetos "detached" tras commits
+    with Session(engine, expire_on_commit=False) as session:
         user = session.exec(select(Usuario).where(Usuario.email == email)).first()
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no existe")
         return user
 
 
-# ------------------------------------------------------------
-# 🧠 MOTOR DE REGLAS (MVP)
-# ------------------------------------------------------------
+# ============================================================
+# RULE ENGINE (MVP)
+# ============================================================
 ZONAS_TENSIONADAS_MVP = {"Madrid", "Barcelona", "Valencia"}  # placeholder
 
 def evaluar_reglas(inmueble: Inmueble) -> tuple[dict, list[str]]:
     resultados: dict = {}
     alertas: list[str] = []
 
-    # Regla 1: duración mínima (simplificada)
+    # 1) Duración mínima (simplificada)
     duracion = 5 if inmueble.tipo_arrendador == "persona_fisica" else 7
     resultados["duracion_minima_anios"] = duracion
     alertas.append(f"Duración mínima aplicable: {duracion} años.")
 
-    # Regla 2: zona tensionada (MVP por municipio)
+    # 2) Zona tensionada (MVP por municipio)
     zona_tensionada = inmueble.municipio.strip() in ZONAS_TENSIONADAS_MVP
     resultados["zona_tensionada"] = zona_tensionada
     if zona_tensionada:
@@ -189,7 +197,7 @@ def evaluar_reglas(inmueble: Inmueble) -> tuple[dict, list[str]]:
     else:
         alertas.append("El inmueble NO está en zona tensionada (MVP).")
 
-    # Regla 3: renta (MVP)
+    # 3) Renta (MVP)
     if zona_tensionada:
         renta_max = inmueble.renta_anterior if inmueble.renta_anterior is not None else inmueble.renta_propuesta
         resultados["renta_maxima_mvp"] = renta_max
@@ -201,12 +209,11 @@ def evaluar_reglas(inmueble: Inmueble) -> tuple[dict, list[str]]:
         resultados["renta_maxima_mvp"] = None
         alertas.append("Renta inicial libre (régimen general, MVP).")
 
-    # Regla 4: fianza (vivienda habitual = 1 mes)
-    fianza = inmueble.renta_propuesta
-    resultados["fianza_minima"] = fianza
-    alertas.append(f"Fianza mínima: {fianza}€ (1 mensualidad).")
+    # 4) Fianza (vivienda habitual = 1 mes)
+    resultados["fianza_minima"] = inmueble.renta_propuesta
+    alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
-    # Semáforo legal simple
+    # Semáforo simple
     if zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]:
         resultados["semaforo"] = "ROJO"
     else:
@@ -215,9 +222,9 @@ def evaluar_reglas(inmueble: Inmueble) -> tuple[dict, list[str]]:
     return resultados, alertas
 
 
-# ------------------------------------------------------------
-# 🚀 ROUTES
-# ------------------------------------------------------------
+# ============================================================
+# ROUTES (PUBLIC)
+# ============================================================
 @app.get("/version")
 def version():
     return {"version": APP_VERSION}
@@ -232,14 +239,19 @@ def head_root():
 
 @app.get("/status")
 def status():
-    with Session(engine) as session:
-        users = session.exec(select(Usuario)).all()
-        return {"status": "✅ OK", "usuarios_registrados": len(users), "version": APP_VERSION}
+    with Session(engine, expire_on_commit=False) as session:
+        users_count = len(session.exec(select(Usuario)).all())
+        return {"status": "✅ OK", "usuarios_registrados": users_count, "version": APP_VERSION}
 
+
+# ============================================================
+# ROUTES (AUTH)
+# ============================================================
 @app.post("/register")
 def register(payload: RegisterPayload):
     validate_password(payload.password)
-    with Session(engine) as session:
+
+    with Session(engine, expire_on_commit=False) as session:
         existing = session.exec(select(Usuario).where(Usuario.email == payload.email)).first()
         if existing:
             raise HTTPException(status_code=400, detail="El usuario ya existe")
@@ -251,14 +263,16 @@ def register(payload: RegisterPayload):
         )
         session.add(user)
         session.commit()
+
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         user = session.exec(select(Usuario).where(Usuario.email == form.username)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
@@ -266,10 +280,14 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
 def me(user: Usuario = Depends(get_current_user)):
     return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
 
-# ---- Inmuebles (protegido) ----
+
+# ============================================================
+# ROUTES (INMUEBLES) - PROTECTED
+# ============================================================
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
-    with Session(engine) as session:
+    # ✅ expire_on_commit=False + response dentro => NO detached error
+    with Session(engine, expire_on_commit=False) as session:
         inm = Inmueble(
             id_usuario=user.id_usuario,
             direccion=payload.direccion,
@@ -296,30 +314,35 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
         session.add(run)
         session.commit()
 
-    return {
-        "mensaje": "✅ Inmueble creado y reglas ejecutadas",
-        "inmueble": {
-            "id_inmueble": inm.id_inmueble,
-            "direccion": inm.direccion,
-            "municipio": inm.municipio,
-            "comunidad_autonoma": inm.comunidad_autonoma,
-            "renta_propuesta": inm.renta_propuesta,
-        },
-        "resultados": resultados,
-        "alertas": alertas,
-        "version": APP_VERSION,
-    }
+        out = {
+            "mensaje": "✅ Inmueble creado y reglas ejecutadas",
+            "inmueble": {
+                "id_inmueble": inm.id_inmueble,
+                "direccion": inm.direccion,
+                "municipio": inm.municipio,
+                "comunidad_autonoma": inm.comunidad_autonoma,
+                "renta_propuesta": inm.renta_propuesta,
+            },
+            "resultados": resultados,
+            "alertas": alertas,
+            "version": APP_VERSION,
+        }
+
+    return out
 
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
-    with Session(engine) as session:
-        inmuebles = session.exec(select(Inmueble).where(Inmueble.id_usuario == user.id_usuario)).all()
+    with Session(engine, expire_on_commit=False) as session:
+        inmuebles = session.exec(
+            select(Inmueble).where(Inmueble.id_usuario == user.id_usuario)
+        ).all()
 
-        # Devuelve también el último RuleRun de cada inmueble (si existe)
         out = []
         for inm in inmuebles:
             last_run = session.exec(
-                select(RuleRun).where(RuleRun.id_inmueble == inm.id_inmueble).order_by(RuleRun.id_run.desc())
+                select(RuleRun)
+                .where(RuleRun.id_inmueble == inm.id_inmueble)
+                .order_by(RuleRun.id_run.desc())
             ).first()
 
             resultados = json.loads(last_run.resultados_json) if last_run else None
@@ -336,7 +359,5 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
                 "alertas": alertas,
             })
 
-        return out
-
-
+    return out
 
