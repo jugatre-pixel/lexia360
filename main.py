@@ -1,6 +1,7 @@
 import os
 import json
 import traceback
+import secrets
 from datetime import datetime, timedelta, timezone, date
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
@@ -28,6 +29,7 @@ if DATABASE_URL.startswith("postgres://"):
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("❌ Falta SECRET_KEY")
+ADMIN_BOOTSTRAP_SECRET = os.getenv("ADMIN_BOOTSTRAP_SECRET", "")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
@@ -344,6 +346,32 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
 @app.get("/me")
+@app.post("/admin/bootstrap")
+def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
+    """
+    Endpoint temporal para convertir TU usuario en admin.
+    Requiere:
+      - estar logueado (Bearer token)
+      - pasar ?secret=...
+      - que ADMIN_BOOTSTRAP_SECRET exista
+    """
+    if not ADMIN_BOOTSTRAP_SECRET:
+        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET no está configurado en el servidor")
+
+    if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
+        raise HTTPException(status_code=403, detail="Secreto incorrecto")
+
+    with Session(engine, expire_on_commit=False) as session:
+        db_user = session.exec(select(Usuario).where(Usuario.id_usuario == user.id_usuario)).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        db_user.rol = "admin"
+        session.add(db_user)
+        session.commit()
+
+    return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
+
 def me(user: Usuario = Depends(get_current_user)):
     return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
 
