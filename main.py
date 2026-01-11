@@ -17,7 +17,7 @@ from sqlmodel import SQLModel, Field, Session, select, create_engine
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v8-inmueble-id-fixed"
+APP_VERSION = "lexia360-v9-chat-mock"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -174,6 +174,17 @@ class ZonaCreate(BaseModel):
     activo: bool = True
 
 
+# ✅ Chat schemas
+class ChatRequest(BaseModel):
+    inmueble_id: int
+    mensaje: str
+
+
+class ChatResponse(BaseModel):
+    respuesta: str
+    requiere_pro: bool = False
+
+
 # ============================================================
 # STARTUP
 # ============================================================
@@ -287,6 +298,58 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
 
 
 # ============================================================
+# CHAT MOCK ENGINE
+# ============================================================
+def mock_chat_engine(mensaje: str) -> tuple[str, bool]:
+    m = (mensaje or "").lower().strip()
+
+    sensitive = [
+        "mi inmueble",
+        "esta vivienda",
+        "puedo subir",
+        "me recomiendas",
+        "qué cláusula",
+        "que cláusula",
+        "en mi caso",
+        "renta máxima",
+        "renta maxima",
+    ]
+
+    if any(k in m for k in sensitive):
+        return (
+            "Para analizar tu caso concreto necesito acceder al informe completo del inmueble. "
+            "Esta funcionalidad está disponible en la versión Pro.",
+            True
+        )
+
+    if "zona tensionada" in m:
+        return (
+            "Una zona tensionada es un área declarada por la administración donde se limitan "
+            "los precios del alquiler para proteger el acceso a la vivienda.",
+            False
+        )
+
+    if "duración" in m or "duracion" in m:
+        return (
+            "En vivienda habitual, la duración mínima del contrato suele ser de 5 años "
+            "si el arrendador es persona física y 7 años si es persona jurídica.",
+            False
+        )
+
+    if "fianza" in m:
+        return (
+            "En los contratos de vivienda habitual, la fianza obligatoria es de una mensualidad de renta.",
+            False
+        )
+
+    return (
+        "Puedo ayudarte con dudas generales sobre alquiler y normativa. "
+        "Si necesitas un análisis específico de tu inmueble, la versión Pro te dará acceso completo.",
+        False
+    )
+
+
+# ============================================================
 # ROUTES (PUBLIC)
 # ============================================================
 @app.get("/version")
@@ -316,7 +379,6 @@ def status():
 @app.get("/debug/env")
 def debug_env():
     val_env = os.getenv("ADMIN_BOOTSTRAP_SECRET", "").strip()
-
     val_file = ""
     p = "/etc/secrets/ADMIN_BOOTSTRAP_SECRET"
     if os.path.exists(p):
@@ -325,7 +387,6 @@ def debug_env():
                 val_file = f.read().strip()
         except Exception:
             val_file = ""
-
     return {
         "env_has_admin_secret": bool(val_env),
         "env_len": len(val_env),
@@ -524,35 +585,45 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
 
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
-    try:
-        with Session(engine, expire_on_commit=False) as session:
-            inmuebles = session.exec(
-                select(Inmueble)
-                .where(Inmueble.id_usuario == user.id_usuario)
-                .order_by(Inmueble.id_inmueble.desc())
-            ).all()
-            return [inmueble_to_out(session, inm) for inm in inmuebles]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB_ERROR: {type(e).__name__}: {str(e)}")
+    with Session(engine, expire_on_commit=False) as session:
+        inmuebles = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .order_by(Inmueble.id_inmueble.desc())
+        ).all()
+
+        return [inmueble_to_out(session, inm) for inm in inmuebles]
 
 @app.get("/inmuebles/{id_inmueble}")
 def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    """
-    ✅ Devuelve SOLO un inmueble (del usuario logueado) con su último RuleRun.
-    """
-    try:
-        with Session(engine, expire_on_commit=False) as session:
-            inm = session.exec(
-                select(Inmueble)
-                .where(Inmueble.id_inmueble == id_inmueble)
-                .where(Inmueble.id_usuario == user.id_usuario)
-            ).first()
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == id_inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+        ).first()
 
-            if not inm:
-                raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+        if not inm:
+            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
 
-            return inmueble_to_out(session, inm)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB_ERROR: {type(e).__name__}: {str(e)}")
+        return inmueble_to_out(session, inm)
+
+
+# ============================================================
+# ROUTE: CHAT (MOCK)
+# ============================================================
+@app.post("/chat", response_model=ChatResponse)
+def chat_assistant(payload: ChatRequest, user: Usuario = Depends(get_current_user)):
+    # Validar que el inmueble es del usuario
+    with Session(engine, expire_on_commit=False) as session:
+        inmueble = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == payload.inmueble_id)
+            .where(Inmueble.id_usuario == user.id_usuario)
+        ).first()
+
+        if not inmueble:
+            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
+    respuesta, requiere_pro = mock_chat_engine(payload.mensaje)
+    return {"respuesta": respuesta, "requiere_pro": requiere_pro}
