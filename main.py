@@ -2,7 +2,7 @@ import os
 import json
 import traceback
 import secrets
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, date
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,7 @@ from sqlmodel import SQLModel, Field, Session, select, create_engine
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v9-chat-mock"
+APP_VERSION = "lexia360-v10-inmuebles-500-debug"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -113,7 +113,8 @@ class Inmueble(SQLModel, table=True):
     renta_propuesta: float
     renta_anterior: float | None = None
 
-    creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # ✅ Evitamos timezone-aware para máxima compatibilidad Postgres
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
 class RuleRun(SQLModel, table=True):
@@ -121,7 +122,7 @@ class RuleRun(SQLModel, table=True):
     id_inmueble: int = Field(index=True, foreign_key="inmueble.id_inmueble")
 
     version: str = APP_VERSION
-    creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
 
     fecha_analisis: date
 
@@ -141,7 +142,7 @@ class ZonaTensionada(SQLModel, table=True):
     fuente_oficial: str
     activo: bool = True
 
-    creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ============================================================
@@ -174,7 +175,6 @@ class ZonaCreate(BaseModel):
     activo: bool = True
 
 
-# ✅ Chat schemas
 class ChatRequest(BaseModel):
     inmueble_id: int
     mensaje: str
@@ -208,7 +208,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 def create_access_token(email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -304,15 +304,9 @@ def mock_chat_engine(mensaje: str) -> tuple[str, bool]:
     m = (mensaje or "").lower().strip()
 
     sensitive = [
-        "mi inmueble",
-        "esta vivienda",
-        "puedo subir",
-        "me recomiendas",
-        "qué cláusula",
-        "que cláusula",
-        "en mi caso",
-        "renta máxima",
-        "renta maxima",
+        "mi inmueble", "esta vivienda", "puedo subir", "me recomiendas",
+        "qué cláusula", "que cláusula", "en mi caso",
+        "renta máxima", "renta maxima",
     ]
 
     if any(k in m for k in sensitive):
@@ -513,52 +507,6 @@ def listar_zonas(admin: Usuario = Depends(require_admin)):
 # ============================================================
 # ROUTES (INMUEBLES)
 # ============================================================
-@app.post("/inmuebles")
-def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
-    fecha_analisis = date.today()
-    with Session(engine, expire_on_commit=False) as session:
-        inm = Inmueble(
-            id_usuario=user.id_usuario,
-            direccion=payload.direccion.strip(),
-            municipio=payload.municipio.strip(),
-            comunidad_autonoma=payload.comunidad_autonoma.strip(),
-            codigo_postal=(payload.codigo_postal.strip() if payload.codigo_postal else None),
-            superficie_m2=payload.superficie_m2,
-            tipo_arrendamiento=payload.tipo_arrendamiento,
-            tipo_arrendador=payload.tipo_arrendador,
-            renta_propuesta=payload.renta_propuesta,
-            renta_anterior=payload.renta_anterior,
-        )
-        session.add(inm)
-        session.commit()
-        session.refresh(inm)
-
-        resultados, alertas = evaluar_reglas(session, inm, fecha_analisis)
-
-        run = RuleRun(
-            id_inmueble=inm.id_inmueble,
-            fecha_analisis=fecha_analisis,
-            resultados_json=json.dumps(resultados, ensure_ascii=False),
-            alertas_json=json.dumps(alertas, ensure_ascii=False),
-        )
-        session.add(run)
-        session.commit()
-
-        return {
-            "mensaje": "✅ Inmueble creado y reglas ejecutadas",
-            "fecha_analisis": str(fecha_analisis),
-            "inmueble": {
-                "id_inmueble": inm.id_inmueble,
-                "direccion": inm.direccion,
-                "municipio": inm.municipio,
-                "comunidad_autonoma": inm.comunidad_autonoma,
-                "renta_propuesta": inm.renta_propuesta,
-            },
-            "resultados": resultados,
-            "alertas": alertas,
-            "version": APP_VERSION,
-        }
-
 def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
     last_run = session.exec(
         select(RuleRun)
@@ -583,6 +531,65 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
         "alertas": alertas,
     }
 
+@app.post("/inmuebles")
+def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
+    """
+    ✅ Si algo falla, devolvemos el error real en `detail` para arreglarlo rápido.
+    """
+    try:
+        fecha_analisis = date.today()
+
+        with Session(engine, expire_on_commit=False) as session:
+            inm = Inmueble(
+                id_usuario=user.id_usuario,
+                direccion=payload.direccion.strip(),
+                municipio=payload.municipio.strip(),
+                comunidad_autonoma=payload.comunidad_autonoma.strip(),
+                codigo_postal=(payload.codigo_postal.strip() if payload.codigo_postal else None),
+                superficie_m2=payload.superficie_m2,
+                tipo_arrendamiento=payload.tipo_arrendamiento,
+                tipo_arrendador=payload.tipo_arrendador,
+                renta_propuesta=payload.renta_propuesta,
+                renta_anterior=payload.renta_anterior,
+            )
+            session.add(inm)
+            session.commit()
+            session.refresh(inm)
+
+            resultados, alertas = evaluar_reglas(session, inm, fecha_analisis)
+
+            run = RuleRun(
+                id_inmueble=inm.id_inmueble,
+                fecha_analisis=fecha_analisis,
+                resultados_json=json.dumps(resultados, ensure_ascii=False),
+                alertas_json=json.dumps(alertas, ensure_ascii=False),
+            )
+            session.add(run)
+            session.commit()
+
+            return {
+                "mensaje": "✅ Inmueble creado y reglas ejecutadas",
+                "fecha_analisis": str(fecha_analisis),
+                "inmueble": {
+                    "id_inmueble": inm.id_inmueble,
+                    "direccion": inm.direccion,
+                    "municipio": inm.municipio,
+                    "comunidad_autonoma": inm.comunidad_autonoma,
+                    "renta_propuesta": inm.renta_propuesta,
+                },
+                "resultados": resultados,
+                "alertas": alertas,
+                "version": APP_VERSION,
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"INMUEBLE_CREATE_ERROR: {type(e).__name__}: {str(e)}"
+        )
+
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -591,7 +598,6 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             .where(Inmueble.id_usuario == user.id_usuario)
             .order_by(Inmueble.id_inmueble.desc())
         ).all()
-
         return [inmueble_to_out(session, inm) for inm in inmuebles]
 
 @app.get("/inmuebles/{id_inmueble}")
@@ -614,7 +620,6 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
 # ============================================================
 @app.post("/chat", response_model=ChatResponse)
 def chat_assistant(payload: ChatRequest, user: Usuario = Depends(get_current_user)):
-    # Validar que el inmueble es del usuario
     with Session(engine, expire_on_commit=False) as session:
         inmueble = session.exec(
             select(Inmueble)
