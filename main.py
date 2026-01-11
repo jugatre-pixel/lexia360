@@ -23,7 +23,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("❌ Falta DATABASE_URL")
 
-# Render a veces da postgres:// (psycopg2 necesita postgresql+psycopg2://)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
@@ -31,7 +30,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("❌ Falta SECRET_KEY")
 
-# ✅ Endpoint temporal para hacerte admin
+# Clave temporal para convertirte en admin (Render -> Environment)
 ADMIN_BOOTSTRAP_SECRET = os.getenv("ADMIN_BOOTSTRAP_SECRET", "")
 
 ALGORITHM = "HS256"
@@ -39,7 +38,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# ✅ Password hashing (sin límite 72 bytes)
+# Hash sin límite 72 bytes
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -107,7 +106,7 @@ class RuleRun(SQLModel, table=True):
     version: str = APP_VERSION
     creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    fecha_analisis: date  # ✅ auditoría / histórico
+    fecha_analisis: date  # auditoría / histórico
 
     resultados_json: str
     alertas_json: str
@@ -209,12 +208,7 @@ def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
 # ============================================================
 # ZONAS TENSIONADAS (DB)
 # ============================================================
-def find_zona_tensionada(
-    session: Session,
-    municipio: str,
-    comunidad_autonoma: str,
-    fecha: date
-) -> ZonaTensionada | None:
+def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: str, fecha: date) -> ZonaTensionada | None:
     mun = municipio.strip()
     ca = comunidad_autonoma.strip()
 
@@ -223,10 +217,7 @@ def find_zona_tensionada(
         .where(ZonaTensionada.municipio == mun)
         .where(ZonaTensionada.comunidad_autonoma == ca)
         .where(ZonaTensionada.fecha_inicio <= fecha)
-        .where(
-            (ZonaTensionada.fecha_fin == None) |
-            (ZonaTensionada.fecha_fin >= fecha)
-        )
+        .where((ZonaTensionada.fecha_fin == None) | (ZonaTensionada.fecha_fin >= fecha))
         .where(ZonaTensionada.activo == True)
         .order_by(ZonaTensionada.fecha_inicio.desc())
     ).first()
@@ -241,12 +232,12 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados: dict = {}
     alertas: list[str] = []
 
-    # 1) Duración mínima (MVP)
+    # Duración mínima (MVP)
     duracion = 5 if inmueble.tipo_arrendador == "persona_fisica" else 7
     resultados["duracion_minima_anios"] = duracion
     alertas.append(f"Duración mínima aplicable: {duracion} años.")
 
-    # 2) Zona tensionada (DB por fecha)
+    # Zona tensionada (DB por fecha)
     zona = find_zona_tensionada(session, inmueble.municipio, inmueble.comunidad_autonoma, fecha_analisis)
     zona_tensionada = zona is not None
     resultados["zona_tensionada"] = zona_tensionada
@@ -260,7 +251,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     else:
         alertas.append("El inmueble NO está en zona tensionada (según dataset cargado).")
 
-    # 3) Renta (MVP)
+    # Renta (MVP)
     if zona_tensionada:
         renta_max = inmueble.renta_anterior if inmueble.renta_anterior is not None else inmueble.renta_propuesta
         resultados["renta_maxima_mvp"] = renta_max
@@ -272,7 +263,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
         resultados["renta_maxima_mvp"] = None
         alertas.append("Renta inicial libre (régimen general, MVP).")
 
-    # 4) Fianza (MVP 1 mensualidad)
+    # Fianza (MVP 1 mensualidad)
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
@@ -348,12 +339,7 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
-    return {
-        "id_usuario": user.id_usuario,
-        "email": user.email,
-        "rol": user.rol,
-        "version": APP_VERSION
-    }
+    return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
 
 
 # ============================================================
@@ -361,22 +347,32 @@ def me(user: Usuario = Depends(get_current_user)):
 # ============================================================
 @app.post("/admin/bootstrap")
 def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
-    if not ADMIN_BOOTSTRAP_SECRET:
-        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET no está configurado en el servidor")
+    try:
+        if not ADMIN_BOOTSTRAP_SECRET:
+            raise HTTPException(
+                status_code=500,
+                detail="ADMIN_BOOTSTRAP_SECRET vacío o no definido en Render (Environment)."
+            )
 
-    if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
-        raise HTTPException(status_code=403, detail="Secreto incorrecto")
+        if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
+            raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
-    with Session(engine, expire_on_commit=False) as session:
-        db_user = session.exec(select(Usuario).where(Usuario.id_usuario == user.id_usuario)).first()
-        if not db_user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        with Session(engine, expire_on_commit=False) as session:
+            # buscamos por email para evitar raros de id
+            db_user = session.exec(select(Usuario).where(Usuario.email == user.email)).first()
+            if not db_user:
+                raise HTTPException(status_code=404, detail="Usuario no encontrado en BD")
 
-        db_user.rol = "admin"
-        session.add(db_user)
-        session.commit()
+            db_user.rol = "admin"
+            session.add(db_user)
+            session.commit()
 
-    return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
+        return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"BOOTSTRAP_ERROR: {type(e).__name__}: {str(e)}")
 
 
 # ============================================================
@@ -507,8 +503,8 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
                 .order_by(RuleRun.id_run.desc())
             ).first()
 
-            resultados = json.loads(last_run.resultados_json) if last_run else None
-            alertas = json.loads(last_run.alertas_json) if last_run else None
+            resultados = json.loads(last_run.resultados_json) if last_run else {}
+            alertas = json.loads(last_run.alertas_json) if last_run else []
 
             out.append({
                 "id_inmueble": inm.id_inmueble,
@@ -516,10 +512,10 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
                 "municipio": inm.municipio,
                 "comunidad_autonoma": inm.comunidad_autonoma,
                 "renta_propuesta": inm.renta_propuesta,
-                "semaforo": resultados.get("semaforo") if resultados else None,
+                "semaforo": resultados.get("semaforo"),
                 "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
-                "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
-                "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente") if resultados else None,
+                "zona_tensionada": resultados.get("zona_tensionada"),
+                "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente"),
                 "resultados": resultados,
                 "alertas": alertas,
             })
