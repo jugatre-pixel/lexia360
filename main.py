@@ -521,3 +521,11 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             })
 
         return out
+@app.get("/debug/env")
+def debug_env():
+    # NO muestra el secreto, solo si existe y su longitud
+    val = os.getenv("ADMIN_BOOTSTRAP_SECRET", "")
+    return {
+        "has_admin_secret": bool(val),
+        "admin_secret_len": len(val),
+    }
