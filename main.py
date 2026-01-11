@@ -17,7 +17,7 @@ from sqlmodel import SQLModel, Field, Session, select, create_engine
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v7-secretfiles-admin"
+APP_VERSION = "lexia360-v8-inmueble-id-fixed"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -35,30 +35,26 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# Hash sin límite 72 bytes
+# Hash sin límite 72 bytes (NO bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def load_secret_from_env_or_file(env_name: str, file_path: str) -> str:
-    # 1) env var
     val = os.getenv(env_name, "").strip()
     if val:
         return val
-
-    # 2) Render Secret File
     try:
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 return f.read().strip()
     except Exception:
         pass
-
     return ""
 
 
-# ✅ Para Render Free: esto suele venir de Secret Files
+# Render Free: Secret Files
 ADMIN_BOOTSTRAP_SECRET = load_secret_from_env_or_file(
     "ADMIN_BOOTSTRAP_SECRET",
     "/etc/secrets/ADMIN_BOOTSTRAP_SECRET"
@@ -98,7 +94,7 @@ class Usuario(SQLModel, table=True):
     nombre: str
     email: str = Field(index=True)
     hashed_password: str
-    rol: str = "cliente"  # "cliente" | "admin"
+    rol: str = "cliente"  # cliente | admin
 
 
 class Inmueble(SQLModel, table=True):
@@ -140,7 +136,7 @@ class ZonaTensionada(SQLModel, table=True):
     municipio: str = Field(index=True)
 
     fecha_inicio: date
-    fecha_fin: date | None = None  # null => vigente
+    fecha_fin: date | None = None
 
     fuente_oficial: str
     activo: bool = True
@@ -227,13 +223,13 @@ def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
 
 
 # ============================================================
-# ZONAS TENSIONADAS (DB)
+# ZONAS TENSIONADAS
 # ============================================================
 def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: str, fecha: date) -> ZonaTensionada | None:
     mun = municipio.strip()
     ca = comunidad_autonoma.strip()
 
-    zona = session.exec(
+    return session.exec(
         select(ZonaTensionada)
         .where(ZonaTensionada.municipio == mun)
         .where(ZonaTensionada.comunidad_autonoma == ca)
@@ -243,11 +239,9 @@ def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: s
         .order_by(ZonaTensionada.fecha_inicio.desc())
     ).first()
 
-    return zona
-
 
 # ============================================================
-# RULE ENGINE (MVP+)
+# RULE ENGINE (MVP)
 # ============================================================
 def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -> tuple[dict, list[str]]:
     resultados: dict = {}
@@ -319,8 +313,6 @@ def status():
             "version": APP_VERSION
         }
 
-
-# ✅ DEBUG: comprueba env vs secret file vs valor efectivo
 @app.get("/debug/env")
 def debug_env():
     val_env = os.getenv("ADMIN_BOOTSTRAP_SECRET", "").strip()
@@ -350,12 +342,10 @@ def debug_env():
 @app.post("/register")
 def register(payload: RegisterPayload):
     validate_password(payload.password)
-
     with Session(engine, expire_on_commit=False) as session:
         existing = session.exec(select(Usuario).where(Usuario.email == payload.email)).first()
         if existing:
             raise HTTPException(status_code=400, detail="El usuario ya existe")
-
         user = Usuario(
             nombre=payload.nombre,
             email=payload.email,
@@ -364,7 +354,6 @@ def register(payload: RegisterPayload):
         )
         session.add(user)
         session.commit()
-
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
 @app.post("/token")
@@ -373,7 +362,6 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
         user = session.exec(select(Usuario).where(Usuario.email == form.username)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
@@ -383,16 +371,12 @@ def me(user: Usuario = Depends(get_current_user)):
 
 
 # ============================================================
-# TEMP ADMIN BOOTSTRAP (REMOVE AFTER)
+# TEMP ADMIN BOOTSTRAP
 # ============================================================
 @app.post("/admin/bootstrap")
 def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
     if not ADMIN_BOOTSTRAP_SECRET:
-        raise HTTPException(
-            status_code=500,
-            detail="ADMIN_BOOTSTRAP_SECRET vacío. Ponlo como Secret File en /etc/secrets/ADMIN_BOOTSTRAP_SECRET (Render -> Secret Files)."
-        )
-
+        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío (Secret File no montado).")
     if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
         raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
@@ -400,7 +384,6 @@ def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
         db_user = session.exec(select(Usuario).where(Usuario.email == user.email)).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado en BD")
-
         db_user.rol = "admin"
         session.add(db_user)
         session.commit()
@@ -409,7 +392,7 @@ def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
 
 
 # ============================================================
-# ROUTES (ZONAS TENSIONADAS - PUBLIC HELPERS)
+# ROUTES (ZONAS TENSIONADAS)
 # ============================================================
 @app.get("/zonas-tensionadas/check")
 def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = None):
@@ -424,10 +407,6 @@ def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = Non
             "fuente_oficial": zona.fuente_oficial if zona else None
         }
 
-
-# ============================================================
-# ROUTES (ADMIN - ZONAS TENSIONADAS)
-# ============================================================
 @app.post("/admin/zonas-tensionadas")
 def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
     with Session(engine, expire_on_commit=False) as session:
@@ -442,7 +421,6 @@ def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
         session.add(z)
         session.commit()
         session.refresh(z)
-
         return {
             "ok": True,
             "id_zona": z.id_zona,
@@ -472,12 +450,11 @@ def listar_zonas(admin: Usuario = Depends(require_admin)):
 
 
 # ============================================================
-# ROUTES (INMUEBLES) - PROTECTED
+# ROUTES (INMUEBLES)
 # ============================================================
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
     fecha_analisis = date.today()
-
     with Session(engine, expire_on_commit=False) as session:
         inm = Inmueble(
             id_usuario=user.id_usuario,
@@ -521,36 +498,61 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
             "version": APP_VERSION,
         }
 
+def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
+    last_run = session.exec(
+        select(RuleRun)
+        .where(RuleRun.id_inmueble == inm.id_inmueble)
+        .order_by(RuleRun.id_run.desc())
+    ).first()
+
+    resultados = json.loads(last_run.resultados_json) if last_run else {}
+    alertas = json.loads(last_run.alertas_json) if last_run else []
+
+    return {
+        "id_inmueble": inm.id_inmueble,
+        "direccion": inm.direccion,
+        "municipio": inm.municipio,
+        "comunidad_autonoma": inm.comunidad_autonoma,
+        "renta_propuesta": inm.renta_propuesta,
+        "semaforo": resultados.get("semaforo"),
+        "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
+        "zona_tensionada": resultados.get("zona_tensionada"),
+        "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente"),
+        "resultados": resultados,
+        "alertas": alertas,
+    }
+
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
-    with Session(engine, expire_on_commit=False) as session:
-        inmuebles = session.exec(
-            select(Inmueble).where(Inmueble.id_usuario == user.id_usuario)
-        ).all()
+    try:
+        with Session(engine, expire_on_commit=False) as session:
+            inmuebles = session.exec(
+                select(Inmueble)
+                .where(Inmueble.id_usuario == user.id_usuario)
+                .order_by(Inmueble.id_inmueble.desc())
+            ).all()
+            return [inmueble_to_out(session, inm) for inm in inmuebles]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB_ERROR: {type(e).__name__}: {str(e)}")
 
-        out = []
-        for inm in inmuebles:
-            last_run = session.exec(
-                select(RuleRun)
-                .where(RuleRun.id_inmueble == inm.id_inmueble)
-                .order_by(RuleRun.id_run.desc())
+@app.get("/inmuebles/{id_inmueble}")
+def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    """
+    ✅ Devuelve SOLO un inmueble (del usuario logueado) con su último RuleRun.
+    """
+    try:
+        with Session(engine, expire_on_commit=False) as session:
+            inm = session.exec(
+                select(Inmueble)
+                .where(Inmueble.id_inmueble == id_inmueble)
+                .where(Inmueble.id_usuario == user.id_usuario)
             ).first()
 
-            resultados = json.loads(last_run.resultados_json) if last_run else {}
-            alertas = json.loads(last_run.alertas_json) if last_run else []
+            if not inm:
+                raise HTTPException(status_code=404, detail="Inmueble no encontrado")
 
-            out.append({
-                "id_inmueble": inm.id_inmueble,
-                "direccion": inm.direccion,
-                "municipio": inm.municipio,
-                "comunidad_autonoma": inm.comunidad_autonoma,
-                "renta_propuesta": inm.renta_propuesta,
-                "semaforo": resultados.get("semaforo"),
-                "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
-                "zona_tensionada": resultados.get("zona_tensionada"),
-                "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente"),
-                "resultados": resultados,
-                "alertas": alertas,
-            })
-
-        return out
+            return inmueble_to_out(session, inm)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB_ERROR: {type(e).__name__}: {str(e)}")
