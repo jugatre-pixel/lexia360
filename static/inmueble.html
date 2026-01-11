@@ -3,84 +3,160 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Ficha del inmueble</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <title>Lexia360 · Ficha legal del inmueble</title>
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
   <style>
-    :root { --accent:#0b5fff; --muted:#667085; --bg:#f6f7fb; --card:#ffffff; --border:#e6e8ef; }
+    :root {
+      --accent:#0b5fff;
+      --muted:#667085;
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --border:#e6e8ef;
+    }
+
     body { background: var(--bg); }
-    header{
-      position: sticky; top: 0; z-index: 10;
-      background: rgba(246,247,251,0.85); backdrop-filter: blur(10px);
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(246,247,251,0.9);
+      backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px 18px; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .btn { display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius: 10px; border:1px solid var(--border); background:#fff; cursor:pointer; text-decoration:none; }
-    .btn.primary { background: var(--accent); color:#fff; border-color: var(--accent); }
-    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media(min-width: 900px){ .grid { grid-template-columns: 1fr 1fr; } }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .topbar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+
+    .btn {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      text-decoration:none;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color:#fff;
+      border-color: var(--accent);
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+
+    @media(min-width:900px){
+      .grid { grid-template-columns:1fr 1fr; }
+    }
+
     .card {
-      background: var(--card); border:1px solid var(--border); border-radius: 14px;
-      padding: 16px; box-shadow: 0 8px 18px rgba(16,24,40,0.04);
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      box-shadow:0 8px 18px rgba(16,24,40,0.04);
     }
+
     .muted { color: var(--muted); }
-    .small { font-size: 13px; }
+    .small { font-size:13px; }
+
     .verdict {
-      border-radius: 16px; padding: 16px; border:1px solid var(--border);
-      display:flex; gap:14px; align-items:flex-start; background:#fff;
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      border-radius:16px;
+      padding:18px;
+      border:1px solid var(--border);
     }
-    .v-green{ background:#f0fff4; border-color:#b7ebc6; }
-    .v-red{ background:#fff5f5; border-color:#ffc4c4; }
+
+    .v-green { background:#f0fff4; border-color:#b7ebc6; }
+    .v-red   { background:#fff5f5; border-color:#ffc4c4; }
     .v-amber{ background:#fffaf0; border-color:#ffe0a3; }
-    .icon { font-size: 20px; }
-    .kv { display:flex; justify-content:space-between; gap:12px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
-    .kv:last-child{ border-bottom:none; }
-    .cta { display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
-    .list { margin: 8px 0 0; padding-left: 18px; }
-    .chip { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; }
-    .danger { color:#b42318; }
+
+    .icon { font-size:22px; }
+
+    .kv {
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:8px 0;
+      border-bottom:1px dashed var(--border);
+    }
+
+    .kv:last-child { border-bottom:none; }
+
+    ul { margin:6px 0 0 18px; }
+
+    .cta {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
   </style>
 </head>
+
 <body>
 <header>
   <div class="wrap topbar">
-    <div style="display:flex; gap:10px; align-items:center;">
+    <div style="display:flex;gap:10px;align-items:center;">
       <span style="font-size:20px">⚖️</span>
       <div>
         <b>Lexia360</b>
         <div class="muted small">Ficha legal del inmueble</div>
       </div>
     </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <a class="btn" href="/static/dashboard.html">← Volver al dashboard</a>
+    <div style="display:flex;gap:10px;">
+      <a class="btn" href="/static/dashboard.html">← Volver</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <div id="titleBlock" class="card" style="margin-bottom:12px; display:none;"></div>
 
-  <div id="verdict" class="verdict" style="display:none;"></div>
+  <section id="headerCard" class="card" style="display:none;"></section>
 
-  <div class="grid" style="margin-top:12px;">
-    <section class="card" id="cardZona" style="display:none;"></section>
-    <section class="card" id="cardPrecio" style="display:none;"></section>
-    <section class="card" id="cardDuracion" style="display:none;"></section>
-    <section class="card" id="cardFianza" style="display:none;"></section>
-  </div>
+  <section id="verdictCard" class="verdict" style="display:none;"></section>
 
-  <section class="card" id="cardAcciones" style="margin-top:12px; display:none;"></section>
+  <section class="grid" style="margin-top:14px;">
+    <div id="cardZona" class="card"></div>
+    <div id="cardPrecio" class="card"></div>
+    <div id="cardDuracion" class="card"></div>
+    <div id="cardFianza" class="card"></div>
+  </section>
 
-  <section class="card" id="cardPro" style="margin-top:12px; display:none;"></section>
+  <section id="cardAlertas" class="card" style="margin-top:14px;"></section>
 
-  <div id="msg" class="small muted" style="margin-top:10px;"></div>
+  <section id="cardPro" class="card" style="margin-top:14px;"></section>
+
+  <div id="msg" class="muted small" style="margin-top:10px;"></div>
 </main>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
-  const params = new URLSearchParams(location.search);
+  const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
   function logout(){
@@ -91,165 +167,100 @@
 
   function euro(n){
     if(n === null || n === undefined) return "—";
-    return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
+    return new Intl.NumberFormat("es-ES", {
+      style:"currency", currency:"EUR"
+    }).format(n);
   }
 
-  function verdictUI(resultados, inmueble){
-    const sem = resultados?.semaforo || "VERDE";
-
-    if(sem === "ROJO"){
-      return {
-        cls: "v-red",
-        icon: "🔴",
-        title: "Riesgo legal detectado",
-        text: "Según los datos aportados, la renta propuesta podría incumplir límites aplicables. Recomendación: revisa la renta y las cláusulas del contrato antes de firmar."
-      };
+  function verdictUI(semaforo){
+    if(semaforo === "ROJO"){
+      return { cls:"v-red", icon:"🔴", title:"Riesgo legal",
+        text:"La renta propuesta puede incumplir la normativa vigente. Se recomienda ajustar el precio o revisar el contrato antes de firmar." };
     }
-    if(sem === "AMBAR" || sem === "AMARILLO"){
-      return {
-        cls: "v-amber",
-        icon: "🟠",
-        title: "Atención: hay puntos a revisar",
-        text: "No hay una alerta crítica, pero hay elementos que conviene ajustar para reducir riesgos."
-      };
-    }
-    return {
-      cls: "v-green",
-      icon: "🟢",
-      title: "Situación correcta",
-      text: "Con los datos aportados, no se detectan alertas críticas en este momento."
-    };
+    return { cls:"v-green", icon:"🟢", title:"Situación correcta",
+      text:"Con los datos actuales no se detectan riesgos legales relevantes." };
   }
 
   async function load(){
     const msg = document.getElementById("msg");
-    msg.textContent = "";
-
-    if(!token){ window.location.href = "/static/index.html"; return; }
-    if(!id){ msg.textContent = "Falta el id del inmueble."; return; }
+    if(!token){ logout(); return; }
+    if(!id){ msg.textContent="Falta ID del inmueble."; return; }
 
     try{
-      const res = await fetch(`${apiUrl}/inmuebles`, {
-        headers: { "Authorization": `Bearer ${token}` }
+      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+        headers:{ "Authorization":`Bearer ${token}` }
       });
+
       if(res.status === 401){ logout(); return; }
+      if(res.status === 404){ msg.textContent="Inmueble no encontrado."; return; }
 
-      const all = await res.json();
-      const item = (Array.isArray(all) ? all : []).find(x => String(x.id_inmueble) === String(id));
+      const item = await res.json();
 
-      if(!item){
-        msg.textContent = "No se encontró el inmueble o no tienes acceso.";
-        return;
-      }
-
-      const resultados = item.resultados || {};
-      const alertas = item.alertas || [];
-
-      // Title block
-      const tb = document.getElementById("titleBlock");
-      tb.style.display = "block";
-      tb.innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-          <div>
-            <h3 style="margin:0 0 6px;">${item.direccion}</h3>
-            <div class="muted small">${item.municipio} · ${item.comunidad_autonoma}</div>
-            <div class="muted small">Último análisis: <b>${item.fecha_analisis || "—"}</b></div>
-          </div>
-          <div class="chip">ID inmueble: <b>${item.id_inmueble}</b></div>
-        </div>
+      const header = document.getElementById("headerCard");
+      header.style.display="block";
+      header.innerHTML = `
+        <h3 style="margin:0 0 6px;">${item.direccion}</h3>
+        <div class="muted small">${item.municipio} · ${item.comunidad_autonoma}</div>
+        <div class="muted small">Último análisis: ${item.fecha_analisis || "—"}</div>
       `;
 
-      // Verdict
-      const v = verdictUI(resultados, item);
-      const verdict = document.getElementById("verdict");
+      const v = verdictUI(item.semaforo);
+      const verdict = document.getElementById("verdictCard");
+      verdict.style.display="flex";
       verdict.className = `verdict ${v.cls}`;
-      verdict.style.display = "flex";
       verdict.innerHTML = `
         <div class="icon">${v.icon}</div>
         <div>
-          <div style="font-weight:800; font-size:18px; margin-bottom:6px;">${v.title}</div>
+          <b style="font-size:18px;">${v.title}</b>
           <div class="small">${v.text}</div>
         </div>
       `;
 
-      // Cards
-      const zona = document.getElementById("cardZona");
-      zona.style.display = "block";
-      zona.innerHTML = `
-        <h4 style="margin:0 0 10px;">📍 Zona</h4>
-        <div class="kv"><span class="muted small">Zona tensionada</span><b>${resultados.zona_tensionada ? "Sí" : "No"}</b></div>
-        <div class="kv"><span class="muted small">Fuente oficial</span><b>${resultados.zona_tensionada_fuente || "—"}</b></div>
-        <div class="kv"><span class="muted small">Fecha análisis</span><b>${resultados.fecha_analisis || "—"}</b></div>
+      document.getElementById("cardZona").innerHTML = `
+        <h4>📍 Zona</h4>
+        <div class="kv"><span class="small muted">Zona tensionada</span><b>${item.zona_tensionada ? "Sí" : "No"}</b></div>
+        <div class="kv"><span class="small muted">Fuente oficial</span><b>${item.zona_tensionada_fuente || "—"}</b></div>
       `;
 
-      const precio = document.getElementById("cardPrecio");
-      precio.style.display = "block";
-      precio.innerHTML = `
-        <h4 style="margin:0 0 10px;">💶 Precio</h4>
-        <div class="kv"><span class="muted small">Renta propuesta</span><b>${euro(item.renta_propuesta)}</b></div>
-        <div class="kv"><span class="muted small">Renta máxima (MVP)</span><b>${resultados.renta_maxima_mvp != null ? euro(resultados.renta_maxima_mvp) : "—"}</b></div>
-        <div class="small muted" style="margin-top:8px;">* Límite “MVP” según renta anterior aportada (si aplica).</div>
+      document.getElementById("cardPrecio").innerHTML = `
+        <h4>💶 Precio</h4>
+        <div class="kv"><span class="small muted">Renta propuesta</span><b>${euro(item.renta_propuesta)}</b></div>
+        <div class="kv"><span class="small muted">Renta máxima (MVP)</span><b>${item.resultados?.renta_maxima_mvp != null ? euro(item.resultados.renta_maxima_mvp) : "—"}</b></div>
       `;
 
-      const dur = document.getElementById("cardDuracion");
-      dur.style.display = "block";
-      dur.innerHTML = `
-        <h4 style="margin:0 0 10px;">⏳ Duración</h4>
-        <div class="kv"><span class="muted small">Duración mínima</span><b>${resultados.duracion_minima_anios ? resultados.duracion_minima_anios + " años" : "—"}</b></div>
-        <div class="small muted" style="margin-top:8px;">Depende del tipo de arrendador (persona física/jurídica).</div>
+      document.getElementById("cardDuracion").innerHTML = `
+        <h4>⏳ Duración</h4>
+        <div class="kv"><span class="small muted">Duración mínima</span><b>${item.resultados?.duracion_minima_anios || "—"} años</b></div>
       `;
 
-      const fianza = document.getElementById("cardFianza");
-      fianza.style.display = "block";
-      fianza.innerHTML = `
-        <h4 style="margin:0 0 10px;">🔒 Fianza</h4>
-        <div class="kv"><span class="muted small">Fianza mínima (MVP)</span><b>${resultados.fianza_minima != null ? euro(resultados.fianza_minima) : "—"}</b></div>
-        <div class="small muted" style="margin-top:8px;">* Simplificado: 1 mensualidad en vivienda habitual.</div>
+      document.getElementById("cardFianza").innerHTML = `
+        <h4>🔒 Fianza</h4>
+        <div class="kv"><span class="small muted">Fianza mínima</span><b>${euro(item.resultados?.fianza_minima)}</b></div>
       `;
 
-      // Acciones / Alertas
-      const acciones = document.getElementById("cardAcciones");
-      acciones.style.display = "block";
-      acciones.innerHTML = `
-        <h4 style="margin:0 0 10px;">⚠️ Qué debes revisar</h4>
-        ${alertas.length ? `<ul class="list">${alertas.map(a => `<li>${escapeHtml(a)}</li>`).join("")}</ul>` :
-          `<div class="muted small">No hay alertas registradas.</div>`}
+      document.getElementById("cardAlertas").innerHTML = `
+        <h4>⚠️ Qué debes revisar</h4>
+        ${item.alertas?.length
+          ? `<ul>${item.alertas.map(a=>`<li>${a}</li>`).join("")}</ul>`
+          : `<div class="muted small">No hay alertas relevantes.</div>`}
         <div class="cta">
-          <a class="btn" href="/static/wizard.html">Editar / crear nuevo análisis</a>
-          <button class="btn primary" onclick="openPro()">🔒 Ver recomendaciones Pro</button>
+          <a class="btn" href="/static/wizard.html">Nuevo análisis</a>
+          <button class="btn primary" onclick="alert('Pro próximamente')">🔒 Recomendaciones Pro</button>
         </div>
       `;
 
-      // Pro teaser (placeholder)
-      const pro = document.getElementById("cardPro");
-      pro.style.display = "block";
-      pro.innerHTML = `
-        <h4 style="margin:0 0 10px;">🔒 Recomendaciones Pro (próximamente)</h4>
-        <div class="muted small">
-          Aquí desbloquearemos:
-          <ul class="list">
-            <li>Cláusulas recomendadas según tu caso</li>
-            <li>Checklist de documentación y anexos</li>
-            <li>Generación de borrador contractual</li>
-            <li>Chat legal con límite Free/Pro</li>
-          </ul>
-        </div>
+      document.getElementById("cardPro").innerHTML = `
+        <h4>🔒 Funciones Pro</h4>
+        <ul>
+          <li>Cláusulas contractuales personalizadas</li>
+          <li>Informe legal descargable</li>
+          <li>Chat legal con IA</li>
+        </ul>
       `;
 
     }catch(e){
-      msg.textContent = "⚠️ No se pudo cargar la ficha del inmueble.";
+      msg.textContent="Error cargando la ficha.";
     }
-  }
-
-  function openPro(){
-    alert("Pro aún no está activado. En el siguiente paso lo conectamos con pagos y control de acceso.");
-  }
-
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;").replaceAll("<","&lt;")
-      .replaceAll(">","&gt;").replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
   }
 
   load();
