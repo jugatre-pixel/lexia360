@@ -17,21 +17,18 @@ from sqlmodel import SQLModel, Field, Session, select, create_engine
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v6-zonas-bd"
+APP_VERSION = "lexia360-v7-secretfiles-admin"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("❌ Falta DATABASE_URL")
+    raise RuntimeError("❌ Falta DATABASE_URL (Render -> Environment Variables)")
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError("❌ Falta SECRET_KEY")
-
-# Clave temporal para convertirte en admin (Render -> Environment)
-ADMIN_BOOTSTRAP_SECRET = os.getenv("ADMIN_BOOTSTRAP_SECRET", "")
+    raise RuntimeError("❌ Falta SECRET_KEY (Render -> Environment Variables)")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
@@ -42,6 +39,30 @@ engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+def load_secret_from_env_or_file(env_name: str, file_path: str) -> str:
+    # 1) env var
+    val = os.getenv(env_name, "").strip()
+    if val:
+        return val
+
+    # 2) Render Secret File
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read().strip()
+    except Exception:
+        pass
+
+    return ""
+
+
+# ✅ Para Render Free: esto suele venir de Secret Files
+ADMIN_BOOTSTRAP_SECRET = load_secret_from_env_or_file(
+    "ADMIN_BOOTSTRAP_SECRET",
+    "/etc/secrets/ADMIN_BOOTSTRAP_SECRET"
+)
 
 
 # ============================================================
@@ -106,7 +127,7 @@ class RuleRun(SQLModel, table=True):
     version: str = APP_VERSION
     creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    fecha_analisis: date  # auditoría / histórico
+    fecha_analisis: date
 
     resultados_json: str
     alertas_json: str
@@ -232,12 +253,10 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados: dict = {}
     alertas: list[str] = []
 
-    # Duración mínima (MVP)
     duracion = 5 if inmueble.tipo_arrendador == "persona_fisica" else 7
     resultados["duracion_minima_anios"] = duracion
     alertas.append(f"Duración mínima aplicable: {duracion} años.")
 
-    # Zona tensionada (DB por fecha)
     zona = find_zona_tensionada(session, inmueble.municipio, inmueble.comunidad_autonoma, fecha_analisis)
     zona_tensionada = zona is not None
     resultados["zona_tensionada"] = zona_tensionada
@@ -251,7 +270,6 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     else:
         alertas.append("El inmueble NO está en zona tensionada (según dataset cargado).")
 
-    # Renta (MVP)
     if zona_tensionada:
         renta_max = inmueble.renta_anterior if inmueble.renta_anterior is not None else inmueble.renta_propuesta
         resultados["renta_maxima_mvp"] = renta_max
@@ -263,11 +281,9 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
         resultados["renta_maxima_mvp"] = None
         alertas.append("Renta inicial libre (régimen general, MVP).")
 
-    # Fianza (MVP 1 mensualidad)
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
-    # Semáforo simple
     if zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]:
         resultados["semaforo"] = "ROJO"
     else:
@@ -302,6 +318,30 @@ def status():
             "zonas_tensionadas": zonas_count,
             "version": APP_VERSION
         }
+
+
+# ✅ DEBUG: comprueba env vs secret file vs valor efectivo
+@app.get("/debug/env")
+def debug_env():
+    val_env = os.getenv("ADMIN_BOOTSTRAP_SECRET", "").strip()
+
+    val_file = ""
+    p = "/etc/secrets/ADMIN_BOOTSTRAP_SECRET"
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                val_file = f.read().strip()
+        except Exception:
+            val_file = ""
+
+    return {
+        "env_has_admin_secret": bool(val_env),
+        "env_len": len(val_env),
+        "file_has_admin_secret": bool(val_file),
+        "file_len": len(val_file),
+        "effective_has_admin_secret": bool(ADMIN_BOOTSTRAP_SECRET),
+        "effective_len": len(ADMIN_BOOTSTRAP_SECRET),
+    }
 
 
 # ============================================================
@@ -347,32 +387,25 @@ def me(user: Usuario = Depends(get_current_user)):
 # ============================================================
 @app.post("/admin/bootstrap")
 def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
-    try:
-        if not ADMIN_BOOTSTRAP_SECRET:
-            raise HTTPException(
-                status_code=500,
-                detail="ADMIN_BOOTSTRAP_SECRET vacío o no definido en Render (Environment)."
-            )
+    if not ADMIN_BOOTSTRAP_SECRET:
+        raise HTTPException(
+            status_code=500,
+            detail="ADMIN_BOOTSTRAP_SECRET vacío. Ponlo como Secret File en /etc/secrets/ADMIN_BOOTSTRAP_SECRET (Render -> Secret Files)."
+        )
 
-        if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
-            raise HTTPException(status_code=403, detail="Secreto incorrecto")
+    if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
+        raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
-        with Session(engine, expire_on_commit=False) as session:
-            # buscamos por email para evitar raros de id
-            db_user = session.exec(select(Usuario).where(Usuario.email == user.email)).first()
-            if not db_user:
-                raise HTTPException(status_code=404, detail="Usuario no encontrado en BD")
+    with Session(engine, expire_on_commit=False) as session:
+        db_user = session.exec(select(Usuario).where(Usuario.email == user.email)).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado en BD")
 
-            db_user.rol = "admin"
-            session.add(db_user)
-            session.commit()
+        db_user.rol = "admin"
+        session.add(db_user)
+        session.commit()
 
-        return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"BOOTSTRAP_ERROR: {type(e).__name__}: {str(e)}")
+    return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
 
 
 # ============================================================
@@ -521,11 +554,3 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             })
 
         return out
-@app.get("/debug/env")
-def debug_env():
-    # NO muestra el secreto, solo si existe y su longitud
-    val = os.getenv("ADMIN_BOOTSTRAP_SECRET", "")
-    return {
-        "has_admin_secret": bool(val),
-        "admin_secret_len": len(val),
-    }
