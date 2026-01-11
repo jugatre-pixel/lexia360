@@ -91,7 +91,6 @@
 
     .v-green { background:#f0fff4; border-color:#b7ebc6; }
     .v-red   { background:#fff5f5; border-color:#ffc4c4; }
-    .v-amber{ background:#fffaf0; border-color:#ffe0a3; }
 
     .icon { font-size:22px; }
 
@@ -112,6 +111,16 @@
       gap:10px;
       flex-wrap:wrap;
       margin-top:10px;
+    }
+
+    /* Chat */
+    .chatbox {
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:10px;
+      height:220px;
+      overflow-y:auto;
+      background:#fafafa;
     }
   </style>
 </head>
@@ -135,9 +144,9 @@
 
 <main class="wrap">
 
-  <section id="headerCard" class="card" style="display:none;"></section>
+  <section id="headerCard" class="card"></section>
 
-  <section id="verdictCard" class="verdict" style="display:none;"></section>
+  <section id="verdictCard" class="verdict"></section>
 
   <section class="grid" style="margin-top:14px;">
     <div id="cardZona" class="card"></div>
@@ -148,9 +157,25 @@
 
   <section id="cardAlertas" class="card" style="margin-top:14px;"></section>
 
-  <section id="cardPro" class="card" style="margin-top:14px;"></section>
+  <!-- ASISTENTE LEGAL -->
+  <section class="card" style="margin-top:14px;">
+    <h4>🤖 Asistente legal</h4>
+    <p class="muted small">
+      Resuelve dudas generales sobre alquiler y normativa de vivienda.
+    </p>
 
-  <div id="msg" class="muted small" style="margin-top:10px;"></div>
+    <div id="chatBox" class="chatbox">
+      <div class="small">👋 Hola, puedo ayudarte con dudas generales sobre alquiler.</div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <input id="chatInput" type="text" placeholder="Escribe tu pregunta…" />
+      <button class="btn primary" onclick="sendChat()">Enviar</button>
+    </div>
+
+    <div id="chatNotice" class="small muted" style="margin-top:8px;"></div>
+  </section>
+
 </main>
 
 <script>
@@ -158,6 +183,8 @@
   const token = localStorage.getItem("token");
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
+
+  const isPro = false; // 🔒 preparado para el futuro
 
   function logout(){
     localStorage.removeItem("token");
@@ -167,100 +194,130 @@
 
   function euro(n){
     if(n === null || n === undefined) return "—";
-    return new Intl.NumberFormat("es-ES", {
-      style:"currency", currency:"EUR"
-    }).format(n);
+    return new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(n);
   }
 
   function verdictUI(semaforo){
     if(semaforo === "ROJO"){
-      return { cls:"v-red", icon:"🔴", title:"Riesgo legal",
-        text:"La renta propuesta puede incumplir la normativa vigente. Se recomienda ajustar el precio o revisar el contrato antes de firmar." };
+      return {
+        cls:"v-red",
+        icon:"🔴",
+        title:"Riesgo legal",
+        text:"La renta propuesta puede incumplir la normativa vigente. Revisa el precio o el contrato antes de firmar."
+      };
     }
-    return { cls:"v-green", icon:"🟢", title:"Situación correcta",
-      text:"Con los datos actuales no se detectan riesgos legales relevantes." };
+    return {
+      cls:"v-green",
+      icon:"🟢",
+      title:"Situación correcta",
+      text:"Con los datos actuales no se detectan riesgos legales relevantes."
+    };
   }
 
   async function load(){
-    const msg = document.getElementById("msg");
     if(!token){ logout(); return; }
-    if(!id){ msg.textContent="Falta ID del inmueble."; return; }
 
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
-        headers:{ "Authorization":`Bearer ${token}` }
-      });
+    const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+      headers:{ "Authorization":`Bearer ${token}` }
+    });
 
-      if(res.status === 401){ logout(); return; }
-      if(res.status === 404){ msg.textContent="Inmueble no encontrado."; return; }
-
-      const item = await res.json();
-
-      const header = document.getElementById("headerCard");
-      header.style.display="block";
-      header.innerHTML = `
-        <h3 style="margin:0 0 6px;">${item.direccion}</h3>
-        <div class="muted small">${item.municipio} · ${item.comunidad_autonoma}</div>
-        <div class="muted small">Último análisis: ${item.fecha_analisis || "—"}</div>
-      `;
-
-      const v = verdictUI(item.semaforo);
-      const verdict = document.getElementById("verdictCard");
-      verdict.style.display="flex";
-      verdict.className = `verdict ${v.cls}`;
-      verdict.innerHTML = `
-        <div class="icon">${v.icon}</div>
-        <div>
-          <b style="font-size:18px;">${v.title}</b>
-          <div class="small">${v.text}</div>
-        </div>
-      `;
-
-      document.getElementById("cardZona").innerHTML = `
-        <h4>📍 Zona</h4>
-        <div class="kv"><span class="small muted">Zona tensionada</span><b>${item.zona_tensionada ? "Sí" : "No"}</b></div>
-        <div class="kv"><span class="small muted">Fuente oficial</span><b>${item.zona_tensionada_fuente || "—"}</b></div>
-      `;
-
-      document.getElementById("cardPrecio").innerHTML = `
-        <h4>💶 Precio</h4>
-        <div class="kv"><span class="small muted">Renta propuesta</span><b>${euro(item.renta_propuesta)}</b></div>
-        <div class="kv"><span class="small muted">Renta máxima (MVP)</span><b>${item.resultados?.renta_maxima_mvp != null ? euro(item.resultados.renta_maxima_mvp) : "—"}</b></div>
-      `;
-
-      document.getElementById("cardDuracion").innerHTML = `
-        <h4>⏳ Duración</h4>
-        <div class="kv"><span class="small muted">Duración mínima</span><b>${item.resultados?.duracion_minima_anios || "—"} años</b></div>
-      `;
-
-      document.getElementById("cardFianza").innerHTML = `
-        <h4>🔒 Fianza</h4>
-        <div class="kv"><span class="small muted">Fianza mínima</span><b>${euro(item.resultados?.fianza_minima)}</b></div>
-      `;
-
-      document.getElementById("cardAlertas").innerHTML = `
-        <h4>⚠️ Qué debes revisar</h4>
-        ${item.alertas?.length
-          ? `<ul>${item.alertas.map(a=>`<li>${a}</li>`).join("")}</ul>`
-          : `<div class="muted small">No hay alertas relevantes.</div>`}
-        <div class="cta">
-          <a class="btn" href="/static/wizard.html">Nuevo análisis</a>
-          <button class="btn primary" onclick="alert('Pro próximamente')">🔒 Recomendaciones Pro</button>
-        </div>
-      `;
-
-      document.getElementById("cardPro").innerHTML = `
-        <h4>🔒 Funciones Pro</h4>
-        <ul>
-          <li>Cláusulas contractuales personalizadas</li>
-          <li>Informe legal descargable</li>
-          <li>Chat legal con IA</li>
-        </ul>
-      `;
-
-    }catch(e){
-      msg.textContent="Error cargando la ficha.";
+    if(res.status === 401){ logout(); return; }
+    if(res.status !== 200){
+      document.getElementById("headerCard").innerHTML = "Error cargando inmueble";
+      return;
     }
+
+    const item = await res.json();
+    const r = item.resultados || {};
+
+    document.getElementById("headerCard").innerHTML = `
+      <h3 style="margin:0 0 6px;">${item.direccion}</h3>
+      <div class="muted small">${item.municipio} · ${item.comunidad_autonoma}</div>
+      <div class="muted small">Último análisis: ${item.fecha_analisis || "—"}</div>
+    `;
+
+    const v = verdictUI(item.semaforo);
+    const vc = document.getElementById("verdictCard");
+    vc.className = `verdict ${v.cls}`;
+    vc.innerHTML = `<div class="icon">${v.icon}</div><div><b>${v.title}</b><div class="small">${v.text}</div></div>`;
+
+    document.getElementById("cardZona").innerHTML = `
+      <h4>📍 Zona</h4>
+      <div class="kv"><span class="small muted">Zona tensionada</span><b>${item.zona_tensionada?"Sí":"No"}</b></div>
+      <div class="kv"><span class="small muted">Fuente</span><b>${item.zona_tensionada_fuente||"—"}</b></div>
+    `;
+
+    document.getElementById("cardPrecio").innerHTML = `
+      <h4>💶 Precio</h4>
+      <div class="kv"><span class="small muted">Renta propuesta</span><b>${euro(item.renta_propuesta)}</b></div>
+      <div class="kv"><span class="small muted">Renta máxima (MVP)</span><b>${r.renta_maxima_mvp!=null?euro(r.renta_maxima_mvp):"—"}</b></div>
+    `;
+
+    document.getElementById("cardDuracion").innerHTML = `
+      <h4>⏳ Duración</h4>
+      <div class="kv"><span class="small muted">Duración mínima</span><b>${r.duracion_minima_anios||"—"} años</b></div>
+    `;
+
+    document.getElementById("cardFianza").innerHTML = `
+      <h4>🔒 Fianza</h4>
+      <div class="kv"><span class="small muted">Fianza mínima</span><b>${euro(r.fianza_minima)}</b></div>
+    `;
+
+    document.getElementById("cardAlertas").innerHTML = `
+      <h4>⚠️ Qué debes revisar</h4>
+      ${item.alertas?.length ? `<ul>${item.alertas.map(a=>`<li>${a}</li>`).join("")}</ul>`
+        : `<div class="muted small">No hay alertas relevantes.</div>`}
+    `;
+  }
+
+  /* =======================
+     ASISTENTE LEGAL (FREE)
+  ====================== */
+  function appendMessage(text, user=false){
+    const box=document.getElementById("chatBox");
+    const div=document.createElement("div");
+    div.className="small";
+    div.style.margin="6px 0";
+    div.innerHTML=(user?"🧑‍💼 ":"🤖 ")+text;
+    box.appendChild(div);
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function sendChat(){
+    const input=document.getElementById("chatInput");
+    const notice=document.getElementById("chatNotice");
+    const q=input.value.trim();
+    if(!q) return;
+
+    appendMessage(q,true);
+    input.value="";
+    notice.textContent="";
+
+    const l=q.toLowerCase();
+    const sensitive=["mi inmueble","puedo subir","me recomiendas","renta máxima"];
+
+    if(!isPro && sensitive.some(k=>l.includes(k))){
+      appendMessage("Para analizar tu caso concreto necesitas la versión Pro.");
+      notice.innerHTML="🔒 Función disponible en <b>Pro</b>.";
+      return;
+    }
+
+    if(l.includes("zona tensionada")){
+      appendMessage("Una zona tensionada es un área donde existen límites al precio del alquiler fijados por la administración.");
+      return;
+    }
+
+    if(l.includes("duración")){
+      appendMessage("La duración mínima suele ser de 5 años si el arrendador es persona física y 7 si es jurídica.");
+      return;
+    }
+
+    if(l.includes("fianza")){
+      appendMessage("En vivienda habitual la fianza obligatoria es de una mensualidad.");
+      return;
+    }
+
+    appendMessage("Puedo ayudarte con dudas generales. Para análisis personalizados, accede a Pro.");
   }
 
   load();
