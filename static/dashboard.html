@@ -60,6 +60,17 @@
     .msg{ margin-top:10px; font-size:13px; font-weight:900; }
     .msg.error{ color:#b42318; }
     .msg.ok{ color:#027a48; }
+    .msg.warn{ color:#b54708; }
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      font-size:12px;
+      font-weight:900;
+    }
   </style>
 </head>
 <body>
@@ -70,7 +81,7 @@
         <div>Lexia360</div>
       </a>
       <div class="nav-actions">
-        <span id="who" style="color:rgba(255,255,255,.85); font-weight:900;"></span>
+        <span id="who" class="pill" style="display:none;"></span>
         <button class="btn" onclick="go('/static/wizard.html')">Wizard</button>
         <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
         <button class="btn" onclick="go('/static/papelera.html')">Papelera</button>
@@ -97,6 +108,9 @@
         </div>
 
         <div id="sysMsg" class="msg"></div>
+        <div class="muted2" style="margin-top:10px;">
+          <span class="muted2">Nota:</span> “Docs” se activará cuando exista endpoint real (por ejemplo <code>/documents</code>).
+        </div>
       </div>
 
       <div class="card">
@@ -122,43 +136,98 @@
   }
   function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
 
-  async function guard(){
+  async function safeJson(res){ try{ return await res.json(); } catch { return null; } }
+
+  async function guardOnce(){
     const t = token();
-    if(!t){ logout(); return false; }
-    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-    if(res.status === 401){ logout(); return false; }
-    if(!res.ok){ return false; }
-    const me = await res.json().catch(()=>null);
-    document.getElementById("who").textContent = me?.email || localStorage.getItem("email") || "";
-    return true;
-  }
+    if(!t){ logout(); return null; }
 
-  async function loadStatus(){
-    const msg = document.getElementById("sysMsg");
-    msg.textContent = "";
     try{
-      const res = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
-      if(res.status===401){ logout(); return; }
-      const data = await res.json().catch(()=>null);
+      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+      if(res.status === 401){ logout(); return null; }
+      if(!res.ok){ logout(); return null; }
+      const me = await safeJson(res);
 
-      setText("k_users", data?.usuarios_registrados ?? "—");
-      setText("k_inm", data?.inmuebles_activos ?? "—");
-      setText("k_trash", data?.inmuebles_eliminados ?? "—");
-      setText("k_docs", data?.documentos ?? "—");
-
-      msg.className = "msg ok";
-      msg.textContent = "✅ Estado cargado.";
-      setTimeout(()=>{ msg.textContent=""; }, 900);
+      const who = document.getElementById("who");
+      const email = me?.email || localStorage.getItem("email") || "";
+      if(email){
+        who.style.display = "inline-block";
+        who.textContent = email;
+      }
+      return me;
     }catch(e){
-      msg.className = "msg error";
-      msg.textContent = "⚠️ No se pudo cargar /status.";
+      // Si falla red, NO logout automático; solo informamos.
+      return null;
     }
   }
 
+  async function loadStatusAndCounts(){
+    const msg = document.getElementById("sysMsg");
+    msg.className = "msg";
+    msg.textContent = "";
+
+    // 1) Usuarios desde /status (no requiere cambios en backend)
+    try{
+      const resS = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
+      if(resS.status===401){ logout(); return; }
+      const s = await safeJson(resS);
+
+      if(resS.ok && s){
+        setText("k_users", s.usuarios_registrados ?? "—");
+      }else{
+        setText("k_users", "—");
+      }
+    }catch(e){
+      setText("k_users", "—");
+    }
+
+    // 2) Inmuebles activos desde /inmuebles
+    try{
+      const resI = await fetch(`${apiUrl}/inmuebles`, { headers: authHeaders() });
+      if(resI.status===401){ logout(); return; }
+      const dataI = await safeJson(resI);
+
+      if(resI.ok && Array.isArray(dataI)){
+        setText("k_inm", dataI.length);
+      }else{
+        setText("k_inm", "—");
+      }
+    }catch(e){
+      setText("k_inm", "—");
+    }
+
+    // 3) Papelera desde /inmuebles/trash
+    try{
+      const resT = await fetch(`${apiUrl}/inmuebles/trash`, { headers: authHeaders() });
+      if(resT.status===401){ logout(); return; }
+      const dataT = await safeJson(resT);
+
+      if(resT.ok && Array.isArray(dataT)){
+        setText("k_trash", dataT.length);
+      }else{
+        setText("k_trash", "—");
+      }
+    }catch(e){
+      setText("k_trash", "—");
+    }
+
+    // 4) Docs: aún no hay endpoint real
+    setText("k_docs", "—");
+
+    msg.className = "msg ok";
+    msg.textContent = "✅ Estado cargado.";
+    setTimeout(()=>{ msg.textContent=""; }, 900);
+  }
+
   (async function init(){
-    const ok = await guard();
-    if(!ok) return;
-    await loadStatus();
+    const me = await guardOnce();
+    if(!me) {
+      // si no pudo validar /me pero hay token, no hacemos logout automático por posible fallo temporal
+      // si quieres forzar, descomenta:
+      // logout();
+      return;
+    }
+    await loadStatusAndCounts();
   })();
 </script>
 </body>
