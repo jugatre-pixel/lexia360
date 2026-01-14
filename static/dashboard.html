@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Contratos y Burofax en minutos</title>
+  <title>Lexia360 · Dashboard</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
   <style>
     :root{
       --brand:#0b5fff; --brand2:#5b8cff;
       --bg:#0b1220; --muted:rgba(255,255,255,.74);
       --card:#fff; --border:#e6e8ef;
+      --ink:#101828;
     }
     body{
       margin:0;
       background:
         radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
         radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 62%, #f6f7fb 62%, #f6f7fb 100%);
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 46%, #f6f7fb 46%, #f6f7fb 100%);
     }
-    .wrap{ max-width:1100px; margin:0 auto; padding:18px; }
+    .wrap{ max-width:1150px; margin:0 auto; padding:18px; }
     .nav{
       position:sticky; top:0; z-index:20;
       background:rgba(11,18,32,.55);
@@ -31,189 +32,271 @@
       background:linear-gradient(135deg,var(--brand),var(--brand2));
       box-shadow:0 14px 28px rgba(11,95,255,.22);
     }
-    .btn{ border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer; }
+    .nav-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer;
+    }
     .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
-    .hero{ padding:38px 0 26px; }
-    .grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:18px; align-items:start; }
+    .btn.ghost{ background:transparent; }
+    .hero{ padding:26px 0 14px; }
+    .headline{ color:#fff; font-size:34px; line-height:1.06; margin:0 0 8px; font-weight:1000; letter-spacing:-.2px; }
+    .sub{ color:var(--muted); margin:0; font-size:14px; }
+    .grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; align-items:start; }
     @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
-    .headline{ color:#fff; font-size:44px; line-height:1.05; margin:0 0 12px; font-weight:1000; letter-spacing:-.3px; }
-    .sub{ color:var(--muted); margin:0 0 18px; font-size:16px; }
-    .trust{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    .pill{ font-size:12px; color:rgba(255,255,255,.85); border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); padding:6px 10px; border-radius:999px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 44px rgba(16,24,40,.12); }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 18px 44px rgba(16,24,40,.12);
+    }
+    .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    @media(max-width:900px){ .kpis{ grid-template-columns:repeat(2,1fr); } }
+    .kpi{ border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff; }
+    .kpi .label{ color:#667085; font-size:12px; font-weight:800; margin-bottom:6px; }
+    .kpi .value{ font-size:22px; font-weight:1000; color:var(--ink); }
+    .kpi .hint{ color:#98a2b3; font-size:12px; margin-top:6px; }
+
+    .actions{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+    @media(max-width:900px){ .actions{ grid-template-columns:1fr; } }
+    .action{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      background:#fff;
+      cursor:pointer;
+      transition: transform .06s ease;
+    }
+    .action:hover{ transform: translateY(-1px); }
+    .action b{ display:block; margin-bottom:6px; }
     .muted2{ color:#667085; font-size:13px; }
-    input{ border-radius:12px !important; }
-    .error{ color:#b42318; font-size:13px; margin-top:8px; font-weight:700; }
-    .ok{ color:#027a48; font-size:13px; margin-top:8px; font-weight:700; }
-    .features{ padding:18px 0 50px; }
-    .featgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-    @media(max-width:900px){ .featgrid{ grid-template-columns:1fr; } }
-    .feat{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; }
-    .feat b{ display:block; margin-bottom:6px; }
-    footer{ color:#98a2b3; font-size:12px; padding:18px 0 36px; }
+
+    table{ margin:0; }
+    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    .smallbtn{
+      padding:8px 10px;
+      border-radius:10px;
+      font-weight:900;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+    }
+    .smallbtn.primary{
+      border-color:transparent;
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+    }
+    .msg{ margin-top:10px; font-size:13px; font-weight:800; }
+    .msg.error{ color:#b42318; }
+    .msg.ok{ color:#027a48; }
   </style>
 </head>
+
 <body>
   <div class="nav">
     <div class="wrap nav-row">
-      <a class="logo" href="/static/index.html">
+      <a class="logo" href="/static/dashboard.html">
         <div class="badge">⚖️</div>
         <div>Lexia360</div>
       </a>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn" onclick="show('login')">Iniciar sesión</button>
-        <button class="btn primary" onclick="show('register')">Crear cuenta</button>
+      <div class="nav-actions">
+        <span id="who" style="color:rgba(255,255,255,.85); font-weight:900;"></span>
+        <button class="btn" onclick="go('/static/wizard.html')">Wizard</button>
+        <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
+        <button class="btn ghost" onclick="go('/static/papelera.html')">Papelera</button>
+        <button class="btn primary" onclick="logout()">Cerrar sesión</button>
       </div>
     </div>
   </div>
 
   <section class="wrap hero">
+    <h1 class="headline">Panel de control</h1>
+    <p class="sub">Tu centro de operaciones: expedientes, documentos y trazabilidad.</p>
+  </section>
+
+  <section class="wrap">
     <div class="grid">
-      <div>
-        <h1 class="headline">Contratos y Burofax<br>con rigor, en minutos.</h1>
-        <p class="sub">
-          Flujos guiados para <b>Contrato de alquiler</b> (con anexos y checklist)
-          y, próximamente, <b>Burofax/Requerimientos</b>. Hecho para España.
-        </p>
-        <div class="trust">
-          <span class="pill">✅ Wizard guiado</span>
-          <span class="pill">✅ Papelera + auditoría</span>
-          <span class="pill">📄 PDF descargable</span>
-          <span class="pill">🔒 Base para plan Pro</span>
+      <div class="card">
+        <h3 style="margin:0 0 10px;">Estado del sistema</h3>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="label">Usuarios</div>
+            <div class="value" id="k_users">—</div>
+            <div class="hint">Registrados</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Inmuebles</div>
+            <div class="value" id="k_inm">—</div>
+            <div class="hint">Activos</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Papelera</div>
+            <div class="value" id="k_trash">—</div>
+            <div class="hint">Eliminados</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Docs</div>
+            <div class="value" id="k_docs">—</div>
+            <div class="hint">Generados</div>
+          </div>
         </div>
+
+        <div class="actions">
+          <div class="action" onclick="go('/static/wizard.html')">
+            <b>🧭 Crear contrato (Wizard)</b>
+            <div class="muted2">Contrato de alquiler + anexos y checklist (MVP).</div>
+          </div>
+          <div class="action" onclick="go('/static/inmuebles.html')">
+            <b>🏠 Gestionar inmuebles</b>
+            <div class="muted2">Alta, edición, ficha y descarga de PDF.</div>
+          </div>
+          <div class="action" onclick="go('/static/papelera.html')">
+            <b>🗑️ Ver papelera</b>
+            <div class="muted2">Recupera o elimina definitivamente.</div>
+          </div>
+        </div>
+
+        <div id="sysMsg" class="msg"></div>
       </div>
 
       <div class="card">
-        <section id="loginBox">
-          <h3 style="margin:0 0 6px;">Accede</h3>
-          <div class="muted2">Entra al panel y gestiona tus expedientes.</div>
+        <h3 style="margin:0 0 10px;">Últimos inmuebles</h3>
+        <div class="muted2" style="margin-bottom:10px;">Acceso rápido a fichas recientes.</div>
 
-          <label>Email</label>
-          <input id="loginEmail" type="email" placeholder="tucorreo@..." />
+        <div style="overflow:auto;">
+          <table role="grid">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr><td colspan="3" class="muted2">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-          <label>Contraseña</label>
-          <input id="loginPassword" type="password" placeholder="••••••••" />
-
-          <button onclick="login()" class="primary" style="width:100%;">Entrar</button>
-          <div id="loginMsg" class="error"></div>
-        </section>
-
-        <section id="registerBox" style="display:none;">
-          <h3 style="margin:0 0 6px;">Crear cuenta</h3>
-          <div class="muted2">Crea tu cuenta en 30 segundos.</div>
-
-          <label>Nombre</label>
-          <input id="regNombre" type="text" placeholder="Nombre y apellidos" />
-
-          <label>Email</label>
-          <input id="regEmail" type="email" placeholder="tucorreo@..." />
-
-          <label>Contraseña</label>
-          <input id="regPassword" type="password" placeholder="mínimo 8 caracteres" />
-
-          <button onclick="register()" class="primary" style="width:100%;">Crear cuenta</button>
-          <div id="regMsg" class="error"></div>
-        </section>
+        <div id="listMsg" class="msg"></div>
       </div>
     </div>
-  </section>
-
-  <section class="wrap features">
-    <div class="featgrid">
-      <div class="feat">
-        <b>📌 Expedientes</b>
-        <div class="muted2">Cada inmueble como expediente con histórico y documentos.</div>
-      </div>
-      <div class="feat">
-        <b>📄 Documentos</b>
-        <div class="muted2">PDF inmediato. Sprint 3: contrato + anexos versionados.</div>
-      </div>
-      <div class="feat">
-        <b>🧾 Checklist</b>
-        <div class="muted2">Cumplimiento y alertas por reglas (MVP → avanzado).</div>
-      </div>
-    </div>
-
-    <footer>
-      © 2026 Lexia360 · Plataforma legal automatizada (España)
-    </footer>
   </section>
 
 <script>
   const apiUrl = location.origin;
+  let __loaded = false;
 
-  (async()=>{
-    const token = localStorage.getItem("token");
-    if(!token) return;
-    try{
-      const res = await fetch(`${apiUrl}/me`, { headers:{ "Authorization": `Bearer ${token}` }});
-      if(res.ok) window.location.href="/static/dashboard.html";
-      else localStorage.removeItem("token");
-    }catch(e){}
-  })();
+  function token(){ return localStorage.getItem("token"); }
+  function authHeaders(){
+    return { "Authorization": `Bearer ${token()}` };
+  }
+  function go(path){ window.location.href = path; }
 
-  function show(which){
-    document.getElementById("loginBox").style.display = which === "login" ? "block" : "none";
-    document.getElementById("registerBox").style.display = which === "register" ? "block" : "none";
-    document.getElementById("loginMsg").textContent = "";
-    document.getElementById("regMsg").textContent = "";
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    window.location.href = "/static/index.html";
   }
 
-  async function register(){
-    const nombre = document.getElementById("regNombre").value.trim();
-    const email = document.getElementById("regEmail").value.trim();
-    const password = document.getElementById("regPassword").value;
+  async function guard(){
+    const t = token();
+    if(!t){ logout(); return false; }
+    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+    if(res.status === 401){ logout(); return false; }
+    if(!res.ok){ return false; }
+    const me = await res.json().catch(()=>null);
+    const label = me?.email || localStorage.getItem("email") || "Cuenta";
+    document.getElementById("who").textContent = label;
+    return true;
+  }
 
-    const msg = document.getElementById("regMsg");
-    msg.className = "error"; msg.textContent = "";
+  function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
+
+  async function loadStatus(){
+    const msg = document.getElementById("sysMsg");
+    msg.textContent = "";
+    try{
+      const res = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
+      if(res.status === 401){ logout(); return; }
+      const data = await res.json().catch(()=>null);
+
+      // Si /status no está protegido o cambia el formato, no rompemos:
+      const u = data?.usuarios_registrados ?? data?.usuarios ?? data?.users ?? null;
+      const a = data?.inmuebles_activos ?? data?.inmuebles ?? data?.activos ?? null;
+      const tr = data?.inmuebles_eliminados ?? data?.papelera ?? data?.trash ?? null;
+      const d = data?.documentos ?? data?.docs ?? null;
+
+      setText("k_users", u ?? "—");
+      setText("k_inm", a ?? "—");
+      setText("k_trash", tr ?? "—");
+      setText("k_docs", d ?? "—");
+
+      msg.className = "msg ok";
+      msg.textContent = "✅ Estado cargado.";
+      setTimeout(()=>{ msg.textContent=""; }, 1200);
+    }catch(e){
+      msg.className = "msg error";
+      msg.textContent = "⚠️ No se pudo cargar /status (no es crítico).";
+    }
+  }
+
+  async function loadInmuebles(){
+    const tbody = document.getElementById("tbody");
+    const msg = document.getElementById("listMsg");
+    msg.textContent = "";
 
     try{
-      const res = await fetch(`${apiUrl}/register`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ nombre, email, password })
-      });
-      const data = await res.json().catch(()=>({}));
+      const res = await fetch(`${apiUrl}/inmuebles?limit=10`, { headers: authHeaders() });
+      if(res.status === 401){ logout(); return; }
+      const items = await res.json().catch(()=>[]);
+      const arr = Array.isArray(items) ? items : (items?.items || []);
 
-      if(!res.ok){
-        msg.textContent = data.detail || "Error al registrar.";
+      if(!arr.length){
+        tbody.innerHTML = `<tr><td colspan="3" class="muted2">No hay inmuebles todavía.</td></tr>`;
         return;
       }
 
-      msg.className = "ok";
-      msg.textContent = "✅ Cuenta creada. Ahora inicia sesión.";
-      setTimeout(()=>show("login"), 700);
+      tbody.innerHTML = arr.slice(0,10).map(x => {
+        const id = x.id ?? x.id_inmueble ?? x.idInmueble ?? "";
+        const nombre = x.nombre ?? x.titulo ?? x.direccion ?? "Inmueble";
+        return `
+          <tr>
+            <td><b>${id}</b></td>
+            <td>${escapeHtml(String(nombre))}</td>
+            <td>
+              <div class="row-actions">
+                <button class="smallbtn primary" onclick="go('/static/inmueble.html?id=${id}')">Abrir</button>
+                <button class="smallbtn" onclick="go('/static/inmuebles.html')">Ver lista</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
     }catch(e){
-      msg.textContent = "⚠️ No se pudo conectar con el servidor.";
+      tbody.innerHTML = `<tr><td colspan="3" class="muted2">No se pudo cargar la lista.</td></tr>`;
+      msg.className = "msg error";
+      msg.textContent = "⚠️ Error cargando /inmuebles.";
     }
   }
 
-  async function login(){
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
-
-    const msg = document.getElementById("loginMsg");
-    msg.className = "error"; msg.textContent = "";
-
-    const formData = new URLSearchParams();
-    formData.append("username", email);
-    formData.append("password", password);
-
-    try{
-      const res = await fetch(`${apiUrl}/token`, { method:"POST", body: formData });
-      const data = await res.json().catch(()=>({}));
-
-      if(data.access_token){
-        localStorage.setItem("token", data.access_token);
-        localStorage.setItem("email", email);
-        window.location.href = "/static/dashboard.html";
-      }else{
-        msg.textContent = "❌ Credenciales incorrectas.";
-      }
-    }catch(e){
-      msg.textContent = "⚠️ No se pudo conectar con el servidor.";
-    }
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   }
+
+  (async function init(){
+    if(__loaded) return;
+    __loaded = true;
+
+    const ok = await guard();
+    if(!ok) return;
+
+    await Promise.all([ loadStatus(), loadInmuebles() ]);
+  })();
 </script>
 </body>
 </html>
