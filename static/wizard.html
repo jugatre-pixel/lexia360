@@ -30,6 +30,10 @@
     .toast.ok{ color:var(--ok); }
     .toast.err{ color:var(--danger); }
     .hint{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:12px; }
+    .pill{
+      display:inline-block; padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border); background:#fff; font-weight:900; font-size:12px; color:#101828;
+    }
   </style>
 </head>
 <body>
@@ -39,7 +43,8 @@
       <div class="badge">⚖️</div>
       <div>Lexia360</div>
     </a>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <span id="who" class="pill" style="display:none;"></span>
       <a class="btn" href="/static/inmuebles.html">📁 Expedientes</a>
       <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
@@ -154,7 +159,7 @@
 
       <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px;">
         <button class="btn" onclick="next(2)">Atrás</button>
-        <button class="btn primary" onclick="create()">Crear expediente</button>
+        <button class="btn primary" id="btnCreate" onclick="create()">Crear expediente</button>
       </div>
     </div>
 
@@ -163,17 +168,23 @@
 
 <script>
   const apiUrl = location.origin;
-  const token = localStorage.getItem("token");
-  if(!token) location.href="/static/index.html";
 
+  function token(){ return localStorage.getItem("token"); }
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
     location.href="/static/index.html";
   }
+  function authHeaders(extra={}){
+    return { ...extra, "Authorization": `Bearer ${token()}` };
+  }
+
+  async function safeJson(res){ try{ return await res.json(); } catch { return {}; } }
 
   function esc(s){
-    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
 
   function setToast(text, ok=true){
@@ -252,22 +263,46 @@
     };
   }
 
+  async function guard(){
+    const t = token();
+    if(!t){ logout(); return false; }
+    try{
+      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+      if(res.status===401){ logout(); return false; }
+      if(!res.ok){ setToast("⚠️ No se pudo validar sesión.", false); return false; }
+      const me = await safeJson(res);
+      const who = document.getElementById("who");
+      const email = me?.email || localStorage.getItem("email") || "";
+      if(email){
+        who.style.display="inline-block";
+        who.textContent=email;
+      }
+      return true;
+    }catch(e){
+      // fallo red: no expulsamos
+      setToast("⚠️ No hay conexión. Intenta recargar.", false);
+      return false;
+    }
+  }
+
   async function create(){
+    const ok = await guard();
+    if(!ok) return;
+
     const payload = collect();
+    const btn = document.getElementById("btnCreate");
+    btn.disabled = true;
 
     try{
       const res = await fetch(`${apiUrl}/inmuebles`, {
         method:"POST",
-        headers:{
-          "Authorization": `Bearer ${token}`,
-          "Content-Type":"application/json"
-        },
+        headers: authHeaders({ "Content-Type":"application/json" }),
         body: JSON.stringify(payload)
       });
 
-      if(res.status===401) return logout();
+      if(res.status===401){ logout(); return; }
 
-      const data = await res.json().catch(()=>({}));
+      const data = await safeJson(res);
       if(!res.ok){
         setToast(data.detail || "Error creando expediente", false);
         return;
@@ -278,10 +313,16 @@
 
     }catch(e){
       setToast("⚠️ No se pudo conectar con el servidor", false);
+    } finally {
+      btn.disabled = false;
     }
   }
 
-  setStep(1);
+  (async function init(){
+    // validamos sesión al entrar
+    await guard();
+    setStep(1);
+  })();
 </script>
 </body>
 </html>
