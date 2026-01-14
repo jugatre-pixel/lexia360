@@ -1,252 +1,241 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lexia360 • Legal, simple, auditable</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lexia360 · Legal simplificado</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
   <style>
     :root{
-      --bg:#F6F8FB;
-      --card:#FFFFFF;
-      --text:#0B1220;
-      --muted:#5B677A;
-      --border:#E6EAF2;
-      --primary:#1E4FD6;
-      --primaryHover:#1A43B7;
-      --accent:#C7A457;
-      --radius:16px;
+      --bg:#0b1220;
+      --card:#ffffff;
+      --muted:#667085;
+      --brand:#0b5fff;
+      --brand2:#5b8cff;
+      --border:#e6e8ef;
     }
-    body{ background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; }
-    .wrap{ max-width:1100px; margin:0 auto; padding:0 18px; }
-
-    header{ position:static; background:#fff; border-bottom:1px solid var(--border); }
-    .nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
-    .brand{ display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.2px; }
-    .brand-badge{ width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),#6D8BFF); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }
-
-    nav a{ color:var(--muted); text-decoration:none; font-weight:700; margin-left:16px; }
-    nav a:hover{ color:var(--text); }
-
-    .btn{ display:inline-flex; align-items:center; justify-content:center; padding:12px 14px; border-radius:12px; font-weight:900; text-decoration:none; border:1px solid var(--border); background:#fff; color:var(--text); cursor:pointer; }
-    .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
-    .btn.primary:hover{ background:var(--primaryHover); border-color:var(--primaryHover); }
-
-    main{ padding:26px 0 38px; }
-
-    .hero{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; align-items:stretch; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:0 10px 24px rgba(11,18,32,.06); }
-
-    h1{ font-size:40px; margin:0 0 10px; line-height:1.08; }
-    .sub{ color:var(--muted); margin:0 0 14px; font-size:16px; }
-    .trust{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-    .pill{ border:1px solid var(--border); background:#fff; color:var(--muted); padding:8px 10px; border-radius:999px; font-weight:800; font-size:13px; }
-
-    .steps{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:14px; }
-    .step{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px; }
-    .step strong{ display:block; margin-bottom:4px; }
-
-    .grid3{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin:18px 0 0; }
-    .mini{ background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
-    .mini h3{ margin:0 0 6px; font-size:16px; }
-    .mini p{ margin:0; color:var(--muted); font-size:14px; }
-
-    .auth .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    input{ background:#fff !important; border:1px solid var(--border) !important; border-radius:12px !important; }
-    .message{ margin-top:10px; font-weight:900; font-size:13px; }
-
-    footer{ border-top:1px solid var(--border); padding:22px 0 28px; color:var(--muted); font-size:13px; margin-top:22px; }
-    footer a{ color:inherit; text-decoration:none; font-weight:800; margin-left:12px; }
-
-    @media (max-width: 900px){
-      .hero{ grid-template-columns:1fr; }
-      h1{ font-size:34px; }
-      .steps{ grid-template-columns:1fr; }
-      .grid3{ grid-template-columns:1fr; }
-      .auth .row{ grid-template-columns:1fr; }
+    body{
+      margin:0;
+      background: radial-gradient(1000px 500px at 20% 0%, rgba(11,95,255,.25), transparent 55%),
+                  radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+                  linear-gradient(180deg, #0b1220 0%, #0f1a33 60%, #f6f7fb 60%, #f6f7fb 100%);
     }
+    .nav{
+      position:sticky; top:0; z-index:20;
+      backdrop-filter: blur(10px);
+      background: rgba(11,18,32,.55);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
+    .nav-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .logo{
+      display:flex; align-items:center; gap:10px;
+      color:#fff; text-decoration:none; font-weight:800; letter-spacing:.2px;
+    }
+    .logo-badge{
+      width:34px;height:34px;border-radius:10px;
+      background: linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 10px 18px rgba(11,95,255,.22);
+    }
+    .logo-badge span{ color:#fff; font-weight:900; }
+    .nav-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .btn.primary{
+      background: linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+      border-color: transparent;
+    }
+
+    .hero{ padding:44px 18px 26px; }
+    .hero-grid{ max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1.2fr .8fr; gap:22px; align-items:start; }
+    @media(max-width:900px){ .hero-grid{ grid-template-columns:1fr; } }
+    .headline{ color:#fff; font-size:40px; line-height:1.05; margin:0 0 12px; font-weight:900; }
+    .sub{ color: rgba(255,255,255,.78); font-size:16px; margin:0 0 18px; }
+    .trust{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .pill{
+      font-size:12px; color: rgba(255,255,255,.85);
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      padding:6px 10px; border-radius:999px;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 18px 40px rgba(16,24,40,.10);
+    }
+    .card h3{ margin:0 0 8px; }
+    .muted{ color: var(--muted); font-size:13px; }
+    input{ border-radius:12px !important; }
+    button{ border-radius:12px !important; font-weight:800 !important; }
+
+    .section{ padding:26px 18px 60px; }
+    .features{ max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    @media(max-width:900px){ .features{ grid-template-columns:1fr; } }
+    .feat{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; }
+    .feat b{ display:block; margin-bottom:6px; }
+    footer{ max-width:1100px; margin:0 auto; padding:20px 18px 40px; color:#98a2b3; font-size:12px; }
+    .error{ color:#b42318; font-size:13px; margin-top:8px; }
+    .ok{ color:#027a48; font-size:13px; margin-top:8px; }
   </style>
 </head>
-<body>
-  <header>
-    <div class="wrap nav">
-      <div class="brand">
-        <span class="brand-badge">⚖</span>
-        <span>Lexia360</span>
-      </div>
-      <nav>
-        <a href="#como">Cómo funciona</a>
-        <a href="#acceso">Acceso</a>
-        <a class="btn primary" href="#acceso">Empezar</a>
-      </nav>
-    </div>
-  </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div class="card">
-        <h1>Legal inmobiliario en minutos.<br/>Claro, guiado y auditable.</h1>
+<body>
+  <div class="nav">
+    <div class="wrap nav-row">
+      <a class="logo" href="/static/index.html">
+        <div class="logo-badge"><span>⚖️</span></div>
+        <div>Lexia360</div>
+      </a>
+
+      <div class="nav-actions">
+        <button class="btn" onclick="show('login')">Iniciar sesión</button>
+        <button class="btn primary" onclick="show('register')">Crear cuenta</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <h1 class="headline">Legal inmobiliario,<br>rápido y claro.</h1>
         <p class="sub">
-          Crea un <b>Perfil Legal del Inmueble</b> con semáforo, parámetros clave y alertas.
-          Diseñado para España con enfoque europeo: trazabilidad, claridad y privacidad.
+          Crea fichas de inmuebles, valida reglas básicas, identifica zona tensionada (según dataset) y descarga un informe PDF profesional.
+          Estilo LegalZoom, enfoque europeo.
         </p>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a class="btn primary" href="#acceso">Crear cuenta</a>
-          <a class="btn" href="#como">Ver cómo funciona</a>
-        </div>
-
         <div class="trust">
-          <span class="pill">Trazabilidad</span>
-          <span class="pill">Semáforo legal</span>
-          <span class="pill">Histórico de análisis</span>
-          <span class="pill">Listo para IA (próx.)</span>
-        </div>
-
-        <div id="como" class="steps">
-          <div class="step">
-            <strong>1) Identifica el inmueble</strong>
-            <span style="color:var(--muted); font-size:13px;">Dirección, municipio y datos clave.</span>
-          </div>
-          <div class="step">
-            <strong>2) Ejecuta reglas</strong>
-            <span style="color:var(--muted); font-size:13px;">Motor normativo + alertas.</span>
-          </div>
-          <div class="step">
-            <strong>3) Decide con claridad</strong>
-            <span style="color:var(--muted); font-size:13px;">Semáforo y acciones recomendadas (próx.).</span>
-          </div>
-        </div>
-
-        <div class="grid3">
-          <div class="mini">
-            <h3>Enfocado</h3>
-            <p>Vivienda habitual (fase 1). Crece por módulos sin caos.</p>
-          </div>
-          <div class="mini">
-            <h3>Profesional</h3>
-            <p>Resultados estructurados, explicables y auditables.</p>
-          </div>
-          <div class="mini">
-            <h3>Escalable</h3>
-            <p>Preparado para informes PDF, pagos y asistente IA.</p>
-          </div>
+          <span class="pill">✅ Informe PDF</span>
+          <span class="pill">✅ Historial por inmueble</span>
+          <span class="pill">✅ Zonas tensionadas</span>
+          <span class="pill">🔒 Control Pro (paywall)</span>
         </div>
       </div>
 
-      <div class="card" id="acceso">
-        <h2 style="margin:0 0 6px;">Acceso</h2>
-        <p class="sub" style="margin:0 0 14px;">Crea cuenta o inicia sesión para acceder al panel.</p>
+      <div class="card">
+        <section id="loginBox">
+          <h3>Accede</h3>
+          <div class="muted">Entra a tu panel y gestiona tus inmuebles.</div>
+          <label>Email</label>
+          <input id="loginEmail" type="email" placeholder="tucorreo@..." />
+          <label>Contraseña</label>
+          <input id="loginPassword" type="password" placeholder="••••••••" />
+          <button onclick="login()" class="primary">Entrar</button>
+          <div id="loginMsg" class="error"></div>
+        </section>
 
-        <div class="auth">
-          <h3 style="font-size:15px; margin:0 0 8px;">Registro</h3>
-          <div class="row">
-            <input id="regNombre" type="text" placeholder="Nombre completo" />
-            <input id="regEmail" type="email" placeholder="Correo" />
-          </div>
-          <input id="regPassword" type="password" placeholder="Contraseña (mín 8)" />
-          <button class="btn primary" style="width:100%;" onclick="register()">Crear cuenta</button>
-          <div id="registerMessage" class="message"></div>
-
-          <hr style="border-color:var(--border); margin:16px 0;"/>
-
-          <h3 style="font-size:15px; margin:0 0 8px;">Iniciar sesión</h3>
-          <input id="loginEmail" type="email" placeholder="Correo" />
-          <input id="loginPassword" type="password" placeholder="Contraseña" />
-          <button class="btn" style="width:100%;" onclick="login()">Entrar</button>
-          <div id="loginMessage" class="message"></div>
-
-          <p style="color:var(--muted); font-size:12px; margin-top:12px;">
-            Cookies esenciales para sesión. Documentación legal se añadirá antes del lanzamiento público.
-          </p>
-        </div>
+        <section id="registerBox" style="display:none;">
+          <h3>Crear cuenta</h3>
+          <div class="muted">Crea tu cuenta en 30 segundos.</div>
+          <label>Nombre</label>
+          <input id="regNombre" type="text" placeholder="Nombre y apellidos" />
+          <label>Email</label>
+          <input id="regEmail" type="email" placeholder="tucorreo@..." />
+          <label>Contraseña</label>
+          <input id="regPassword" type="password" placeholder="mínimo 8 caracteres" />
+          <button onclick="register()" class="primary">Crear cuenta</button>
+          <div id="regMsg" class="error"></div>
+        </section>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <footer>
-      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <span>© 2026 Lexia360</span>
-        <span>
-          <a href="#">Privacidad</a>
-          <a href="#">Términos</a>
-          <a href="#">Cookies</a>
-        </span>
+  <section class="section">
+    <div class="features">
+      <div class="feat">
+        <b>📌 Fichas por inmueble</b>
+        <div class="muted">Cada inmueble tiene su ficha y su historial de análisis.</div>
       </div>
-    </footer>
-  </main>
+      <div class="feat">
+        <b>📄 Informe PDF</b>
+        <div class="muted">Un informe limpio y presentable para tu archivo o cliente.</div>
+      </div>
+      <div class="feat">
+        <b>🧠 Asistente IA</b>
+        <div class="muted">Dudas generales gratis, caso concreto solo Pro.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    © 2026 Lexia360 · Aviso legal · Privacidad
+  </footer>
 
   <script>
-    const apiUrl = window.location.origin;
+    const apiUrl = location.origin;
 
-    function setMsg(id, text, ok=false){
-      const el = document.getElementById(id);
-      el.style.color = ok ? "green" : "crimson";
-      el.textContent = text || "";
+    function show(which){
+      document.getElementById("loginBox").style.display = which === "login" ? "block" : "none";
+      document.getElementById("registerBox").style.display = which === "register" ? "block" : "none";
+      document.getElementById("loginMsg").textContent = "";
+      document.getElementById("regMsg").textContent = "";
     }
 
-    async function parseResponse(res){
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (ct.includes("application/json")) return await res.json();
-      const txt = await res.text();
-      return { detail: txt };
-    }
-
-    async function register() {
+    async function register(){
       const nombre = document.getElementById("regNombre").value.trim();
       const email = document.getElementById("regEmail").value.trim();
       const password = document.getElementById("regPassword").value;
 
-      setMsg("registerMessage","");
+      const msg = document.getElementById("regMsg");
+      msg.className = "error";
+      msg.textContent = "";
 
-      if (!nombre || !email || !password) return setMsg("registerMessage","Completa todos los campos.");
-      try {
+      try{
         const res = await fetch(`${apiUrl}/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
           body: JSON.stringify({ nombre, email, password })
         });
-        const data = await parseResponse(res);
-        if (res.ok) {
-          setMsg("registerMessage", data.mensaje || "✅ Registro completado. Inicia sesión.", true);
-        } else {
-          setMsg("registerMessage", data.detail || "Error al registrar.");
+        const data = await res.json();
+        if(!res.ok){
+          msg.textContent = data.detail || "Error al registrar.";
+          return;
         }
-      } catch {
-        setMsg("registerMessage","No se pudo conectar con el servidor.");
+        msg.className = "ok";
+        msg.textContent = "✅ Cuenta creada. Ahora inicia sesión.";
+        setTimeout(()=>show("login"), 900);
+      }catch(e){
+        msg.textContent = "⚠️ No se pudo conectar con el servidor.";
       }
     }
 
-    async function login() {
+    async function login(){
       const email = document.getElementById("loginEmail").value.trim();
       const password = document.getElementById("loginPassword").value;
 
-      setMsg("loginMessage","");
+      const msg = document.getElementById("loginMsg");
+      msg.className = "error";
+      msg.textContent = "";
 
       const formData = new URLSearchParams();
       formData.append("username", email);
       formData.append("password", password);
 
-      try {
-        const res = await fetch(`${apiUrl}/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: formData
-        });
-        const data = await parseResponse(res);
+      try{
+        const res = await fetch(`${apiUrl}/token`, { method:"POST", body: formData });
+        const data = await res.json();
 
-        if (res.ok && data.access_token) {
+        if(data.access_token){
           localStorage.setItem("token", data.access_token);
+          localStorage.setItem("email", email);
           window.location.href = "/static/dashboard.html";
-        } else {
-          setMsg("loginMessage", data.detail || "Credenciales incorrectas.");
+        }else{
+          msg.textContent = "❌ Credenciales incorrectas.";
         }
-      } catch {
-        setMsg("loginMessage","No se pudo conectar con el servidor.");
+      }catch(e){
+        msg.textContent = "⚠️ No se pudo conectar con el servidor.";
       }
     }
   </script>
