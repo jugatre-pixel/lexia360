@@ -18,7 +18,7 @@ from sqlalchemy import text
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v12-softdelete-undo"
+APP_VERSION = "lexia360-v13-trash-purge"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -109,7 +109,7 @@ class Inmueble(SQLModel, table=True):
     superficie_m2: int | None = None
 
     tipo_arrendamiento: str = "vivienda_habitual"
-    tipo_arrendador: str = "persona_fisica"  # persona_fisica / persona_juridica
+    tipo_arrendador: str = "persona_fisica"
 
     renta_propuesta: float
     renta_anterior: float | None = None
@@ -193,15 +193,14 @@ class ChatResponse(BaseModel):
 # ============================================================
 def _autofix_schema():
     """
-    Auto-migración simple para MVP:
-    - Si falta rulerun.fecha_analisis, la crea.
-    - Si falta inmueble.activo, la crea.
+    Auto-migración MVP para evitar Alembic por ahora:
+    - rulerun.fecha_analisis
+    - inmueble.activo
     """
     with engine.begin() as conn:
         # ✅ rulerun.fecha_analisis
         exists_fecha = conn.execute(text("""
-            SELECT 1
-            FROM information_schema.columns
+            SELECT 1 FROM information_schema.columns
             WHERE table_name='rulerun' AND column_name='fecha_analisis'
         """)).first()
 
@@ -210,10 +209,9 @@ def _autofix_schema():
             conn.execute(text("UPDATE rulerun SET fecha_analisis = CURRENT_DATE WHERE fecha_analisis IS NULL"))
             conn.execute(text("ALTER TABLE rulerun ALTER COLUMN fecha_analisis SET NOT NULL"))
 
-        # ✅ inmueble.activo (soft delete)
+        # ✅ inmueble.activo
         exists_activo = conn.execute(text("""
-            SELECT 1
-            FROM information_schema.columns
+            SELECT 1 FROM information_schema.columns
             WHERE table_name='inmueble' AND column_name='activo'
         """)).first()
 
@@ -221,6 +219,7 @@ def _autofix_schema():
             conn.execute(text("ALTER TABLE inmueble ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
+
 
 @app.on_event("startup")
 def on_startup():
@@ -327,11 +326,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
-    if zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]:
-        resultados["semaforo"] = "ROJO"
-    else:
-        resultados["semaforo"] = "VERDE"
-
+    resultados["semaforo"] = "ROJO" if (zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]) else "VERDE"
     return resultados, alertas
 
 
@@ -340,45 +335,16 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
 # ============================================================
 def mock_chat_engine(mensaje: str) -> tuple[str, bool]:
     m = (mensaje or "").lower().strip()
-
-    sensitive = [
-        "mi inmueble", "esta vivienda", "puedo subir", "me recomiendas",
-        "qué cláusula", "que cláusula", "en mi caso",
-        "renta máxima", "renta maxima",
-    ]
-
+    sensitive = ["mi inmueble","esta vivienda","puedo subir","me recomiendas","qué cláusula","que cláusula","en mi caso","renta máxima","renta maxima"]
     if any(k in m for k in sensitive):
-        return (
-            "Para analizar tu caso concreto necesito acceder al informe completo del inmueble. "
-            "Esta funcionalidad está disponible en la versión Pro.",
-            True
-        )
-
+        return ("Para analizar tu caso concreto necesito acceder al informe completo del inmueble. Esta funcionalidad está disponible en la versión Pro.", True)
     if "zona tensionada" in m:
-        return (
-            "Una zona tensionada es un área declarada por la administración donde se limitan "
-            "los precios del alquiler para proteger el acceso a la vivienda.",
-            False
-        )
-
+        return ("Una zona tensionada es un área declarada por la administración donde se limitan los precios del alquiler para proteger el acceso a la vivienda.", False)
     if "duración" in m or "duracion" in m:
-        return (
-            "En vivienda habitual, la duración mínima del contrato suele ser de 5 años "
-            "si el arrendador es persona física y 7 años si es persona jurídica.",
-            False
-        )
-
+        return ("En vivienda habitual, la duración mínima del contrato suele ser de 5 años si el arrendador es persona física y 7 años si es persona jurídica.", False)
     if "fianza" in m:
-        return (
-            "En los contratos de vivienda habitual, la fianza obligatoria es de una mensualidad de renta.",
-            False
-        )
-
-    return (
-        "Puedo ayudarte con dudas generales sobre alquiler y normativa. "
-        "Si necesitas un análisis específico de tu inmueble, la versión Pro te dará acceso completo.",
-        False
-    )
+        return ("En los contratos de vivienda habitual, la fianza obligatoria es de una mensualidad de renta.", False)
+    return ("Puedo ayudarte con dudas generales sobre alquiler y normativa. Si necesitas un análisis específico de tu inmueble, la versión Pro te dará acceso completo.", False)
 
 
 # ============================================================
@@ -401,12 +367,8 @@ def status():
     with Session(engine, expire_on_commit=False) as session:
         users_count = len(session.exec(select(Usuario)).all())
         zonas_count = len(session.exec(select(ZonaTensionada)).all())
-        return {
-            "status": "✅ OK",
-            "usuarios_registrados": users_count,
-            "zonas_tensionadas": zonas_count,
-            "version": APP_VERSION
-        }
+        return {"status":"✅ OK","usuarios_registrados":users_count,"zonas_tensionadas":zonas_count,"version":APP_VERSION}
+
 
 @app.get("/debug/env")
 def debug_env():
@@ -447,7 +409,7 @@ def register(payload: RegisterPayload):
         )
         session.add(user)
         session.commit()
-    return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
+    return {"mensaje":"✅ Registro completado","version":APP_VERSION}
 
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
@@ -456,11 +418,11 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token(user.email)
-    return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
+    return {"access_token":token,"token_type":"bearer","version":APP_VERSION}
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
-    return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
+    return {"id_usuario":user.id_usuario,"email":user.email,"rol":user.rol,"version":APP_VERSION}
 
 
 # ============================================================
@@ -492,13 +454,7 @@ def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = Non
     f = fecha or date.today()
     with Session(engine, expire_on_commit=False) as session:
         zona = find_zona_tensionada(session, municipio, comunidad_autonoma, f)
-        return {
-            "municipio": municipio,
-            "comunidad_autonoma": comunidad_autonoma,
-            "fecha": str(f),
-            "zona_tensionada": zona is not None,
-            "fuente_oficial": zona.fuente_oficial if zona else None
-        }
+        return {"municipio":municipio,"comunidad_autonoma":comunidad_autonoma,"fecha":str(f),"zona_tensionada":zona is not None,"fuente_oficial":zona.fuente_oficial if zona else None}
 
 @app.post("/admin/zonas-tensionadas")
 def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
@@ -514,23 +470,12 @@ def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
         session.add(z)
         session.commit()
         session.refresh(z)
-        return {
-            "ok": True,
-            "id_zona": z.id_zona,
-            "comunidad_autonoma": z.comunidad_autonoma,
-            "municipio": z.municipio,
-            "fecha_inicio": str(z.fecha_inicio),
-            "fecha_fin": str(z.fecha_fin) if z.fecha_fin else None,
-            "fuente_oficial": z.fuente_oficial,
-            "activo": z.activo
-        }
+        return {"ok":True,"id_zona":z.id_zona}
 
 @app.get("/admin/zonas-tensionadas")
 def listar_zonas(admin: Usuario = Depends(require_admin)):
     with Session(engine, expire_on_commit=False) as session:
-        zonas = session.exec(
-            select(ZonaTensionada).order_by(ZonaTensionada.comunidad_autonoma, ZonaTensionada.municipio)
-        ).all()
+        zonas = session.exec(select(ZonaTensionada).order_by(ZonaTensionada.comunidad_autonoma, ZonaTensionada.municipio)).all()
         return [{
             "id_zona": z.id_zona,
             "comunidad_autonoma": z.comunidad_autonoma,
@@ -543,7 +488,7 @@ def listar_zonas(admin: Usuario = Depends(require_admin)):
 
 
 # ============================================================
-# ROUTES (INMUEBLES)
+# INMUEBLES HELPERS
 # ============================================================
 def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
     last_run = session.exec(
@@ -561,14 +506,19 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
         "municipio": inm.municipio,
         "comunidad_autonoma": inm.comunidad_autonoma,
         "renta_propuesta": inm.renta_propuesta,
-        "semaforo": resultados.get("semaforo"),
+        "activo": inm.activo,
+        "semaforo": resultados.get("semaforo") if resultados else None,
         "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
-        "zona_tensionada": resultados.get("zona_tensionada"),
-        "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente"),
+        "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
+        "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente") if resultados else None,
         "resultados": resultados,
         "alertas": alertas,
     }
 
+
+# ============================================================
+# ROUTES (INMUEBLES)
+# ============================================================
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
     try:
@@ -603,26 +553,10 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
             session.add(run)
             session.commit()
 
-            return {
-                "mensaje": "✅ Inmueble creado y reglas ejecutadas",
-                "fecha_analisis": str(fecha_analisis),
-                "inmueble": {
-                    "id_inmueble": inm.id_inmueble,
-                    "direccion": inm.direccion,
-                    "municipio": inm.municipio,
-                    "comunidad_autonoma": inm.comunidad_autonoma,
-                    "renta_propuesta": inm.renta_propuesta,
-                },
-                "resultados": resultados,
-                "alertas": alertas,
-                "version": APP_VERSION,
-            }
+            return {"ok": True, "mensaje":"✅ Inmueble creado", "id_inmueble": inm.id_inmueble, "version": APP_VERSION}
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"INMUEBLE_CREATE_ERROR: {type(e).__name__}: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"INMUEBLE_CREATE_ERROR: {type(e).__name__}: {str(e)}")
 
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
@@ -633,7 +567,6 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             .where(Inmueble.activo == True)
             .order_by(Inmueble.id_inmueble.desc())
         ).all()
-
         return [inmueble_to_out(session, inm) for inm in inmuebles]
 
 @app.get("/inmuebles/{id_inmueble}")
@@ -645,13 +578,11 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
             .where(Inmueble.id_usuario == user.id_usuario)
             .where(Inmueble.activo == True)
         ).first()
-
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
-
         return inmueble_to_out(session, inm)
 
-# ✅ Soft delete
+# ✅ Soft delete (se va a papelera)
 @app.delete("/inmuebles/{id_inmueble}")
 def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -661,17 +592,26 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
             .where(Inmueble.id_usuario == user.id_usuario)
             .where(Inmueble.activo == True)
         ).first()
-
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
-
         inm.activo = False
         session.add(inm)
         session.commit()
+    return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
-    return {"ok": True, "mensaje": "✅ Inmueble movido a papelera (puedes deshacer)"}
+# ✅ Lista de papelera
+@app.get("/inmuebles/trash")
+def listar_papelera(user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        inmuebles = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == False)
+            .order_by(Inmueble.id_inmueble.desc())
+        ).all()
+        return [inmueble_to_out(session, inm) for inm in inmuebles]
 
-# ✅ Restore
+# ✅ Restore desde papelera
 @app.post("/inmuebles/{id_inmueble}/restore")
 def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -681,7 +621,6 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
             .where(Inmueble.id_usuario == user.id_usuario)
             .where(Inmueble.activo == False)
         ).first()
-
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado en papelera")
 
@@ -691,9 +630,37 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
 
     return {"ok": True, "mensaje": "✅ Inmueble restaurado"}
 
+# ✅ Purga definitiva SOLO desde papelera
+@app.delete("/inmuebles/{id_inmueble}/purge")
+def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    """
+    Hard delete:
+    - SOLO si el inmueble está en papelera (activo=False)
+    - Borra primero sus RuleRun asociados
+    """
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == id_inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == False)
+        ).first()
+
+        if not inm:
+            raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
+
+        # borrar historial
+        session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
+
+        # borrar inmueble
+        session.delete(inm)
+        session.commit()
+
+    return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
+
 
 # ============================================================
-# ROUTE: CHAT (MOCK)
+# CHAT (MOCK)
 # ============================================================
 @app.post("/chat", response_model=ChatResponse)
 def chat_assistant(payload: ChatRequest, user: Usuario = Depends(get_current_user)):
@@ -704,7 +671,6 @@ def chat_assistant(payload: ChatRequest, user: Usuario = Depends(get_current_use
             .where(Inmueble.id_usuario == user.id_usuario)
             .where(Inmueble.activo == True)
         ).first()
-
         if not inmueble:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
 
