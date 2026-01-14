@@ -3,80 +3,280 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Dashboard</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <title>Lexia360 · Panel</title>
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
   <style>
-    :root { --accent:#0b5fff; --muted:#667085; --bg:#f6f7fb; --card:#ffffff; --border:#e6e8ef; }
-    body { background: var(--bg); }
-    header {
-      position: sticky; top: 0; z-index: 10;
-      background: rgba(246,247,251,0.85); backdrop-filter: blur(10px);
+    :root{
+      --accent:#0b5fff;
+      --muted:#667085;
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --border:#e6e8ef;
+      --danger:#b42318;
+    }
+
+    body{ background: var(--bg); }
+
+    header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(246,247,251,0.9);
+      backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px 18px; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .brand { display:flex; align-items:center; gap:10px; }
-    .brand b { font-size: 18px; letter-spacing: .2px; }
-    .pill { padding: 6px 10px; border:1px solid var(--border); border-radius: 999px; background:#fff; color: var(--muted); font-size: 13px; }
-    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media(min-width: 900px){ .grid { grid-template-columns: 1fr 1fr; } }
-    .card {
-      background: var(--card); border:1px solid var(--border); border-radius: 14px;
-      padding: 16px; box-shadow: 0 8px 18px rgba(16,24,40,0.04);
+
+    .wrap{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px;
     }
-    .row { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
-    .muted { color: var(--muted); }
-    .badge { font-size: 12px; padding: 4px 8px; border-radius:999px; border:1px solid var(--border); background:#fff; }
-    .b-green{ border-color:#b7ebc6; background:#f0fff4; }
-    .b-red{ border-color:#ffc4c4; background:#fff5f5; }
-    .b-amber{ border-color:#ffe0a3; background:#fffaf0; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
-    .btn { display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius: 10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
-    .btn.primary { background: var(--accent); color:#fff; border-color: var(--accent); }
-    .btn:disabled{ opacity:.6; cursor:not-allowed; }
-    .empty { text-align:center; padding: 26px; color: var(--muted); }
-    .toast { margin-top: 10px; color:#b42318; }
-    .small { font-size: 13px; }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      text-decoration:none;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .btn.primary{
+      background: var(--accent);
+      color:#fff;
+      border-color: var(--accent);
+    }
+
+    .btn.danger{
+      background:#fff;
+      border-color:#ffb3b3;
+      color: var(--danger);
+    }
+
+    .muted{ color: var(--muted); }
+    .small{ font-size: 13px; }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      box-shadow: 0 8px 18px rgba(16,24,40,0.04);
+    }
+
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .row{
+      display:flex;
+      justify-content:space-between;
+      gap: 14px;
+      align-items:flex-start;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .row h4{
+      margin:0 0 6px 0;
+      font-size: 16px;
+    }
+
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px 14px;
+    }
+
+    .pill{
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fafafa;
+    }
+
+    .pill.green{ border-color:#b7ebc6; background:#f0fff4; }
+    .pill.red{ border-color:#ffc4c4; background:#fff5f5; }
+    .pill.gray{ border-color: var(--border); background:#f8fafc; }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      min-width: 260px;
+    }
+
+    footer{
+      text-align:center;
+      padding: 18px 0 40px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ====== Modal (LegalZoom-like) ====== */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background: rgba(16,24,40,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 999;
+      padding: 18px;
+    }
+
+    .modal{
+      width: min(560px, 100%);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 18px 50px rgba(16,24,40,0.18);
+    }
+
+    .modal h3{ margin: 0 0 6px 0; }
+    .modal .muted{ margin: 0 0 14px 0; }
+
+    .modal-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    /* ====== Toast ====== */
+    .toast{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 18px;
+      background:#111827;
+      color:#fff;
+      border-radius: 999px;
+      padding: 10px 14px;
+      display:none;
+      align-items:center;
+      gap: 10px;
+      z-index: 1000;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+      max-width: calc(100% - 30px);
+    }
+
+    .toast button{
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.08);
+      color:#fff;
+      padding: 6px 10px;
+      cursor:pointer;
+      font-weight: 700;
+    }
   </style>
 </head>
+
 <body>
 <header>
   <div class="wrap topbar">
     <div class="brand">
-      <span style="font-size:20px">⚖️</span>
+      <div style="font-size:20px">⚖️</div>
       <div>
-        <b>Lexia360</b><div class="muted small">Panel de inmuebles</div>
+        <b>Lexia360</b>
+        <div class="muted small">Panel de inmuebles</div>
       </div>
     </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <span id="who" class="pill">—</span>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a class="btn primary" href="/static/wizard.html">➕ Crear inmueble</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <div class="row" style="margin: 10px 0 14px;">
-    <div>
-      <h3 style="margin:0;">Tus inmuebles</h3>
-      <div class="muted small">Cada inmueble tiene su ficha legal con veredicto y recomendaciones.</div>
-    </div>
-    <div class="actions">
-      <a class="btn primary" href="/static/wizard.html">➕ Nuevo inmueble</a>
-      <button class="btn" onclick="load()">🔄 Actualizar</button>
-    </div>
-  </div>
+  <section class="card">
+    <h3 style="margin:0 0 6px;">Hola, <span id="userEmail"></span> 👋</h3>
+    <div class="muted small">Gestiona tus inmuebles y revisa su estado legal en un clic.</div>
+    <div id="statusLine" class="small muted" style="margin-top:10px;"></div>
+  </section>
 
-  <section id="list" class="grid"></section>
-  <div id="msg" class="toast"></div>
+  <section class="card" style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0 0 6px;">Tus inmuebles</h3>
+        <div class="muted small">Ver ficha, alertas y semáforo.</div>
+      </div>
+      <button class="btn" onclick="loadInmuebles()">🔄 Actualizar</button>
+    </div>
+
+    <div id="list" class="list"></div>
+    <div id="empty" class="muted small" style="margin-top:12px; display:none;">
+      Aún no tienes inmuebles. Pulsa <b>“Crear inmueble”</b> para empezar.
+    </div>
+  </section>
 </main>
 
-<script>
-  const apiUrl = location.origin; // mismo dominio que el backend
-  const token = localStorage.getItem("token");
-  const email = localStorage.getItem("email") || "Usuario";
+<footer>
+  © 2026 Lexia360 · Estilo LegalZoom (toque europeo)
+</footer>
 
-  document.getElementById("who").textContent = email;
+<!-- Modal -->
+<div id="overlay" class="overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Eliminar inmueble</h3>
+    <p class="muted small" id="modalText"></p>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="hideModal()">Cancelar</button>
+      <button class="btn danger" onclick="confirmDelete()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast">
+  <span id="toastText" class="small">Eliminado.</span>
+  <button onclick="undoDelete()">Deshacer</button>
+</div>
+
+<script>
+  const apiUrl = location.origin;
+  const token = localStorage.getItem("token");
+  const userEmail = localStorage.getItem("email");
+  document.getElementById("userEmail").textContent = userEmail || "Usuario";
+
+  let pendingDeleteId = null;
+  let pendingDeleteLabel = "";
+  let lastDeletedId = null;
+  let toastTimer = null;
 
   function logout(){
     localStorage.removeItem("token");
@@ -84,89 +284,171 @@
     window.location.href = "/static/index.html";
   }
 
-  function semaforoBadge(semaforo){
-    if(semaforo === "ROJO") return `<span class="badge b-red">🔴 Riesgo</span>`;
-    if(semaforo === "AMBAR" || semaforo === "AMARILLO") return `<span class="badge b-amber">🟠 Atención</span>`;
-    return `<span class="badge b-green">🟢 Correcto</span>`;
+  function semaforoPill(semaforo){
+    if(semaforo === "ROJO") return `<span class="pill red">🔴 Riesgo</span>`;
+    if(semaforo === "VERDE") return `<span class="pill green">🟢 OK</span>`;
+    return `<span class="pill gray">—</span>`;
   }
 
-  function euro(n){
-    if(n === null || n === undefined) return "—";
-    return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
   }
 
-  async function load(){
-    const list = document.getElementById("list");
-    const msg = document.getElementById("msg");
-    msg.textContent = "";
-    list.innerHTML = "";
-
-    if(!token){
-      window.location.href = "/static/index.html";
-      return;
+  async function loadStatus(){
+    const el = document.getElementById("statusLine");
+    try{
+      const res = await fetch(`${apiUrl}/status`);
+      const data = await res.json();
+      el.textContent = `Servidor: ${data.status} · Usuarios: ${data.usuarios_registrados} · Zonas: ${data.zonas_tensionadas ?? 0} · ${data.version}`;
+    }catch(e){
+      el.textContent = "Servidor: ⚠️ no disponible";
     }
+  }
+
+  async function loadInmuebles(){
+    if(!token){ logout(); return; }
+
+    const list = document.getElementById("list");
+    const empty = document.getElementById("empty");
+
+    list.innerHTML = `<div class="muted small">Cargando…</div>`;
+    empty.style.display = "none";
 
     try{
       const res = await fetch(`${apiUrl}/inmuebles`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
-      if(res.status === 401){
-        logout(); return;
-      }
+      if(res.status === 401){ logout(); return; }
+      const items = await res.json();
 
-      const data = await res.json();
-      if(!Array.isArray(data) || data.length === 0){
-        list.innerHTML = `<div class="card empty">
-          <h4 style="margin-top:0;">Aún no tienes inmuebles</h4>
-          <p class="muted">Crea el primero para obtener tu ficha legal.</p>
-          <a class="btn primary" href="/static/wizard.html">Crear inmueble</a>
-        </div>`;
+      if(!Array.isArray(items) || items.length === 0){
+        list.innerHTML = "";
+        empty.style.display = "block";
         return;
       }
 
-      data.forEach(item => {
-        const zona = item.zona_tensionada ? "Sí" : "No";
-        const fuente = item.zona_tensionada_fuente ? item.zona_tensionada_fuente : "—";
-        const f = item.fecha_analisis ? item.fecha_analisis : "—";
-
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="row">
-            <div>
-              <h4 style="margin:0 0 6px;">${item.direccion}</h4>
-              <div class="muted small">${item.municipio} · ${item.comunidad_autonoma}</div>
+      list.innerHTML = items.map(inm => `
+        <div class="row">
+          <div style="flex:1;">
+            <h4>${escapeHtml(inm.direccion || "Sin dirección")}</h4>
+            <div class="meta">
+              <span class="pill gray">${escapeHtml(inm.municipio || "—")}</span>
+              <span class="pill gray">${escapeHtml(inm.comunidad_autonoma || "—")}</span>
+              ${semaforoPill(inm.semaforo)}
+              <span class="pill gray">Análisis: ${escapeHtml(inm.fecha_analisis || "—")}</span>
+              <span class="pill gray">Zona: ${inm.zona_tensionada ? "Sí" : "No"}</span>
             </div>
-            <div>${semaforoBadge(item.semaforo)}</div>
+            ${inm.zona_tensionada_fuente ? `<div class="muted small" style="margin-top:8px;">Fuente: ${escapeHtml(inm.zona_tensionada_fuente)}</div>` : ""}
           </div>
-
-          <hr style="margin:14px 0; border-color: var(--border);" />
-
-          <div class="row">
-            <div class="small muted">Renta propuesta</div>
-            <div><b>${euro(item.renta_propuesta)}</b></div>
-          </div>
-          <div class="row" style="margin-top:6px;">
-            <div class="small muted">Zona tensionada</div>
-            <div><b>${zona}</b></div>
-          </div>
-          <div class="small muted" style="margin-top:6px;">Fuente: ${fuente}</div>
-          <div class="small muted" style="margin-top:6px;">Último análisis: ${f}</div>
 
           <div class="actions">
-            <a class="btn primary" href="/static/inmueble.html?id=${encodeURIComponent(item.id_inmueble)}">Ver ficha legal</a>
+            <a class="btn" href="/static/inmueble.html?id=${inm.id_inmueble}">📄 Ver ficha</a>
+            <button class="btn danger" onclick="openDeleteModal(${inm.id_inmueble}, '${escapeHtml(inm.direccion || "Inmueble")}')">🗑️ Eliminar</button>
           </div>
-        `;
-        list.appendChild(card);
-      });
+        </div>
+      `).join("");
 
     }catch(e){
-      msg.textContent = "⚠️ No se pudo cargar la lista. Revisa tu conexión.";
+      list.innerHTML = `<div class="muted small">⚠️ Error cargando inmuebles.</div>`;
     }
   }
 
-  load();
+  // ===== Modal =====
+  function openDeleteModal(id, label){
+    pendingDeleteId = id;
+    pendingDeleteLabel = label;
+    document.getElementById("modalText").innerHTML =
+      `Vas a eliminar <b>${label}</b>. Se moverá a la papelera y podrás <b>deshacer</b> la acción.`;
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function hideModal(){
+    document.getElementById("overlay").style.display = "none";
+    pendingDeleteId = null;
+    pendingDeleteLabel = "";
+  }
+
+  function closeModal(e){
+    // click fuera del modal
+    if(e.target.id === "overlay") hideModal();
+  }
+
+  async function confirmDelete(){
+    if(!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    const label = pendingDeleteLabel || "Inmueble";
+    hideModal();
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      const data = await res.json().catch(()=>({}));
+
+      if(!res.ok){
+        alert(data.detail || "Error eliminando inmueble");
+        return;
+      }
+
+      lastDeletedId = id;
+      showToast(`✅ Eliminado: ${label}.`, true);
+
+      await loadInmuebles();
+    }catch(e){
+      alert("Error de conexión");
+    }
+  }
+
+  // ===== Toast + Undo =====
+  function showToast(text, withUndo){
+    const t = document.getElementById("toast");
+    document.getElementById("toastText").textContent = text;
+    t.style.display = "flex";
+    t.querySelector("button").style.display = withUndo ? "inline-flex" : "none";
+
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      t.style.display = "none";
+      toastTimer = null;
+    }, 8000);
+  }
+
+  async function undoDelete(){
+    if(!lastDeletedId) return;
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${lastDeletedId}/restore`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      const data = await res.json().catch(()=>({}));
+
+      if(!res.ok){
+        alert(data.detail || "No se pudo deshacer");
+        return;
+      }
+
+      showToast("✅ Acción deshecha. Inmueble restaurado.", false);
+      lastDeletedId = null;
+      await loadInmuebles();
+    }catch(e){
+      alert("Error de conexión");
+    }
+  }
+
+  // init
+  if(!token){ logout(); }
+  loadStatus();
+  loadInmuebles();
 </script>
 </body>
 </html>
