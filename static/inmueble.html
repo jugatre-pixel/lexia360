@@ -3,188 +3,71 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Ficha legal del inmueble</title>
+  <title>Lexia360 · Ficha inmueble</title>
 
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
 
   <style>
-    :root {
-      --accent:#0b5fff;
-      --muted:#667085;
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --border:#e6e8ef;
+    :root{
+      --bg:#f6f7fb; --border:#e6e8ef; --muted:#667085; --accent:#0b5fff; --danger:#b42318;
     }
-
-    body { background: var(--bg); }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(246,247,251,0.9);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 18px;
-    }
-
-    .topbar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-    }
-
-    .btn {
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:10px 14px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:#fff;
-      cursor:pointer;
-      text-decoration:none;
-    }
-
-    .btn.primary {
-      background: var(--accent);
-      color:#fff;
-      border-color: var(--accent);
-    }
-
-    .grid {
-      display:grid;
-      grid-template-columns:1fr;
-      gap:14px;
-    }
-
-    @media(min-width:900px){
-      .grid { grid-template-columns:1fr 1fr; }
-    }
-
-    .card {
-      background: var(--card);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:16px;
-      box-shadow:0 8px 18px rgba(16,24,40,0.04);
-    }
-
-    .muted { color: var(--muted); }
-    .small { font-size:13px; }
-
-    .verdict {
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
-      border-radius:16px;
-      padding:18px;
-      border:1px solid var(--border);
-    }
-
-    .v-green { background:#f0fff4; border-color:#b7ebc6; }
-    .v-red   { background:#fff5f5; border-color:#ffc4c4; }
-
-    .icon { font-size:22px; }
-
-    .kv {
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      padding:8px 0;
-      border-bottom:1px dashed var(--border);
-    }
-
-    .kv:last-child { border-bottom:none; }
-
-    ul { margin:6px 0 0 18px; }
-
-    .cta {
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
-
-    /* Chat */
-    .chatbox {
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:10px;
-      height:220px;
-      overflow-y:auto;
-      background:#fafafa;
-    }
+    body{ background:var(--bg); }
+    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); }
+    .wrap{ max-width:1000px; margin:0 auto; padding:18px; }
+    .topbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .btn{ display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
+    .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn.danger{ border-color:#ffb3b3; color:var(--danger); }
+    .card{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:0 8px 18px rgba(16,24,40,.04); }
+    .muted{ color:var(--muted); }
+    .small{ font-size:13px; }
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
+    @media(min-width:900px){ .grid{ grid-template-columns: 1fr 1fr; } }
+    .pill{ font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#fafafa; display:inline-block; }
+    .pill.green{ border-color:#b7ebc6; background:#f0fff4; }
+    .pill.red{ border-color:#ffc4c4; background:#fff5f5; }
+    ul{ margin: 8px 0 0 18px; }
   </style>
 </head>
 
 <body>
 <header>
   <div class="wrap topbar">
-    <div style="display:flex;gap:10px;align-items:center;">
-      <span style="font-size:20px">⚖️</span>
-      <div>
-        <b>Lexia360</b>
-        <div class="muted small">Ficha legal del inmueble</div>
-      </div>
+    <div>
+      <b>📄 Ficha del inmueble</b>
+      <div class="muted small">Detalle + informe PDF</div>
     </div>
-    <div style="display:flex;gap:10px;">
-      <a class="btn" href="/static/dashboard.html">← Volver</a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn" href="/static/dashboard.html">← Panel</a>
+      <button class="btn primary" onclick="downloadPdf()">⬇️ Descargar PDF</button>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-
-  <section id="headerCard" class="card"></section>
-
-  <section id="verdictCard" class="verdict"></section>
-
-  <section class="grid" style="margin-top:14px;">
-    <div id="cardZona" class="card"></div>
-    <div id="cardPrecio" class="card"></div>
-    <div id="cardDuracion" class="card"></div>
-    <div id="cardFianza" class="card"></div>
+  <section class="card">
+    <h3 style="margin:0 0 6px;" id="title">Cargando…</h3>
+    <div class="muted small" id="subtitle"></div>
+    <div style="margin-top:10px;" id="pills"></div>
   </section>
 
-  <section id="cardAlertas" class="card" style="margin-top:14px;"></section>
-
-  <!-- ASISTENTE LEGAL -->
-  <section class="card" style="margin-top:14px;">
-    <h4>🤖 Asistente legal</h4>
-    <p class="muted small">
-      Resuelve dudas generales sobre alquiler y normativa de vivienda.
-    </p>
-
-    <div id="chatBox" class="chatbox">
-      <div class="small">👋 Hola, puedo ayudarte con dudas generales sobre alquiler.</div>
+  <section class="grid">
+    <div class="card">
+      <h4 style="margin:0 0 10px;">Datos</h4>
+      <div class="small" id="datos">—</div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <input id="chatInput" type="text" placeholder="Escribe tu pregunta…" />
-      <button class="btn primary" onclick="sendChat()">Enviar</button>
+    <div class="card">
+      <h4 style="margin:0 0 10px;">Alertas</h4>
+      <div class="small" id="alertas">—</div>
     </div>
-
-    <div id="chatNotice" class="small muted" style="margin-top:8px;"></div>
   </section>
-
 </main>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-
-  const isPro = false; // 🔒 preparado para el futuro
 
   function logout(){
     localStorage.removeItem("token");
@@ -192,132 +75,90 @@
     window.location.href = "/static/index.html";
   }
 
-  function euro(n){
-    if(n === null || n === undefined) return "—";
-    return new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(n);
-  }
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id");
 
-  function verdictUI(semaforo){
-    if(semaforo === "ROJO"){
-      return {
-        cls:"v-red",
-        icon:"🔴",
-        title:"Riesgo legal",
-        text:"La renta propuesta puede incumplir la normativa vigente. Revisa el precio o el contrato antes de firmar."
-      };
-    }
-    return {
-      cls:"v-green",
-      icon:"🟢",
-      title:"Situación correcta",
-      text:"Con los datos actuales no se detectan riesgos legales relevantes."
-    };
+  if(!token){ logout(); }
+  if(!id){ alert("Falta id"); window.location.href="/static/dashboard.html"; }
+
+  function pillSemaforo(s){
+    if(s === "VERDE") return `<span class="pill green">🟢 OK</span>`;
+    if(s === "ROJO") return `<span class="pill red">🔴 Riesgo</span>`;
+    return `<span class="pill">—</span>`;
   }
 
   async function load(){
-    if(!token){ logout(); return; }
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(res.status === 401){ logout(); return; }
+      const inm = await res.json();
 
-    const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
-      headers:{ "Authorization":`Bearer ${token}` }
-    });
+      document.getElementById("title").textContent = inm.direccion || `Inmueble #${id}`;
+      document.getElementById("subtitle").textContent = `${inm.municipio || "—"} · ${inm.comunidad_autonoma || "—"} · Análisis: ${inm.fecha_analisis || "—"}`;
 
-    if(res.status === 401){ logout(); return; }
-    if(res.status !== 200){
-      document.getElementById("headerCard").innerHTML = "Error cargando inmueble";
-      return;
+      const zona = inm.zona_tensionada ? "Sí" : "No";
+      document.getElementById("pills").innerHTML = `
+        ${pillSemaforo(inm.semaforo)}
+        <span class="pill">Zona tensionada: ${zona}</span>
+        ${inm.zona_tensionada_fuente ? `<span class="pill">Fuente: ${escapeHtml(inm.zona_tensionada_fuente)}</span>` : ""}
+      `;
+
+      document.getElementById("datos").innerHTML = `
+        <b>Renta propuesta:</b> ${inm.renta_propuesta ?? "—"} €<br>
+        <b>Renta anterior:</b> ${inm.renta_anterior ?? "—"}<br>
+        <b>Tipo arrendamiento:</b> ${escapeHtml(inm.tipo_arrendamiento || "—")}<br>
+        <b>Tipo arrendador:</b> ${escapeHtml(inm.tipo_arrendador || "—")}<br>
+        <b>CP:</b> ${escapeHtml(inm.codigo_postal || "—")}<br>
+        <b>Superficie:</b> ${inm.superficie_m2 ?? "—"} m²<br>
+      `;
+
+      const alertas = Array.isArray(inm.alertas) ? inm.alertas : [];
+      document.getElementById("alertas").innerHTML = alertas.length
+        ? `<ul>${alertas.map(a => `<li>${escapeHtml(a)}</li>`).join("")}</ul>`
+        : "—";
+
+    }catch(e){
+      alert("Error cargando ficha");
+      window.location.href="/static/dashboard.html";
     }
-
-    const item = await res.json();
-    const r = item.resultados || {};
-
-    document.getElementById("headerCard").innerHTML = `
-      <h3 style="margin:0 0 6px;">${item.direccion}</h3>
-      <div class="muted small">${item.municipio} · ${item.comunidad_autonoma}</div>
-      <div class="muted small">Último análisis: ${item.fecha_analisis || "—"}</div>
-    `;
-
-    const v = verdictUI(item.semaforo);
-    const vc = document.getElementById("verdictCard");
-    vc.className = `verdict ${v.cls}`;
-    vc.innerHTML = `<div class="icon">${v.icon}</div><div><b>${v.title}</b><div class="small">${v.text}</div></div>`;
-
-    document.getElementById("cardZona").innerHTML = `
-      <h4>📍 Zona</h4>
-      <div class="kv"><span class="small muted">Zona tensionada</span><b>${item.zona_tensionada?"Sí":"No"}</b></div>
-      <div class="kv"><span class="small muted">Fuente</span><b>${item.zona_tensionada_fuente||"—"}</b></div>
-    `;
-
-    document.getElementById("cardPrecio").innerHTML = `
-      <h4>💶 Precio</h4>
-      <div class="kv"><span class="small muted">Renta propuesta</span><b>${euro(item.renta_propuesta)}</b></div>
-      <div class="kv"><span class="small muted">Renta máxima (MVP)</span><b>${r.renta_maxima_mvp!=null?euro(r.renta_maxima_mvp):"—"}</b></div>
-    `;
-
-    document.getElementById("cardDuracion").innerHTML = `
-      <h4>⏳ Duración</h4>
-      <div class="kv"><span class="small muted">Duración mínima</span><b>${r.duracion_minima_anios||"—"} años</b></div>
-    `;
-
-    document.getElementById("cardFianza").innerHTML = `
-      <h4>🔒 Fianza</h4>
-      <div class="kv"><span class="small muted">Fianza mínima</span><b>${euro(r.fianza_minima)}</b></div>
-    `;
-
-    document.getElementById("cardAlertas").innerHTML = `
-      <h4>⚠️ Qué debes revisar</h4>
-      ${item.alertas?.length ? `<ul>${item.alertas.map(a=>`<li>${a}</li>`).join("")}</ul>`
-        : `<div class="muted small">No hay alertas relevantes.</div>`}
-    `;
   }
 
-  /* =======================
-     ASISTENTE LEGAL (FREE)
-  ====================== */
-  function appendMessage(text, user=false){
-    const box=document.getElementById("chatBox");
-    const div=document.createElement("div");
-    div.className="small";
-    div.style.margin="6px 0";
-    div.innerHTML=(user?"🧑‍💼 ":"🤖 ")+text;
-    box.appendChild(div);
-    box.scrollTop=box.scrollHeight;
+  async function downloadPdf(){
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}/pdf`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(res.status === 401){ logout(); return; }
+      if(!res.ok){
+        const t = await res.text().catch(()=> "");
+        alert("No se pudo generar el PDF: " + t);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lexia360_informe_inmueble_${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }catch(e){
+      alert("Error descargando PDF");
+    }
   }
 
-  function sendChat(){
-    const input=document.getElementById("chatInput");
-    const notice=document.getElementById("chatNotice");
-    const q=input.value.trim();
-    if(!q) return;
-
-    appendMessage(q,true);
-    input.value="";
-    notice.textContent="";
-
-    const l=q.toLowerCase();
-    const sensitive=["mi inmueble","puedo subir","me recomiendas","renta máxima"];
-
-    if(!isPro && sensitive.some(k=>l.includes(k))){
-      appendMessage("Para analizar tu caso concreto necesitas la versión Pro.");
-      notice.innerHTML="🔒 Función disponible en <b>Pro</b>.";
-      return;
-    }
-
-    if(l.includes("zona tensionada")){
-      appendMessage("Una zona tensionada es un área donde existen límites al precio del alquiler fijados por la administración.");
-      return;
-    }
-
-    if(l.includes("duración")){
-      appendMessage("La duración mínima suele ser de 5 años si el arrendador es persona física y 7 si es jurídica.");
-      return;
-    }
-
-    if(l.includes("fianza")){
-      appendMessage("En vivienda habitual la fianza obligatoria es de una mensualidad.");
-      return;
-    }
-
-    appendMessage("Puedo ayudarte con dudas generales. Para análisis personalizados, accede a Pro.");
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
   }
 
   load();
