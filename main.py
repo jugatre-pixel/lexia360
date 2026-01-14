@@ -2,28 +2,33 @@ import os
 import json
 import traceback
 import secrets
+import io
 from datetime import datetime, timedelta, date
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import StreamingResponse
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from sqlmodel import SQLModel, Field, Session, select, create_engine
 from sqlalchemy import text
 
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+
 
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v13-trash-purge"
+APP_VERSION = "lexia360-v14-pdf-report"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("❌ Falta DATABASE_URL (Render -> Environment Variables)")
-
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
@@ -55,7 +60,6 @@ def load_secret_from_env_or_file(env_name: str, file_path: str) -> str:
     return ""
 
 
-# Render Free: Secret Files
 ADMIN_BOOTSTRAP_SECRET = load_secret_from_env_or_file(
     "ADMIN_BOOTSTRAP_SECRET",
     "/etc/secrets/ADMIN_BOOTSTRAP_SECRET"
@@ -116,7 +120,7 @@ class Inmueble(SQLModel, table=True):
 
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
-    # ✅ Soft delete
+    # soft delete
     activo: bool = Field(default=True, index=True)
 
 
@@ -192,34 +196,26 @@ class ChatResponse(BaseModel):
 # STARTUP + AUTO FIX SCHEMA
 # ============================================================
 def _autofix_schema():
-    """
-    Auto-migración MVP para evitar Alembic por ahora:
-    - rulerun.fecha_analisis
-    - inmueble.activo
-    """
     with engine.begin() as conn:
-        # ✅ rulerun.fecha_analisis
+        # rulerun.fecha_analisis
         exists_fecha = conn.execute(text("""
             SELECT 1 FROM information_schema.columns
             WHERE table_name='rulerun' AND column_name='fecha_analisis'
         """)).first()
-
         if not exists_fecha:
             conn.execute(text("ALTER TABLE rulerun ADD COLUMN fecha_analisis DATE"))
             conn.execute(text("UPDATE rulerun SET fecha_analisis = CURRENT_DATE WHERE fecha_analisis IS NULL"))
             conn.execute(text("ALTER TABLE rulerun ALTER COLUMN fecha_analisis SET NOT NULL"))
 
-        # ✅ inmueble.activo
+        # inmueble.activo
         exists_activo = conn.execute(text("""
             SELECT 1 FROM information_schema.columns
             WHERE table_name='inmueble' AND column_name='activo'
         """)).first()
-
         if not exists_activo:
             conn.execute(text("ALTER TABLE inmueble ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
-
 
 @app.on_event("startup")
 def on_startup():
@@ -331,7 +327,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
 
 
 # ============================================================
-# CHAT MOCK ENGINE
+# CHAT MOCK
 # ============================================================
 def mock_chat_engine(mensaje: str) -> tuple[str, bool]:
     m = (mensaje or "").lower().strip()
@@ -345,6 +341,193 @@ def mock_chat_engine(mensaje: str) -> tuple[str, bool]:
     if "fianza" in m:
         return ("En los contratos de vivienda habitual, la fianza obligatoria es de una mensualidad de renta.", False)
     return ("Puedo ayudarte con dudas generales sobre alquiler y normativa. Si necesitas un análisis específico de tu inmueble, la versión Pro te dará acceso completo.", False)
+
+
+# ============================================================
+# HELPERS (INMUEBLES OUT)
+# ============================================================
+def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
+    last_run = session.exec(
+        select(RuleRun).where(RuleRun.id_inmueble == inm.id_inmueble).order_by(RuleRun.id_run.desc())
+    ).first()
+
+    resultados = json.loads(last_run.resultados_json) if last_run else {}
+    alertas = json.loads(last_run.alertas_json) if last_run else []
+
+    return {
+        "id_inmueble": inm.id_inmueble,
+        "direccion": inm.direccion,
+        "municipio": inm.municipio,
+        "comunidad_autonoma": inm.comunidad_autonoma,
+        "codigo_postal": inm.codigo_postal,
+        "superficie_m2": inm.superficie_m2,
+        "tipo_arrendamiento": inm.tipo_arrendamiento,
+        "tipo_arrendador": inm.tipo_arrendador,
+        "renta_propuesta": inm.renta_propuesta,
+        "renta_anterior": inm.renta_anterior,
+        "activo": inm.activo,
+        "semaforo": resultados.get("semaforo") if resultados else None,
+        "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
+        "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
+        "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente") if resultados else None,
+        "resultados": resultados,
+        "alertas": alertas,
+    }
+
+
+# ============================================================
+# PDF GENERATOR
+# ============================================================
+def _wrap_lines(texto: str, max_chars: int = 95) -> list[str]:
+    words = (texto or "").split()
+    lines = []
+    cur = ""
+    for w in words:
+        if len(cur) + len(w) + 1 <= max_chars:
+            cur = (cur + " " + w).strip()
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    return lines
+
+def generar_pdf_informe(inmueble: dict) -> bytes:
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+
+    left = 18 * mm
+    right = w - 18 * mm
+    y = h - 18 * mm
+
+    # Header
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(left, y, "Lexia360 — Informe legal del inmueble")
+    y -= 6 * mm
+
+    c.setFont("Helvetica", 9)
+    c.drawString(left, y, f"Generado: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} · Versión: {APP_VERSION}")
+    y -= 10 * mm
+
+    # Línea
+    c.setLineWidth(1)
+    c.line(left, y, right, y)
+    y -= 8 * mm
+
+    # Datos inmueble
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(left, y, "1) Datos del inmueble")
+    y -= 7 * mm
+
+    c.setFont("Helvetica", 10)
+    datos = [
+        ("Dirección", inmueble.get("direccion")),
+        ("Municipio", inmueble.get("municipio")),
+        ("Comunidad", inmueble.get("comunidad_autonoma")),
+        ("CP", inmueble.get("codigo_postal") or "—"),
+        ("Superficie (m²)", str(inmueble.get("superficie_m2") or "—")),
+        ("Tipo arrendamiento", inmueble.get("tipo_arrendamiento") or "—"),
+        ("Tipo arrendador", inmueble.get("tipo_arrendador") or "—"),
+        ("Renta propuesta", f"{inmueble.get('renta_propuesta')} €"),
+        ("Renta anterior", f"{inmueble.get('renta_anterior')} €" if inmueble.get("renta_anterior") is not None else "—"),
+    ]
+    for k, v in datos:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(left, y, f"{k}:")
+        c.setFont("Helvetica", 10)
+        c.drawString(left + 42*mm, y, str(v))
+        y -= 6 * mm
+
+    y -= 2 * mm
+    c.setLineWidth(0.5)
+    c.line(left, y, right, y)
+    y -= 8 * mm
+
+    # Resultados
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(left, y, "2) Resultado automático (MVP)")
+    y -= 7 * mm
+
+    res = inmueble.get("resultados") or {}
+    sem = res.get("semaforo") or inmueble.get("semaforo") or "—"
+    zona = "Sí" if res.get("zona_tensionada") else "No"
+    fuente = res.get("zona_tensionada_fuente") or "—"
+    dur = res.get("duracion_minima_anios", "—")
+    renta_max = res.get("renta_maxima_mvp", None)
+    renta_max_txt = f"{renta_max} €" if renta_max is not None else "—"
+    fianza = res.get("fianza_minima", None)
+    fianza_txt = f"{fianza} €" if fianza is not None else "—"
+
+    resumen = [
+        ("Semáforo", sem),
+        ("Zona tensionada", zona),
+        ("Fuente oficial", fuente),
+        ("Duración mínima", f"{dur} años"),
+        ("Renta máxima (MVP)", renta_max_txt),
+        ("Fianza mínima (MVP)", fianza_txt),
+        ("Fecha análisis", res.get("fecha_analisis") or inmueble.get("fecha_analisis") or "—"),
+    ]
+    for k, v in resumen:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(left, y, f"{k}:")
+        c.setFont("Helvetica", 10)
+        c.drawString(left + 48*mm, y, str(v))
+        y -= 6 * mm
+
+    y -= 2 * mm
+    c.setLineWidth(0.5)
+    c.line(left, y, right, y)
+    y -= 8 * mm
+
+    # Alertas
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(left, y, "3) Alertas y notas")
+    y -= 7 * mm
+    c.setFont("Helvetica", 10)
+
+    alertas = inmueble.get("alertas") or []
+    if not alertas:
+        alertas = ["—"]
+
+    for a in alertas:
+        for line in _wrap_lines(f"• {a}", max_chars=105):
+            if y < 22 * mm:
+                c.showPage()
+                y = h - 18 * mm
+                c.setFont("Helvetica", 10)
+            c.drawString(left, y, line)
+            y -= 5.5 * mm
+
+    # Disclaimer
+    if y < 30 * mm:
+        c.showPage()
+        y = h - 18 * mm
+
+    y -= 6 * mm
+    c.setLineWidth(0.5)
+    c.line(left, y, right, y)
+    y -= 7 * mm
+
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(left, y, "Disclaimer")
+    y -= 6 * mm
+    c.setFont("Helvetica", 9)
+    disclaimer = (
+        "Este informe es una ayuda informativa automatizada y no constituye asesoramiento jurídico individualizado. "
+        "Para una revisión completa del caso y redacción final del contrato, consulta con un profesional."
+    )
+    for line in _wrap_lines(disclaimer, max_chars=110):
+        c.drawString(left, y, line)
+        y -= 4.8 * mm
+
+    c.showPage()
+    c.save()
+
+    pdf = buf.getvalue()
+    buf.close()
+    return pdf
 
 
 # ============================================================
@@ -368,7 +551,6 @@ def status():
         users_count = len(session.exec(select(Usuario)).all())
         zonas_count = len(session.exec(select(ZonaTensionada)).all())
         return {"status":"✅ OK","usuarios_registrados":users_count,"zonas_tensionadas":zonas_count,"version":APP_VERSION}
-
 
 @app.get("/debug/env")
 def debug_env():
@@ -454,7 +636,7 @@ def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = Non
     f = fecha or date.today()
     with Session(engine, expire_on_commit=False) as session:
         zona = find_zona_tensionada(session, municipio, comunidad_autonoma, f)
-        return {"municipio":municipio,"comunidad_autonoma":comunidad_autonoma,"fecha":str(f),"zona_tensionada":zona is not None,"fuente_oficial":zona.fuente_oficial if zona else None}
+        return {"municipio":municipio,"comunidad_autonoma":comunidad_autonoma,"fecha":str(f),"zona_tensionada":zona is not None,"fuente_oficial": zona.fuente_oficial if zona else None}
 
 @app.post("/admin/zonas-tensionadas")
 def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
@@ -488,42 +670,12 @@ def listar_zonas(admin: Usuario = Depends(require_admin)):
 
 
 # ============================================================
-# INMUEBLES HELPERS
-# ============================================================
-def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
-    last_run = session.exec(
-        select(RuleRun)
-        .where(RuleRun.id_inmueble == inm.id_inmueble)
-        .order_by(RuleRun.id_run.desc())
-    ).first()
-
-    resultados = json.loads(last_run.resultados_json) if last_run else {}
-    alertas = json.loads(last_run.alertas_json) if last_run else []
-
-    return {
-        "id_inmueble": inm.id_inmueble,
-        "direccion": inm.direccion,
-        "municipio": inm.municipio,
-        "comunidad_autonoma": inm.comunidad_autonoma,
-        "renta_propuesta": inm.renta_propuesta,
-        "activo": inm.activo,
-        "semaforo": resultados.get("semaforo") if resultados else None,
-        "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
-        "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
-        "zona_tensionada_fuente": resultados.get("zona_tensionada_fuente") if resultados else None,
-        "resultados": resultados,
-        "alertas": alertas,
-    }
-
-
-# ============================================================
 # ROUTES (INMUEBLES)
 # ============================================================
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
     try:
         fecha_analisis = date.today()
-
         with Session(engine, expire_on_commit=False) as session:
             inm = Inmueble(
                 id_usuario=user.id_usuario,
@@ -582,7 +734,7 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
         return inmueble_to_out(session, inm)
 
-# ✅ Soft delete (se va a papelera)
+# Soft delete → papelera
 @app.delete("/inmuebles/{id_inmueble}")
 def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -599,7 +751,6 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
         session.commit()
     return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
-# ✅ Lista de papelera
 @app.get("/inmuebles/trash")
 def listar_papelera(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -611,7 +762,6 @@ def listar_papelera(user: Usuario = Depends(get_current_user)):
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
 
-# ✅ Restore desde papelera
 @app.post("/inmuebles/{id_inmueble}/restore")
 def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -630,14 +780,8 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
 
     return {"ok": True, "mensaje": "✅ Inmueble restaurado"}
 
-# ✅ Purga definitiva SOLO desde papelera
 @app.delete("/inmuebles/{id_inmueble}/purge")
 def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    """
-    Hard delete:
-    - SOLO si el inmueble está en papelera (activo=False)
-    - Borra primero sus RuleRun asociados
-    """
     with Session(engine, expire_on_commit=False) as session:
         inm = session.exec(
             select(Inmueble)
@@ -649,14 +793,32 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
         if not inm:
             raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
 
-        # borrar historial
         session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
-
-        # borrar inmueble
         session.delete(inm)
         session.commit()
 
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
+
+# ✅ PDF Informe Legal (descargable)
+@app.get("/inmuebles/{id_inmueble}/pdf")
+def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == id_inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == True)
+        ).first()
+        if not inm:
+            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
+        payload = inmueble_to_out(session, inm)
+
+    pdf_bytes = generar_pdf_informe(payload)
+
+    filename = f"lexia360_informe_inmueble_{id_inmueble}.pdf"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
 
 
 # ============================================================
