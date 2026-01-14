@@ -3,280 +3,288 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Lexia360 · Expedientes</title>
+  <title>Lexia360 · Inmuebles</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318; --ok:#027a48; }
-    body{ margin:0; background:var(--bg); }
-    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
-    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
-    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
-    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 14px 28px rgba(11,95,255,.18); }
-    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
-    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
-    .btn.danger{ border-color:#f0c9c8; color:var(--danger); }
-    .btn.ghost{ background:transparent; }
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
-    .muted{ color:var(--muted); }
-    .small{ font-size:13px; }
-    .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
-    .lefttools{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
-    .tab{ border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:999px; cursor:pointer; font-weight:900; }
-    .tab.active{ border-color:rgba(11,95,255,.35); box-shadow:0 10px 26px rgba(11,95,255,.12); }
-    input, select{ border-radius:12px !important; }
-    table{ font-size:14px; }
-    .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; font-weight:900; font-size:12px; }
-    .pill.ok{ border-color:rgba(2,122,72,.25); color:var(--ok); }
-    .pill.warn{ border-color:rgba(180,35,24,.25); color:var(--danger); }
-    .pill.neutral{ color:var(--muted); }
-    .row-actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
-    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
-    .toast.ok{ color:var(--ok); }
-    .toast.err{ color:var(--danger); }
-    .empty{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:16px; color:var(--muted); }
+    :root{
+      --brand:#0b5fff; --brand2:#5b8cff;
+      --bg:#0b1220; --muted:rgba(255,255,255,.72);
+      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --radius:16px;
+    }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 62%, #f6f7fb 62%, #f6f7fb 100%);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:rgba(11,18,32,.62);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
+    .badge{
+      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 14px 28px rgba(11,95,255,.22);
+    }
+    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:8px 12px;border-radius:999px;
+      text-decoration:none;font-weight:900;font-size:13px;
+    }
+    .chip.active{background:rgba(255,255,255,.12)}
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:10px 14px;border-radius:12px;
+      font-weight:900;cursor:pointer;
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
+    .hero{padding:28px 0 10px;}
+    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
+    .sub{color:var(--muted);margin:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .search{display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%}
+    .search input{border-radius:12px !important;max-width:520px}
+    table{border-radius:16px;overflow:hidden}
+    .muted2{color:#667085;font-size:13px}
+    .pill{
+      font-size:12px;color:#111827;border:1px solid var(--border);background:#fff;
+      padding:6px 10px;border-radius:999px;font-weight:900;
+    }
+    .toast{
+      position:fixed;left:18px;bottom:18px;z-index:9999;
+      background:#111827;color:#fff;border:1px solid rgba(255,255,255,.12);
+      padding:12px 14px;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.25);
+      display:none;max-width:520px;
+    }
+    .toast.show{display:block}
+    .danger{background:#b42318 !important;border-color:#b42318 !important}
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap top">
-    <a class="brand" href="/static/dashboard.html">
-      <div class="badge">⚖️</div>
-      <div>Lexia360</div>
-    </a>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn" href="/static/dashboard.html">🏠 Dashboard</a>
-      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
-      <a class="btn primary" href="/static/wizard.html">➕ Nuevo expediente</a>
-      <button class="btn" onclick="logout()">Cerrar sesión</button>
+  <div class="topbar">
+    <div class="wrap toprow">
+      <a class="brand" href="/static/dashboard.html">
+        <div class="badge">⚖️</div>
+        <div>Lexia360</div>
+      </a>
+
+      <div class="navlinks">
+        <a class="chip" href="/static/dashboard.html">Dashboard</a>
+        <a class="chip active" href="/static/inmuebles.html">Inmuebles</a>
+        <a class="chip" href="/static/wizard.html">Wizard</a>
+        <a class="chip" href="/static/papelera.html">Papelera</a>
+        <button class="btn" onclick="logout()">Salir</button>
+      </div>
     </div>
   </div>
-</header>
 
-<main class="wrap">
-  <div class="grid">
-    <section class="card">
-      <div class="toolbar">
-        <div>
-          <h3 style="margin:0;">Expedientes</h3>
-          <div class="muted small">Gestión de inmuebles (MVP). Borrado seguro con papelera.</div>
+  <section class="wrap hero">
+    <h2 class="headline">Inmuebles</h2>
+    <p class="sub">Expedientes activos. Eliminar envía a papelera (recuperable).</p>
+  </section>
+
+  <section class="wrap">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;">
+        <div class="search">
+          <input id="q" type="search" placeholder="Buscar por referencia, dirección, propietario…" oninput="render()"/>
+          <span class="pill" id="count">—</span>
         </div>
 
-        <div class="lefttools">
-          <div class="tabs">
-            <button class="tab active" id="tabActivos" onclick="setTab('activos')">Activos</button>
-            <button class="tab" id="tabTrash" onclick="setTab('trash')">Papelera</button>
-          </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="/static/wizard.html" role="button" class="secondary">🧙 Wizard</a>
+          <button class="btn primary" onclick="createQuick()">+ Nuevo inmueble</button>
         </div>
       </div>
 
-      <hr/>
-
-      <div class="toolbar" style="justify-content:space-between;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <input id="q" type="search" placeholder="Buscar por dirección, municipio..." style="min-width:260px;" oninput="render()"/>
-          <select id="fSem" onchange="render()">
-            <option value="">Semáforo: todos</option>
-            <option value="VERDE">VERDE</option>
-            <option value="ROJO">ROJO</option>
-          </select>
-        </div>
-        <div class="muted small" id="countText">—</div>
+      <div class="muted2" style="margin-bottom:12px;">
+        Consejo: crea rápido un expediente y entra a la ficha para descargar PDF o completar datos.
       </div>
 
-      <div id="toast" class="toast"></div>
-
-      <div style="overflow:auto; margin-top:10px;">
+      <figure style="margin:0;">
         <table role="grid">
           <thead>
             <tr>
-              <th>Dirección</th>
-              <th>Municipio</th>
-              <th>CA</th>
-              <th>Renta</th>
-              <th>Semáforo</th>
-              <th style="text-align:right;">Acciones</th>
+              <th>ID</th>
+              <th>Referencia / Dirección</th>
+              <th>Estado</th>
+              <th style="width:240px;">Acciones</th>
             </tr>
           </thead>
-          <tbody id="tbody"></tbody>
+          <tbody id="rows"></tbody>
         </table>
-      </div>
+      </figure>
 
-      <div id="empty" class="empty" style="display:none; margin-top:10px;">
-        No hay expedientes aquí todavía. Crea uno desde “Nuevo expediente”.
+      <div class="muted2" id="empty" style="display:none;margin-top:12px;">
+        No hay inmuebles todavía. Crea uno con “Nuevo inmueble”.
       </div>
-    </section>
-  </div>
-</main>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
 
 <script>
   const apiUrl = location.origin;
-  const token = localStorage.getItem("token");
-  if(!token) location.href="/static/index.html";
+  let inmuebles = [];
 
-  let tab = "activos";
-  let activos = [];
-  let trash = [];
-
+  function token(){ return localStorage.getItem("token"); }
+  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+  function guard(){
+    const t = token();
+    if(!t){ window.location.href="/static/index.html"; return false; }
+    return true;
+  }
+  function toast(msg){
+    const el=document.getElementById("toast");
+    el.textContent=msg; el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"), 3400);
+  }
   function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    location.href="/static/index.html";
+    localStorage.removeItem("token"); localStorage.removeItem("email");
+    window.location.href="/static/index.html";
+  }
+  async function safeJson(res){ try{return await res.json();}catch{return {};} }
+
+  function normalizeText(s){ return (s||"").toString().toLowerCase().trim(); }
+
+  function labelFor(i){
+    // Intentamos ser compatibles con distintos nombres de campo
+    const ref = i.referencia || i.ref || i.codigo || i.nombre || `Inmueble ${i.id || i.id_inmueble || i.id_inmuebles || ""}`.trim();
+    const dir = i.direccion || i.dirección || i.address || i.ubicacion || "";
+    const owner = i.propietario || i.arrendador || i.cliente || "";
+    const main = [ref, dir].filter(Boolean).join(" · ");
+    const sub = [owner].filter(Boolean).join(" ");
+    return { main: main || (ref||"—"), sub };
   }
 
-  function esc(s){
-    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-  }
-
-  function setToast(text, ok=true){
-    const el = document.getElementById("toast");
-    el.className = "toast " + (ok ? "ok" : "err");
-    el.textContent = text || "";
-    if(text){
-      setTimeout(()=>{ el.textContent=""; }, 2600);
-    }
-  }
-
-  function setTab(t){
-    tab = t;
-    document.getElementById("tabActivos").classList.toggle("active", t==="activos");
-    document.getElementById("tabTrash").classList.toggle("active", t==="trash");
-    // si vas a trash, cargo trash
-    if(t==="trash") loadTrash();
-    render();
-  }
-
-  async function api(path, opts={}){
-    const res = await fetch(`${apiUrl}${path}`, {
-      ...opts,
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        ...(opts.headers||{})
-      }
-    });
-    if(res.status===401) logout();
-    return res;
-  }
-
-  async function loadActivos(){
-    const res = await api("/inmuebles");
-    activos = await res.json().catch(()=>[]);
-  }
-
-  async function loadTrash(){
-    const res = await api("/inmuebles/trash");
-    if(!res.ok){
-      const d = await res.json().catch(()=>({}));
-      setToast(d.detail || "Error cargando papelera", false);
-      trash = [];
-      return;
-    }
-    trash = await res.json().catch(()=>[]);
-  }
-
-  function semPill(value){
-    if(value==="VERDE") return `<span class="pill ok">● VERDE</span>`;
-    if(value==="ROJO") return `<span class="pill warn">● ROJO</span>`;
-    return `<span class="pill neutral">● —</span>`;
-  }
-
-  function money(v){
-    if(v===null || v===undefined || v==="") return "—";
-    const n = Number(v);
-    if(Number.isNaN(n)) return esc(v);
-    return n.toLocaleString("es-ES",{maximumFractionDigits:2}) + " €";
-  }
-
-  function filteredRows(){
-    const q = document.getElementById("q").value.trim().toLowerCase();
-    const fSem = document.getElementById("fSem").value;
-    const data = (tab==="activos" ? activos : trash);
-
-    return (data||[]).filter(i=>{
-      const hay = `${i.direccion||""} ${i.municipio||""} ${i.comunidad_autonoma||""}`.toLowerCase();
-      if(q && !hay.includes(q)) return false;
-      if(fSem && (i.semaforo||"") !== fSem) return false;
-      return true;
-    });
+  function getId(i){
+    return i.id ?? i.id_inmueble ?? i.idInmueble ?? i.id_inmuebles;
   }
 
   function render(){
-    const rows = filteredRows();
-    const tbody = document.getElementById("tbody");
+    const q = normalizeText(document.getElementById("q").value);
+    const filtered = inmuebles.filter(i=>{
+      if(!q) return true;
+      const {main, sub} = labelFor(i);
+      const blob = normalizeText(`${getId(i)} ${main} ${sub}`);
+      return blob.includes(q);
+    });
+
+    document.getElementById("count").textContent = `${filtered.length} activos`;
+    const tbody = document.getElementById("rows");
     tbody.innerHTML = "";
 
-    document.getElementById("countText").textContent =
-      `${rows.length} resultado(s) · vista: ${tab==="activos" ? "Activos" : "Papelera"}`;
+    document.getElementById("empty").style.display = (filtered.length===0) ? "block" : "none";
 
-    const empty = document.getElementById("empty");
-    empty.style.display = rows.length ? "none" : "block";
+    for(const i of filtered){
+      const id = getId(i);
+      const {main, sub} = labelFor(i);
+      const estado = i.estado || i.status || "Activo";
 
-    for(const i of rows){
       const tr = document.createElement("tr");
-
-      const actions = (tab==="activos")
-        ? `
-          <div class="row-actions">
-            <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">Abrir</a>
-            <button class="btn danger" onclick="moveToTrash(${i.id_inmueble})">Eliminar</button>
-          </div>
-        `
-        : `
-          <div class="row-actions">
-            <button class="btn" onclick="restore(${i.id_inmueble})">Restaurar</button>
-            <button class="btn danger" onclick="purge(${i.id_inmueble})">Borrar definitivo</button>
-          </div>
-        `;
-
       tr.innerHTML = `
-        <td><b>${esc(i.direccion || "—")}</b></td>
-        <td>${esc(i.municipio || "—")}</td>
-        <td>${esc(i.comunidad_autonoma || "—")}</td>
-        <td>${money(i.renta_propuesta)}</td>
-        <td>${semPill(i.semaforo)}</td>
-        <td style="text-align:right;">${actions}</td>
+        <td><b>${id ?? "—"}</b></td>
+        <td>
+          <div style="font-weight:950;">${escapeHtml(main)}</div>
+          <div class="muted2">${escapeHtml(sub || "")}</div>
+        </td>
+        <td><span class="pill">${escapeHtml(estado)}</span></td>
+        <td>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a role="button" class="secondary" href="/static/inmueble.html?id=${encodeURIComponent(id)}">Abrir</a>
+            <button class="danger" onclick="del(${Number(id)})">Eliminar</button>
+          </div>
+        </td>
       `;
       tbody.appendChild(tr);
     }
   }
 
-  async function moveToTrash(id){
-    if(!confirm("¿Mover a papelera? (Se puede restaurar)")) return;
-    const res = await api(`/inmuebles/${id}`, { method:"DELETE" });
-    const d = await res.json().catch(()=>({}));
-    if(!res.ok){ setToast(d.detail || "Error moviendo a papelera", false); return; }
-    setToast("✅ Movido a papelera", true);
-    await loadActivos();
-    await loadTrash();
+  function escapeHtml(s){
+    return (s??"").toString()
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  async function load(){
+    if(!guard()) return;
+    const res = await fetch(`${apiUrl}/inmuebles`, { headers: authHeaders() });
+    if(res.status===401){ logout(); return; }
+    const data = await safeJson(res);
+    inmuebles = Array.isArray(data) ? data : [];
     render();
   }
 
-  async function restore(id){
-    const res = await api(`/inmuebles/${id}/restore`, { method:"POST" });
-    const d = await res.json().catch(()=>({}));
-    if(!res.ok){ setToast(d.detail || "Error restaurando", false); return; }
-    setToast("✅ Restaurado", true);
-    await loadActivos();
-    await loadTrash();
-    render();
+  async function createQuick(){
+    if(!guard()) return;
+
+    // Creamos un "mínimo viable" compatible con varios backends
+    const payload = {
+      referencia: `EXP-${Date.now().toString().slice(-6)}`,
+      direccion: "",
+      propietario: "",
+      notas: ""
+    };
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles`, {
+        method:"POST",
+        headers: authHeaders({ "Content-Type":"application/json" }),
+        body: JSON.stringify(payload)
+      });
+      if(res.status===401){ logout(); return; }
+      const data = await safeJson(res);
+
+      if(!res.ok){
+        toast(data.detail || "No se pudo crear el inmueble.");
+        return;
+      }
+
+      const id = getId(data);
+      toast("✅ Inmueble creado.");
+      if(id) window.location.href = `/static/inmueble.html?id=${encodeURIComponent(id)}`;
+      else load();
+    }catch(e){
+      toast("⚠️ No se pudo conectar con el servidor.");
+    }
   }
 
-  async function purge(id){
-    if(!confirm("⚠️ Borrado definitivo. ¿Seguro?")) return;
-    const res = await api(`/inmuebles/${id}/purge`, { method:"DELETE" });
-    const d = await res.json().catch(()=>({}));
-    if(!res.ok){ setToast(d.detail || "Error en borrado definitivo", false); return; }
-    setToast("🧨 Borrado definitivo completado", true);
-    await loadTrash();
-    render();
+  async function del(id){
+    if(!guard()) return;
+    if(!confirm("¿Enviar este inmueble a la papelera? (podrás restaurarlo)")) return;
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+        method:"DELETE",
+        headers: authHeaders()
+      });
+      if(res.status===401){ logout(); return; }
+      const data = await safeJson(res);
+
+      if(!res.ok){
+        toast(data.detail || "No se pudo eliminar.");
+        return;
+      }
+
+      toast("🗑️ Enviado a papelera.");
+      await load();
+    }catch(e){
+      toast("⚠️ Error de conexión.");
+    }
   }
 
-  (async()=>{
-    await loadActivos();
-    render();
-  })();
+  load();
 </script>
 </body>
 </html>
