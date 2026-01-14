@@ -598,21 +598,23 @@ def head_root():
 
 @app.get("/status")
 def status():
-    """
-    ✅ Fix robusto: evita el bug de `.one()[0]`.
-    """
     with Session(engine, expire_on_commit=False) as session:
         users_count = session.exec(text("SELECT COUNT(*) FROM usuario")).one()
         zonas_count = session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one()
-        inmuebles_count = session.exec(text("SELECT COUNT(*) FROM inmueble")).one()
+
+        # .one() puede devolver int o Row según versión/config
+        if not isinstance(users_count, int):
+            users_count = users_count[0]
+        if not isinstance(zonas_count, int):
+            zonas_count = zonas_count[0]
 
         return {
             "status": "✅ OK",
             "usuarios_registrados": int(users_count or 0),
-            "inmuebles_total": int(inmuebles_count or 0),
             "zonas_tensionadas": int(zonas_count or 0),
             "version": APP_VERSION,
         }
+
 
 
 # ============================================================
