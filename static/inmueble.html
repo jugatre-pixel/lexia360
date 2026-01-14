@@ -31,29 +31,6 @@
       display:flex;align-items:center;justify-content:center;color:#fff;
       box-shadow:0 10px 18px rgba(11,95,255,.18);
     }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:16px;
-      box-shadow:0 18px 40px rgba(16,24,40,.07);
-      margin-bottom:14px;
-    }
-    .row{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-    .muted{ color:var(--muted); }
-    .small{ font-size:13px; }
-
-    .pill{
-      display:inline-flex; align-items:center;
-      padding:6px 12px; border-radius:999px;
-      font-size:12px; font-weight:800;
-      border:1px solid var(--border);
-      background:#f7f8fb;
-    }
-    .pill.ok{ background:#ecfdf3; color:var(--ok); border-color:#abefc6; }
-    .pill.bad{ background:#fef3f2; color:var(--bad); border-color:#fecdca; }
-
     .btn{
       display:inline-flex; align-items:center; gap:8px;
       padding:10px 14px; border-radius:12px;
@@ -61,6 +38,29 @@
       cursor:pointer; font-weight:800; text-decoration:none; color:inherit;
     }
     .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:16px;
+      box-shadow:0 18px 40px rgba(16,24,40,.07);
+      margin-bottom:14px;
+    }
+    .row{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+    .muted{ color:var(--muted); }
+    .small{ font-size:13px; }
+    .pill{
+      display:inline-flex; align-items:center;
+      padding:6px 12px; border-radius:999px;
+      font-size:12px; font-weight:900;
+      border:1px solid var(--border);
+      background:#f7f8fb;
+    }
+    .pill.ok{ background:#ecfdf3; color:var(--ok); border-color:#abefc6; }
+    .pill.bad{ background:#fef3f2; color:var(--bad); border-color:#fecdca; }
+    .kv{ display:grid; grid-template-columns: 220px 1fr; gap:10px; padding:8px 0; border-bottom:1px dashed var(--border); }
+    .kv b{ color:#111827; }
+    @media(max-width:700px){ .kv{ grid-template-columns: 1fr; } }
+    .alerts{ margin-top:8px; }
+    .alert{ padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:#fff; margin-bottom:8px; }
   </style>
 </head>
 
@@ -84,45 +84,46 @@
   <section class="card">
     <div class="row">
       <div>
-        <h3 style="margin:0;">Ficha legal del inmueble</h3>
-        <div class="muted small" id="subTitle">—</div>
+        <h3 style="margin:0;" id="title">Ficha del inmueble</h3>
+        <div class="muted small" id="subtitle">—</div>
       </div>
-      <div id="semaforoPill" class="pill">—</div>
+      <div>
+        <span id="semaforoPill" class="pill">—</span>
+      </div>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="row" style="align-items:center;">
+      <div>
+        <h4 style="margin:0;">Informe PDF</h4>
+        <div class="muted small">Descarga un informe profesional para archivo o cliente.</div>
+      </div>
+      <button class="btn primary" onclick="downloadPDF()">📄 Descargar PDF</button>
+    </div>
+    <div id="pdfMsg" class="muted small" style="margin-top:10px;"></div>
   </section>
 
   <section class="card">
     <h4 style="margin-top:0;">Datos del inmueble</h4>
-    <div class="small" id="datos">Cargando…</div>
+    <div id="datos" class="small">Cargando…</div>
   </section>
 
   <section class="card">
     <h4 style="margin-top:0;">Resultado automático (MVP)</h4>
-    <div class="small" id="resultado">Cargando…</div>
+    <div id="resultado" class="small">Cargando…</div>
   </section>
 
   <section class="card">
     <h4 style="margin-top:0;">Alertas</h4>
-    <div class="small" id="alertas">Cargando…</div>
-  </section>
-
-  <section class="card">
-    <div class="row">
-      <div class="muted small">
-        Puedes descargar un informe PDF profesional con el resultado legal del inmueble.
-      </div>
-      <button class="btn primary" onclick="downloadPDF()">📄 Descargar informe PDF</button>
-    </div>
+    <div id="alertas" class="small">Cargando…</div>
   </section>
 </main>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
-
-  if(!token){
-    window.location.href="/static/index.html";
-  }
+  if(!token) window.location.href="/static/index.html";
 
   function logout(){
     localStorage.removeItem("token");
@@ -130,14 +131,26 @@
     window.location.href="/static/index.html";
   }
 
-  function qs(name){
-    return new URLSearchParams(window.location.search).get(name);
-  }
-
+  function qs(name){ return new URLSearchParams(window.location.search).get(name); }
   const id = qs("id");
   if(!id){
-    alert("ID de inmueble no especificado");
+    alert("Falta ?id=");
     window.location.href="/static/inmuebles.html";
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function setSemaforo(semaforo){
+    const pill = document.getElementById("semaforoPill");
+    pill.textContent = semaforo || "—";
+    pill.className = "pill " + (semaforo === "VERDE" ? "ok" : (semaforo === "ROJO" ? "bad" : ""));
   }
 
   async function loadInmueble(){
@@ -155,50 +168,81 @@
 
       const i = await res.json();
 
-      document.getElementById("subTitle").textContent =
-        `${i.municipio || "—"} · ${i.comunidad_autonoma || "—"}`;
+      document.getElementById("title").textContent = i.direccion || "Ficha del inmueble";
+      document.getElementById("subtitle").textContent = `${i.municipio || "—"} · ${i.comunidad_autonoma || "—"} · ID ${i.id_inmueble}`;
+      setSemaforo(i.semaforo || null);
 
-      const sem = i.semaforo || "—";
-      const pill = document.getElementById("semaforoPill");
-      pill.textContent = sem;
-      pill.className = "pill " + (sem === "VERDE" ? "ok" : (sem === "ROJO" ? "bad" : ""));
-
+      // Datos
       document.getElementById("datos").innerHTML = `
-        <b>Dirección:</b> ${escapeHtml(i.direccion || "—")}<br>
-        <b>Municipio:</b> ${escapeHtml(i.municipio || "—")}<br>
-        <b>Comunidad:</b> ${escapeHtml(i.comunidad_autonoma || "—")}<br>
-        <b>Superficie:</b> ${i.superficie_m2 ?? "—"} m²<br>
-        <b>Renta propuesta:</b> ${i.renta_propuesta ?? "—"} €<br>
-        <b>Renta anterior:</b> ${i.renta_anterior ?? "—"} €
+        <div class="kv"><b>Dirección</b><div>${escapeHtml(i.direccion || "—")}</div></div>
+        <div class="kv"><b>Municipio</b><div>${escapeHtml(i.municipio || "—")}</div></div>
+        <div class="kv"><b>Comunidad</b><div>${escapeHtml(i.comunidad_autonoma || "—")}</div></div>
+        <div class="kv"><b>Código postal</b><div>${escapeHtml(i.codigo_postal || "—")}</div></div>
+        <div class="kv"><b>Superficie</b><div>${(i.superficie_m2 ?? "—")} m²</div></div>
+        <div class="kv"><b>Tipo arrendador</b><div>${escapeHtml(i.tipo_arrendador || "—")}</div></div>
+        <div class="kv"><b>Tipo arrendamiento</b><div>${escapeHtml(i.tipo_arrendamiento || "—")}</div></div>
+        <div class="kv"><b>Renta propuesta</b><div>${(i.renta_propuesta ?? "—")} €</div></div>
+        <div class="kv"><b>Renta anterior</b><div>${(i.renta_anterior ?? "—")} €</div></div>
       `;
 
+      // Resultado
+      const zonaTxt = (i.zona_tensionada === true) ? "Sí" : (i.zona_tensionada === false ? "No" : "—");
       document.getElementById("resultado").innerHTML = `
-        <b>Zona tensionada:</b> ${i.zona_tensionada ? "Sí" : "No"}<br>
-        <b>Fuente oficial:</b> ${escapeHtml(i.zona_tensionada_fuente || "—")}<br>
-        <b>Fecha análisis:</b> ${escapeHtml(i.fecha_analisis || "—")}
+        <div class="kv"><b>Semáforo</b><div>${escapeHtml(i.semaforo || "—")}</div></div>
+        <div class="kv"><b>Zona tensionada</b><div>${zonaTxt}</div></div>
+        <div class="kv"><b>Fuente oficial</b><div>${escapeHtml(i.zona_tensionada_fuente || "—")}</div></div>
+        <div class="kv"><b>Fecha de análisis</b><div>${escapeHtml(i.fecha_analisis || "—")}</div></div>
       `;
 
-      const alerts = i.alertas || [];
-      document.getElementById("alertas").innerHTML = alerts.length
-        ? alerts.map(a => `• ${escapeHtml(a)}`).join("<br>")
+      // Alertas
+      const alertas = Array.isArray(i.alertas) ? i.alertas : [];
+      document.getElementById("alertas").innerHTML = alertas.length
+        ? `<div class="alerts">${alertas.map(a => `<div class="alert">• ${escapeHtml(a)}</div>`).join("")}</div>`
         : "—";
 
     }catch(e){
-      alert("Error cargando el inmueble");
+      alert("Error cargando la ficha");
     }
   }
 
-  function downloadPDF(){
-    window.open(`${apiUrl}/inmuebles/${id}/pdf`, "_blank");
-  }
+  async function downloadPDF(){
+    const msg = document.getElementById("pdfMsg");
+    msg.textContent = "Generando PDF…";
 
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}/pdf`, {
+        headers:{ "Authorization": `Bearer ${token}` }
+      });
+
+      if(res.status === 401){ logout(); return; }
+      if(!res.ok){
+        const data = await res.json().catch(()=>({}));
+        msg.textContent = data.detail || "No se pudo generar el PDF.";
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      // nombre
+      let filename = `lexia360_informe_inmueble_${id}.pdf`;
+      const cd = res.headers.get("content-disposition") || "";
+      const m = cd.match(/filename="([^"]+)"/i);
+      if(m && m[1]) filename = m[1];
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      msg.textContent = "✅ PDF descargado.";
+
+    }catch(e){
+      msg.textContent = "⚠️ Error de conexión generando el PDF.";
+    }
   }
 
   loadInmueble();
