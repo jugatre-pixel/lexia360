@@ -4,46 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lexia360 · Panel</title>
-
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
-
   <style>
-    :root{
-      --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff;
-    }
+    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; }
     body{ background:var(--bg); margin:0; }
-    header{
-      position:sticky; top:0; z-index:20;
-      background:rgba(246,247,251,.92);
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid var(--border);
-    }
+    header{ position:sticky; top:0; z-index:20; background:rgba(246,247,251,.92); backdrop-filter: blur(10px); border-bottom:1px solid var(--border); }
     .wrap{ max-width:1100px; margin:0 auto; padding:14px 18px; }
     .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-      text-decoration:none; color:inherit; font-weight:900;
-    }
-    .badge{
-      width:34px;height:34px;border-radius:10px;
-      background:linear-gradient(135deg,var(--brand),#5b8cff);
-      display:flex;align-items:center;justify-content:center;color:#fff;
-      box-shadow:0 10px 18px rgba(11,95,255,.18);
-    }
-    .btn{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:10px 14px; border-radius:12px;
-      border:1px solid var(--border); background:#fff;
-      cursor:pointer; font-weight:800; text-decoration:none; color:inherit;
-    }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:900; }
+    .badge{ width:34px;height:34px;border-radius:10px; background:linear-gradient(135deg,var(--brand),#5b8cff);
+      display:flex;align-items:center;justify-content:center;color:#fff; box-shadow:0 10px 18px rgba(11,95,255,.18); }
+    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:800; text-decoration:none; color:inherit; }
     .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
     .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:16px; }
     @media(min-width:950px){ .grid{ grid-template-columns: 1.2fr .8fr; } }
-    .card{
-      background:var(--card); border:1px solid var(--border);
-      border-radius:16px; padding:16px;
-      box-shadow:0 18px 40px rgba(16,24,40,.07);
-    }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
     .muted{ color:var(--muted); }
     .small{ font-size:13px; }
     .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
@@ -66,8 +41,8 @@
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn" href="/static/inmuebles.html">🏠 Inmuebles</a>
-      <a class="btn primary" href="/static/wizard.html">➕ Crear inmueble</a>
-      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
+      <a class="btn primary" href="/static/wizard.html">➕ Wizard</a>
+      <a class="btn" href="/static/index.html">Inicio público</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
@@ -97,8 +72,8 @@
 
       <hr />
 
-      <h4 style="margin:0 0 8px;">Tu plan</h4>
-      <div class="muted small" id="billingText">Cargando…</div>
+      <h4 style="margin:0 0 8px;">Actividad reciente</h4>
+      <div class="muted small" id="auditText">Cargando…</div>
     </aside>
   </div>
 </main>
@@ -109,7 +84,6 @@
   const email = localStorage.getItem("email");
 
   if(!token){ window.location.href = "/static/index.html"; }
-
   document.getElementById("userPill").textContent = email ? `👤 ${email}` : "👤 Usuario";
 
   function logout(){
@@ -134,7 +108,6 @@
       document.getElementById("statusText").innerHTML = `
         <b>${data.status || "—"}</b><br>
         Usuarios: ${data.usuarios_registrados ?? "—"}<br>
-        Inmuebles: ${data.inmuebles_total ?? "—"}<br>
         Zonas tensionadas: ${data.zonas_tensionadas ?? "—"}<br>
         Versión: ${data.version ?? "—"}
       `;
@@ -143,27 +116,9 @@
     }
   }
 
-  async function loadBilling(){
-    try{
-      const res = await fetch(`${apiUrl}/billing/me`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if(!res.ok){
-        document.getElementById("billingText").textContent = "Plan: Free (por ahora)";
-        return;
-      }
-      const data = await res.json();
-      document.getElementById("billingText").innerHTML = `Plan: <b>${data.plan || "free"}</b> · Pro: <b>${data.pro ? "Sí" : "No"}</b>`;
-    }catch(e){
-      document.getElementById("billingText").textContent = "Plan: Free (por ahora)";
-    }
-  }
-
   async function loadLatest(){
     try{
-      const res = await fetch(`${apiUrl}/inmuebles`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await fetch(`${apiUrl}/inmuebles`, { headers: { "Authorization": `Bearer ${token}` } });
       if(res.status === 401){ logout(); return; }
       const items = await res.json();
       const list = document.getElementById("latestList");
@@ -182,16 +137,36 @@
       });
 
       if((items || []).length === 0){
-        list.innerHTML = `<div class="muted small">Aún no tienes inmuebles. Pulsa “Crear inmueble”.</div>`;
+        list.innerHTML = `<div class="muted small">Aún no tienes inmuebles. Ve a “Inmuebles” o usa el Wizard para crear el primero.</div>`;
       }
     }catch(e){
       document.getElementById("latestList").innerHTML = `<div class="muted small">⚠️ No se pudieron cargar tus inmuebles.</div>`;
     }
   }
 
+  async function loadAudit(){
+    try{
+      const res = await fetch(`${apiUrl}/audit`, { headers: { "Authorization": `Bearer ${token}` } });
+      if(res.status === 401){ logout(); return; }
+      const logs = await res.json();
+      const top = (logs || []).slice(0,8);
+      if(top.length === 0){
+        document.getElementById("auditText").textContent = "Sin actividad registrada aún.";
+        return;
+      }
+      document.getElementById("auditText").innerHTML = top.map(l=>{
+        const when = (l.creado_en || "").replace("T"," ").slice(0,19);
+        const ent = l.entidad_id != null ? `#${l.entidad_id}` : "";
+        return `• <b>${escapeHtml(l.accion)}</b> ${escapeHtml(l.entidad)} ${escapeHtml(ent)}<br><span class="muted small">${escapeHtml(when)}</span>`;
+      }).join("<br><br>");
+    }catch(e){
+      document.getElementById("auditText").textContent = "No disponible.";
+    }
+  }
+
   loadStatus();
-  loadBilling();
   loadLatest();
+  loadAudit();
 </script>
 </body>
 </html>
