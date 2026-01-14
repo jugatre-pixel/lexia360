@@ -1,8 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
 sqlmodel
-psycopg2-binary
-passlib
-python-jose[cryptography]
+passlib[bcrypt]
+python-jose
 python-multipart
-pydantic[email]
+psycopg2-binary
+reportlab
