@@ -24,7 +24,7 @@ from reportlab.lib.units import mm
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = os.getenv("APP_VERSION", "lexia360-v15-stable-trash-pdf")
+APP_VERSION = os.getenv("APP_VERSION", "lexia360-v16-trash-eliminado-en")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if not DATABASE_URL:
@@ -34,7 +34,6 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 elif DATABASE_URL.startswith("postgresql://"):
-    # SQLAlchemy prefers postgresql+psycopg2://
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
@@ -134,6 +133,9 @@ class Inmueble(SQLModel, table=True):
 
     # soft delete
     activo: bool = Field(default=True, index=True)
+
+    # ✅ NUEVO: fecha de eliminado (para mostrar en la papelera)
+    eliminado_en: datetime | None = Field(default=None, index=True)
 
 
 class RuleRun(SQLModel, table=True):
@@ -250,6 +252,14 @@ def _autofix_schema():
             conn.execute(text("ALTER TABLE inmueble ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
+
+        # ✅ inmueble.eliminado_en
+        exists_eliminado = conn.execute(text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='inmueble' AND column_name='eliminado_en'
+        """)).first()
+        if not exists_eliminado:
+            conn.execute(text("ALTER TABLE inmueble ADD COLUMN eliminado_en TIMESTAMP NULL"))
 
 
 @app.on_event("startup")
@@ -405,7 +415,9 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
         "tipo_arrendador": inm.tipo_arrendador,
         "renta_propuesta": inm.renta_propuesta,
         "renta_anterior": inm.renta_anterior,
+        "creado_en": inm.creado_en.isoformat() if inm.creado_en else None,
         "activo": inm.activo,
+        "eliminado_en": inm.eliminado_en.isoformat() if inm.eliminado_en else None,  # ✅ clave para papelera
         "semaforo": resultados.get("semaforo") if resultados else None,
         "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
         "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
@@ -596,25 +608,42 @@ def root():
 def head_root():
     return Response(status_code=200)
 
-@app.get("/status")
-def status():
-    with Session(engine, expire_on_commit=False) as session:
-        users_count = session.exec(text("SELECT COUNT(*) FROM usuario")).one()
-        zonas_count = session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one()
 
-        # .one() puede devolver int o Row según versión/config
-        if not isinstance(users_count, int):
-            users_count = users_count[0]
-        if not isinstance(zonas_count, int):
-            zonas_count = zonas_count[0]
+def _scalar_first(session: Session, sql: str) -> int:
+    row = session.exec(text(sql)).first()
+    if row is None:
+        return 0
+    if isinstance(row, int):
+        return int(row)
+    # Row/tuple
+    try:
+        return int(row[0])
+    except Exception:
+        return 0
+
+
+@app.get("/status")
+def status(user: Usuario = Depends(get_current_user)):
+    # ✅ protegido por auth para evitar que bots te lo machaquen
+    with Session(engine, expire_on_commit=False) as session:
+        users_count = _scalar_first(session, "SELECT COUNT(*) FROM usuario")
+        zonas_count = _scalar_first(session, "SELECT COUNT(*) FROM zonatensionada")
+        inm_activos = session.exec(
+            select(Inmueble).where(Inmueble.id_usuario == user.id_usuario).where(Inmueble.activo == True)
+        ).all()
+        inm_trash = session.exec(
+            select(Inmueble).where(Inmueble.id_usuario == user.id_usuario).where(Inmueble.activo == False)
+        ).all()
 
         return {
             "status": "✅ OK",
             "usuarios_registrados": int(users_count or 0),
             "zonas_tensionadas": int(zonas_count or 0),
+            "inmuebles_activos": len(inm_activos),
+            "inmuebles_eliminados": len(inm_trash),
+            "documentos": 0,
             "version": APP_VERSION,
         }
-
 
 
 # ============================================================
@@ -637,6 +666,7 @@ def register(payload: RegisterPayload):
         session.commit()
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
+
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
     with Session(engine, expire_on_commit=False) as session:
@@ -645,6 +675,7 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
+
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
@@ -734,9 +765,14 @@ def listar_papelera(user: Usuario = Depends(get_current_user)):
             select(Inmueble)
             .where(Inmueble.id_usuario == user.id_usuario)
             .where(Inmueble.activo == False)
-            .order_by(Inmueble.id_inmueble.desc())
+            .order_by(Inmueble.eliminado_en.desc(), Inmueble.id_inmueble.desc())
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
+
+# ✅ Alias por si tu frontend llama /_trash
+@app.get("/inmuebles/_trash")
+def listar_papelera_alias(user: Usuario = Depends(get_current_user)):
+    return listar_papelera(user)
 
 @app.post("/inmuebles/{id_inmueble}/restore")
 def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -751,6 +787,7 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
             raise HTTPException(status_code=404, detail="Inmueble no encontrado en papelera")
 
         inm.activo = True
+        inm.eliminado_en = None
         session.add(inm)
         session.commit()
 
@@ -775,6 +812,11 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
 
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
 
+# ✅ Alias por si tu frontend llama /hard
+@app.delete("/inmuebles/{id_inmueble}/hard")
+def borrar_definitivo_alias(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    return borrar_definitivo(id_inmueble, user)
+
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
     try:
@@ -792,6 +834,7 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
                 renta_propuesta=payload.renta_propuesta,
                 renta_anterior=payload.renta_anterior,
                 activo=True,
+                eliminado_en=None,
             )
             session.add(inm)
             session.commit()
@@ -848,9 +891,12 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
         inm.activo = False
+        inm.eliminado_en = datetime.utcnow()  # ✅ para mostrar en papelera
         session.add(inm)
         session.commit()
+
     return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
 @app.get("/inmuebles/{id_inmueble}/pdf")
