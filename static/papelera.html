@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lexia360 · Papelera</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <style>
+    :root{ --bg:#f6f7fb; --border:#e6e8ef; --muted:#667085; --danger:#b42318; --accent:#0b5fff; }
+    body{ background:var(--bg); }
+    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.9); backdrop-filter: blur(10px); border-bottom:1px solid var(--border); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:18px; }
+    .topbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .btn{ display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
+    .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn.danger{ border-color:#ffb3b3; color:var(--danger); }
+    .card{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:0 8px 18px rgba(16,24,40,.04); }
+    .muted{ color:var(--muted); }
+    .small{ font-size:13px; }
+    .list{ display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+    .row{ display:flex; justify-content:space-between; gap:14px; align-items:flex-start; padding:14px; border:1px solid var(--border); border-radius:14px; background:#fff; }
+    .meta{ display:flex; flex-wrap:wrap; gap:8px 14px; }
+    .pill{ font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#fafafa; }
+    footer{ text-align:center; padding:18px 0 40px; color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap topbar">
+    <div>
+      <b>🗑️ Papelera</b>
+      <div class="muted small">Restaurar o borrar definitivamente</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <a class="btn" href="/static/dashboard.html">← Volver al panel</a>
+      <button class="btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card">
+    <h3 style="margin:0 0 6px;">Inmuebles en papelera</h3>
+    <div class="muted small">Solo aquí se permite el borrado definitivo.</div>
+
+    <div id="list" class="list"></div>
+    <div id="empty" class="muted small" style="margin-top:12px; display:none;">
+      No hay inmuebles en papelera.
+    </div>
+  </section>
+</main>
+
+<footer>© 2026 Lexia360</footer>
+
+<script>
+  const apiUrl = location.origin;
+  const token = localStorage.getItem("token");
+
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    window.location.href = "/static/index.html";
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  async function loadTrash(){
+    if(!token){ logout(); return; }
+
+    const list = document.getElementById("list");
+    const empty = document.getElementById("empty");
+
+    list.innerHTML = `<div class="muted small">Cargando…</div>`;
+    empty.style.display = "none";
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/trash`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(res.status === 401){ logout(); return; }
+      const items = await res.json();
+
+      if(!Array.isArray(items) || items.length === 0){
+        list.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+
+      list.innerHTML = items.map(inm => `
+        <div class="row">
+          <div style="flex:1;">
+            <b>${escapeHtml(inm.direccion || "Sin dirección")}</b>
+            <div class="meta" style="margin-top:8px;">
+              <span class="pill">${escapeHtml(inm.municipio || "—")}</span>
+              <span class="pill">${escapeHtml(inm.comunidad_autonoma || "—")}</span>
+              <span class="pill">ID: ${inm.id_inmueble}</span>
+            </div>
+            <div class="muted small" style="margin-top:8px;">
+              Consejo: restaura si fue un error. Borra definitivo solo si estás 100% seguro.
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; min-width:260px;">
+            <button class="btn primary" onclick="restore(${inm.id_inmueble})">♻️ Restaurar</button>
+            <button class="btn danger" onclick="purge(${inm.id_inmueble})">🧨 Borrar definitivo</button>
+          </div>
+        </div>
+      `).join("");
+
+    }catch(e){
+      list.innerHTML = `<div class="muted small">⚠️ Error cargando papelera.</div>`;
+    }
+  }
+
+  async function restore(id){
+    if(!confirm("¿Restaurar este inmueble al panel?")) return;
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}/restore`, {
+        method:"POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){ alert(data.detail || "Error restaurando"); return; }
+      await loadTrash();
+    }catch(e){ alert("Error de conexión"); }
+  }
+
+  async function purge(id){
+    const ok = confirm("ATENCIÓN: esto borrará el inmueble y su historial para siempre. ¿Continuar?");
+    if(!ok) return;
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}/purge`, {
+        method:"DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){ alert(data.detail || "Error borrando definitivo"); return; }
+      alert("✅ Borrado definitivo completado");
+      await loadTrash();
+    }catch(e){ alert("Error de conexión"); }
+  }
+
+  if(!token){ logout(); }
+  loadTrash();
+</script>
+</body>
+</html>
