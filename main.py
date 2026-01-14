@@ -25,17 +25,16 @@ from reportlab.lib.units import mm
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = "lexia360-v15-stable-schema-trash-pdf"
+APP_VERSION = "lexia360-v15-trash-fix-routing"
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("❌ Falta DATABASE_URL (Render -> Environment Variables)")
 
-# Render sometimes provides postgres://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
-SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("❌ Falta SECRET_KEY (Render -> Environment Variables)")
 
@@ -44,7 +43,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# ✅ Hash robusto sin límite 72 bytes (NO bcrypt)
+# Hash sin límite 72 bytes (NO bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -72,7 +71,7 @@ ADMIN_BOOTSTRAP_SECRET = load_secret_from_env_or_file(
 # ============================================================
 # APP
 # ============================================================
-app = FastAPI(title="Lexia360", version=APP_VERSION)
+app = FastAPI(title="Lexia360")
 
 app.add_middleware(
     CORSMiddleware,
@@ -82,6 +81,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def catch_exceptions(request: Request, call_next):
     try:
@@ -89,6 +89,7 @@ async def catch_exceptions(request: Request, call_next):
     except Exception:
         traceback.print_exc()
         raise
+
 
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static", html=True), name="static")
@@ -104,8 +105,8 @@ class Usuario(SQLModel, table=True):
     hashed_password: str
     rol: str = "cliente"  # cliente | admin
 
-    # ✅ IMPORTANTE: existirá en BD vía autofix (corrige tu error)
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    # ✅ lo añadimos en el modelo y lo auto-fixeamos en DB
+    creado_en: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 class Inmueble(SQLModel, table=True):
@@ -124,7 +125,7 @@ class Inmueble(SQLModel, table=True):
     renta_propuesta: float
     renta_anterior: float | None = None
 
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    creado_en: datetime = Field(default_factory=datetime.utcnow, index=True)
 
     # ✅ Soft delete
     activo: bool = Field(default=True, index=True)
@@ -135,7 +136,7 @@ class RuleRun(SQLModel, table=True):
     id_inmueble: int = Field(index=True, foreign_key="inmueble.id_inmueble")
 
     version: str = APP_VERSION
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    creado_en: datetime = Field(default_factory=datetime.utcnow, index=True)
 
     fecha_analisis: date
     resultados_json: str
@@ -154,7 +155,7 @@ class ZonaTensionada(SQLModel, table=True):
     fuente_oficial: str
     activo: bool = True
 
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    creado_en: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 # ============================================================
@@ -205,7 +206,7 @@ def _autofix_schema():
     Auto-migración MVP (sin Alembic):
     - rulerun.fecha_analisis
     - inmueble.activo
-    - usuario.creado_en   ✅ FIX del error que tienes
+    - usuario.creado_en  ✅ para que no te rompa status/me
     """
     with engine.begin() as conn:
         # ✅ rulerun.fecha_analisis
@@ -225,18 +226,19 @@ def _autofix_schema():
         """)).first()
         if not exists_activo:
             conn.execute(text("ALTER TABLE inmueble ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
-            conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
-            conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
+        # normaliza NULLs
+        conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
+        conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
-        # ✅ usuario.creado_en  (tu error actual)
-        exists_u_creado = conn.execute(text("""
+        # ✅ usuario.creado_en
+        exists_uce = conn.execute(text("""
             SELECT 1 FROM information_schema.columns
             WHERE table_name='usuario' AND column_name='creado_en'
         """)).first()
-        if not exists_u_creado:
-            conn.execute(text("ALTER TABLE usuario ADD COLUMN creado_en TIMESTAMP"))
-            conn.execute(text("UPDATE usuario SET creado_en = NOW() WHERE creado_en IS NULL"))
-            conn.execute(text("ALTER TABLE usuario ALTER COLUMN creado_en SET NOT NULL"))
+        if not exists_uce:
+            conn.execute(text("ALTER TABLE usuario ADD COLUMN creado_en TIMESTAMP DEFAULT NOW()"))
+        conn.execute(text("UPDATE usuario SET creado_en = NOW() WHERE creado_en IS NULL"))
+        conn.execute(text("ALTER TABLE usuario ALTER COLUMN creado_en SET NOT NULL"))
 
 
 @app.on_event("startup")
@@ -256,16 +258,20 @@ def validate_password(password: str):
     if len(password) < 8:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
 
+
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
+
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
+
 
 def create_access_token(email: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
     try:
@@ -282,6 +288,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
             raise HTTPException(status_code=401, detail="Usuario no existe")
         return user
 
+
 def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
     if user.rol != "admin":
         raise HTTPException(status_code=403, detail="No autorizado (admin)")
@@ -294,6 +301,7 @@ def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
 def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: str, fecha: date) -> ZonaTensionada | None:
     mun = municipio.strip()
     ca = comunidad_autonoma.strip()
+
     return session.exec(
         select(ZonaTensionada)
         .where(ZonaTensionada.municipio == mun)
@@ -343,12 +351,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
-    resultados["semaforo"] = "ROJO" if (
-        zona_tensionada
-        and resultados["renta_maxima_mvp"] is not None
-        and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]
-    ) else "VERDE"
-
+    resultados["semaforo"] = "ROJO" if (zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]) else "VERDE"
     return resultados, alertas
 
 
@@ -374,9 +377,7 @@ def mock_chat_engine(mensaje: str) -> tuple[str, bool]:
 # ============================================================
 def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
     last_run = session.exec(
-        select(RuleRun)
-        .where(RuleRun.id_inmueble == inm.id_inmueble)
-        .order_by(RuleRun.id_run.desc())
+        select(RuleRun).where(RuleRun.id_inmueble == inm.id_inmueble).order_by(RuleRun.id_run.desc())
     ).first()
 
     resultados = json.loads(last_run.resultados_json) if last_run else {}
@@ -436,15 +437,14 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
         c.drawString(left, top, "Lexia360")
         c.setFont("Helvetica", 10)
         c.drawRightString(right, top, "Informe legal del inmueble")
-
         c.setLineWidth(1)
-        c.line(left, top - 6*mm, right, top - 6*mm)
-        y = top - 12*mm
+        c.line(left, top - 6 * mm, right, top - 6 * mm)
+        y = top - 12 * mm
 
         c.setFont("Helvetica", 8)
         c.setFillGray(0.35)
-        c.drawString(left, 12*mm, "Confidencial · Generado por Lexia360")
-        c.drawRightString(right, 12*mm, f"Página {page_num}")
+        c.drawString(left, 12 * mm, "Confidencial · Generado por Lexia360")
+        c.drawRightString(right, 12 * mm, f"Página {page_num}")
         c.setFillGray(0)
 
     def section_title(t: str):
@@ -463,7 +463,7 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
         c.setFont("Helvetica-Bold", 10)
         c.drawString(left, y, f"{k}:")
         c.setFont("Helvetica", 10)
-        c.drawString(left + 48*mm, y, v)
+        c.drawString(left + 48 * mm, y, v)
         y -= 6 * mm
 
     def ensure_space(min_y: float, page_num: int) -> int:
@@ -491,13 +491,12 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
     fianza = res.get("fianza_minima", None)
 
     c.setFont("Helvetica", 10)
-    resumen = [
+    for line in [
         f"Semáforo: {sem}",
         f"Zona tensionada: {zona}",
         f"Fecha de análisis: {fecha_analisis}",
         f"Duración mínima aplicable: {dur} años",
-    ]
-    for line in resumen:
+    ]:
         c.drawString(left, y, line)
         y -= 5.5 * mm
 
@@ -509,7 +508,7 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
     y -= 9 * mm
 
     section_title("1) Datos del inmueble")
-    page = ensure_space(40*mm, page)
+    page = ensure_space(40 * mm, page)
 
     kv("Dirección", inmueble.get("direccion") or "—")
     kv("Municipio", inmueble.get("municipio") or "—")
@@ -523,7 +522,7 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
 
     y -= 2 * mm
     section_title("2) Resultado automático (MVP)")
-    page = ensure_space(45*mm, page)
+    page = ensure_space(45 * mm, page)
 
     kv("Semáforo de riesgo", sem)
     kv("Zona tensionada", zona)
@@ -534,22 +533,19 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
 
     y -= 2 * mm
     section_title("3) Alertas y recomendaciones")
-    page = ensure_space(45*mm, page)
+    page = ensure_space(45 * mm, page)
 
-    alertas = inmueble.get("alertas") or []
-    if not alertas:
-        alertas = ["—"]
-
+    alertas = inmueble.get("alertas") or ["—"]
     c.setFont("Helvetica", 10)
     for a in alertas:
-        page = ensure_space(28*mm, page)
+        page = ensure_space(28 * mm, page)
         for line in wrap(f"• {a}", max_chars=110):
             c.drawString(left, y, line)
             y -= 5.2 * mm
 
     y -= 3 * mm
     section_title("4) Aviso legal")
-    page = ensure_space(35*mm, page)
+    page = ensure_space(35 * mm, page)
 
     aviso = (
         "Este informe es informativo y se genera mediante reglas automatizadas (MVP). "
@@ -576,46 +572,26 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
 def version():
     return {"version": APP_VERSION}
 
+
 @app.get("/")
 def root():
     return {"mensaje": "Lexia360 API OK 🚀", "static": "/static/index.html", "version": APP_VERSION}
+
 
 @app.head("/")
 def head_root():
     return Response(status_code=200)
 
+
 @app.get("/status")
 def status():
-    # ✅ Robust + rápido (evita SELECT * que rompe por columnas)
-    with Session(engine, expire_on_commit=False) as session:
-        users_count = session.exec(text("SELECT COUNT(*) FROM usuario")).one()[0]
-        zonas_count = session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one()[0]
-        return {
-            "status": "✅ OK",
-            "usuarios_registrados": int(users_count),
-            "zonas_tensionadas": int(zonas_count),
-            "version": APP_VERSION
-        }
-
-@app.get("/debug/env")
-def debug_env():
-    val_env = os.getenv("ADMIN_BOOTSTRAP_SECRET", "").strip()
-    val_file = ""
-    p = "/etc/secrets/ADMIN_BOOTSTRAP_SECRET"
-    if os.path.exists(p):
-        try:
-            with open(p, "r", encoding="utf-8") as f:
-                val_file = f.read().strip()
-        except Exception:
-            val_file = ""
-    return {
-        "env_has_admin_secret": bool(val_env),
-        "env_len": len(val_env),
-        "file_has_admin_secret": bool(val_file),
-        "file_len": len(val_file),
-        "effective_has_admin_secret": bool(ADMIN_BOOTSTRAP_SECRET),
-        "effective_len": len(ADMIN_BOOTSTRAP_SECRET),
-    }
+    """
+    ✅ Robusto: no depende de que SQLModel intente seleccionar columnas nuevas.
+    """
+    with engine.begin() as conn:
+        users_count = conn.execute(text("SELECT COUNT(*) FROM usuario")).scalar() or 0
+        zonas_count = conn.execute(text("SELECT COUNT(*) FROM zonatensionada")).scalar() or 0
+    return {"status": "✅ OK", "usuarios_registrados": int(users_count), "zonas_tensionadas": int(zonas_count), "version": APP_VERSION}
 
 
 # ============================================================
@@ -629,8 +605,8 @@ def register(payload: RegisterPayload):
         if existing:
             raise HTTPException(status_code=400, detail="El usuario ya existe")
         user = Usuario(
-            nombre=payload.nombre.strip(),
-            email=payload.email.strip().lower(),
+            nombre=payload.nombre,
+            email=payload.email,
             hashed_password=get_password_hash(payload.password),
             rol="cliente",
         )
@@ -638,14 +614,16 @@ def register(payload: RegisterPayload):
         session.commit()
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
+
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
     with Session(engine, expire_on_commit=False) as session:
-        user = session.exec(select(Usuario).where(Usuario.email == form.username.strip().lower())).first()
+        user = session.exec(select(Usuario).where(Usuario.email == form.username)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
+
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
@@ -686,8 +664,9 @@ def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = Non
             "comunidad_autonoma": comunidad_autonoma,
             "fecha": str(f),
             "zona_tensionada": zona is not None,
-            "fuente_oficial": zona.fuente_oficial if zona else None
+            "fuente_oficial": zona.fuente_oficial if zona else None,
         }
+
 
 @app.post("/admin/zonas-tensionadas")
 def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
@@ -698,33 +677,88 @@ def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
             fecha_inicio=payload.fecha_inicio,
             fecha_fin=payload.fecha_fin,
             fuente_oficial=payload.fuente_oficial.strip(),
-            activo=payload.activo
+            activo=payload.activo,
         )
         session.add(z)
         session.commit()
         session.refresh(z)
         return {"ok": True, "id_zona": z.id_zona}
 
+
 @app.get("/admin/zonas-tensionadas")
 def listar_zonas(admin: Usuario = Depends(require_admin)):
     with Session(engine, expire_on_commit=False) as session:
-        zonas = session.exec(
-            select(ZonaTensionada).order_by(ZonaTensionada.comunidad_autonoma, ZonaTensionada.municipio)
-        ).all()
-        return [{
-            "id_zona": z.id_zona,
-            "comunidad_autonoma": z.comunidad_autonoma,
-            "municipio": z.municipio,
-            "fecha_inicio": str(z.fecha_inicio),
-            "fecha_fin": str(z.fecha_fin) if z.fecha_fin else None,
-            "fuente_oficial": z.fuente_oficial,
-            "activo": z.activo,
-        } for z in zonas]
+        zonas = session.exec(select(ZonaTensionada).order_by(ZonaTensionada.comunidad_autonoma, ZonaTensionada.municipio)).all()
+        return [
+            {
+                "id_zona": z.id_zona,
+                "comunidad_autonoma": z.comunidad_autonoma,
+                "municipio": z.municipio,
+                "fecha_inicio": str(z.fecha_inicio),
+                "fecha_fin": str(z.fecha_fin) if z.fecha_fin else None,
+                "fuente_oficial": z.fuente_oficial,
+                "activo": z.activo,
+            }
+            for z in zonas
+        ]
 
 
 # ============================================================
 # ROUTES (INMUEBLES)
+# IMPORTANT: rutas fijas ANTES de /inmuebles/{id_inmueble}
 # ============================================================
+
+@app.get("/inmuebles/trash")
+def listar_papelera(user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        inmuebles = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == False)
+            .order_by(Inmueble.id_inmueble.desc())
+        ).all()
+        return [inmueble_to_out(session, inm) for inm in inmuebles]
+
+
+@app.post("/inmuebles/{id_inmueble}/restore")
+def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == id_inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == False)
+        ).first()
+        if not inm:
+            raise HTTPException(status_code=404, detail="Inmueble no encontrado en papelera")
+
+        inm.activo = True
+        session.add(inm)
+        session.commit()
+
+    return {"ok": True, "mensaje": "✅ Inmueble restaurado"}
+
+
+@app.delete("/inmuebles/{id_inmueble}/purge")
+def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == id_inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == False)
+        ).first()
+
+        if not inm:
+            raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
+
+        session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
+        session.delete(inm)
+        session.commit()
+
+    return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
+
+
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
     try:
@@ -748,6 +782,7 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
             session.refresh(inm)
 
             resultados, alertas = evaluar_reglas(session, inm, fecha_analisis)
+
             run = RuleRun(
                 id_inmueble=inm.id_inmueble,
                 fecha_analisis=fecha_analisis,
@@ -762,6 +797,7 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"INMUEBLE_CREATE_ERROR: {type(e).__name__}: {str(e)}")
 
+
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -772,6 +808,7 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             .order_by(Inmueble.id_inmueble.desc())
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
+
 
 @app.get("/inmuebles/{id_inmueble}")
 def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -786,7 +823,7 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
         return inmueble_to_out(session, inm)
 
-# ✅ Soft delete -> papelera
+
 @app.delete("/inmuebles/{id_inmueble}")
 def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -798,62 +835,14 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
         inm.activo = False
         session.add(inm)
         session.commit()
+
     return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
-@app.get("/inmuebles/trash")
-def listar_papelera(user: Usuario = Depends(get_current_user)):
-    with Session(engine, expire_on_commit=False) as session:
-        inmuebles = session.exec(
-            select(Inmueble)
-            .where(Inmueble.id_usuario == user.id_usuario)
-            .where(Inmueble.activo == False)
-            .order_by(Inmueble.id_inmueble.desc())
-        ).all()
-        return [inmueble_to_out(session, inm) for inm in inmuebles]
 
-@app.post("/inmuebles/{id_inmueble}/restore")
-def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    with Session(engine, expire_on_commit=False) as session:
-        inm = session.exec(
-            select(Inmueble)
-            .where(Inmueble.id_inmueble == id_inmueble)
-            .where(Inmueble.id_usuario == user.id_usuario)
-            .where(Inmueble.activo == False)
-        ).first()
-        if not inm:
-            raise HTTPException(status_code=404, detail="Inmueble no encontrado en papelera")
-        inm.activo = True
-        session.add(inm)
-        session.commit()
-    return {"ok": True, "mensaje": "✅ Inmueble restaurado"}
-
-@app.delete("/inmuebles/{id_inmueble}/purge")
-def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    """
-    Hard delete:
-    - SOLO si está en papelera (activo=False)
-    - Borra primero RuleRun asociados
-    """
-    with Session(engine, expire_on_commit=False) as session:
-        inm = session.exec(
-            select(Inmueble)
-            .where(Inmueble.id_inmueble == id_inmueble)
-            .where(Inmueble.id_usuario == user.id_usuario)
-            .where(Inmueble.activo == False)
-        ).first()
-        if not inm:
-            raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
-
-        session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
-        session.delete(inm)
-        session.commit()
-
-    return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
-
-# ✅ PDF descargable
 @app.get("/inmuebles/{id_inmueble}/pdf")
 def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -869,9 +858,9 @@ def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
         payload = inmueble_to_out(session, inm)
 
     pdf_bytes = generar_pdf_informe(payload)
+
     filename = f"lexia360_informe_inmueble_{id_inmueble}.pdf"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
 
 
