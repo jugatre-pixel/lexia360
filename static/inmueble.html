@@ -65,7 +65,6 @@
 <body>
 <header>
   <div class="wrap top">
-    <!-- ✅ Click en Lexia360 => vuelve al panel -->
     <a class="brand" href="/static/dashboard.html">
       <div class="badge">⚖️</div>
       <div>Lexia360</div>
@@ -73,7 +72,8 @@
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn" href="/static/dashboard.html">← Panel</a>
-      <a class="btn" href="/static/index.html">Inicio público</a>
+      <a class="btn primary" href="/static/wizard.html">➕ Crear inmueble</a>
+      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
@@ -85,8 +85,9 @@
       <div class="row">
         <div>
           <h3 style="margin:0;">Inmuebles</h3>
-          <div class="muted small">Lista, borrado seguro y papelera</div>
+          <div class="muted small">Activos + papelera (borrado seguro)</div>
         </div>
+        <button class="btn" onclick="loadList()">🔄 Actualizar</button>
       </div>
 
       <div class="tabs">
@@ -98,8 +99,8 @@
     </section>
 
     <aside class="card">
-      <h4 style="margin:0 0 8px;">Crear inmueble</h4>
-      <div class="muted small">Rellena lo mínimo para empezar</div>
+      <h4 style="margin:0 0 8px;">Crear rápido (mínimo)</h4>
+      <div class="muted small">Para un flujo completo usa el Wizard</div>
 
       <label>Dirección</label>
       <input id="dir" type="text" placeholder="Calle, número, piso..." />
@@ -120,9 +121,8 @@
       <div id="msg" class="muted small" style="margin-top:8px;"></div>
 
       <hr />
-
       <div class="muted small">
-        Consejo: al crear, entra en la ficha del inmueble y descarga el informe PDF.
+        Consejo: entra en la ficha del inmueble y descarga el informe PDF.
       </div>
     </aside>
   </div>
@@ -132,9 +132,7 @@
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
 
-  if(!token){
-    window.location.href="/static/index.html";
-  }
+  if(!token){ window.location.href="/static/index.html"; }
 
   function logout(){
     localStorage.removeItem("token");
@@ -149,6 +147,15 @@
     document.getElementById("tabActivos").classList.toggle("active", tab === "activos");
     document.getElementById("tabPapelera").classList.toggle("active", tab === "papelera");
     loadList();
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
   }
 
   async function loadList(){
@@ -180,18 +187,20 @@
           <div class="item-sub">
             ${escapeHtml(i.municipio || "—")} · ${escapeHtml(i.comunidad_autonoma || "—")}
             · Semáforo: <b>${escapeHtml(i.semaforo || "—")}</b>
-            ${i.zona_tensionada ? "· Zona tensionada: Sí" : ""}
+            · Análisis: ${escapeHtml(i.fecha_analisis || "—")}
+            ${i.zona_tensionada ? "· Zona tensionada: Sí" : "· Zona tensionada: No"}
           </div>
 
           <div class="actions">
             ${currentTab === "activos"
               ? `
-                <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">Abrir ficha</a>
-                <button class="btn danger" onclick="softDelete(${i.id_inmueble})">Mover a papelera</button>
+                <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">📄 Abrir ficha</a>
+                <a class="btn" href="${apiUrl}/inmuebles/${i.id_inmueble}/pdf" target="_blank">📄 PDF</a>
+                <button class="btn danger" onclick="softDelete(${i.id_inmueble})">🗑️ Mover a papelera</button>
               `
               : `
-                <button class="btn" onclick="restore(${i.id_inmueble})">Restaurar</button>
-                <button class="btn danger" onclick="purge(${i.id_inmueble})">Borrado definitivo</button>
+                <button class="btn" onclick="restore(${i.id_inmueble})">♻️ Restaurar</button>
+                <button class="btn danger" onclick="purge(${i.id_inmueble})">🧨 Borrado definitivo</button>
               `
             }
           </div>
@@ -231,7 +240,7 @@
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(()=>({}));
 
       if(!res.ok){
         msg.textContent = data.detail || "Error creando inmueble.";
@@ -306,15 +315,6 @@
     }
 
     loadList();
-  }
-
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
   }
 
   loadList();
