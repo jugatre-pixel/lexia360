@@ -3,153 +3,309 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Ficha inmueble</title>
+  <title>Lexia360 · Inmuebles</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
 
   <style>
     :root{
-      --bg:#f6f7fb; --border:#e6e8ef; --muted:#667085; --accent:#0b5fff; --danger:#b42318;
+      --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318;
     }
-    body{ background:var(--bg); }
-    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); }
-    .wrap{ max-width:1000px; margin:0 auto; padding:18px; }
-    .topbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .btn{ display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
-    .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
-    .btn.danger{ border-color:#ffb3b3; color:var(--danger); }
-    .card{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:0 8px 18px rgba(16,24,40,.04); }
+    body{ background:var(--bg); margin:0; }
+    header{
+      position:sticky; top:0; z-index:20;
+      background:rgba(246,247,251,.92);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:14px 18px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; color:inherit; font-weight:900;
+    }
+    .badge{
+      width:34px;height:34px;border-radius:10px;
+      background:linear-gradient(135deg,var(--brand),#5b8cff);
+      display:flex;align-items:center;justify-content:center;color:#fff;
+      box-shadow:0 10px 18px rgba(11,95,255,.18);
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:12px;
+      border:1px solid var(--border); background:#fff;
+      cursor:pointer; font-weight:800; text-decoration:none; color:inherit;
+    }
+    .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    .btn.danger{ border-color:#ffd0d0; color:var(--danger); }
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:16px; }
+    @media(min-width:950px){ .grid{ grid-template-columns: 1.2fr .8fr; } }
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:16px;
+      box-shadow:0 18px 40px rgba(16,24,40,.07);
+    }
     .muted{ color:var(--muted); }
     .small{ font-size:13px; }
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
-    @media(min-width:900px){ .grid{ grid-template-columns: 1fr 1fr; } }
-    .pill{ font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#fafafa; display:inline-block; }
-    .pill.green{ border-color:#b7ebc6; background:#f0fff4; }
-    .pill.red{ border-color:#ffc4c4; background:#fff5f5; }
-    ul{ margin: 8px 0 0 18px; }
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    .item{
+      border:1px solid var(--border); border-radius:14px; background:#fff;
+      padding:12px; margin-bottom:10px;
+    }
+    .item-title{ font-weight:900; }
+    .item-sub{ color:var(--muted); font-size:13px; margin-top:3px; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+    .tab{ padding:8px 12px; border:1px solid var(--border); border-radius:999px; background:#fff; cursor:pointer; font-weight:800; }
+    .tab.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    input, select { border-radius:12px !important; }
   </style>
 </head>
 
 <body>
 <header>
-  <div class="wrap topbar">
-    <div>
-      <b>📄 Ficha del inmueble</b>
-      <div class="muted small">Detalle + informe PDF</div>
-    </div>
+  <div class="wrap top">
+    <!-- ✅ Click en Lexia360 => vuelve al panel -->
+    <a class="brand" href="/static/dashboard.html">
+      <div class="badge">⚖️</div>
+      <div>Lexia360</div>
+    </a>
+
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn" href="/static/dashboard.html">← Panel</a>
-      <button class="btn primary" onclick="downloadPdf()">⬇️ Descargar PDF</button>
+      <a class="btn" href="/static/index.html">Inicio público</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <section class="card">
-    <h3 style="margin:0 0 6px;" id="title">Cargando…</h3>
-    <div class="muted small" id="subtitle"></div>
-    <div style="margin-top:10px;" id="pills"></div>
-  </section>
+  <div class="grid">
+    <section class="card">
+      <div class="row">
+        <div>
+          <h3 style="margin:0;">Inmuebles</h3>
+          <div class="muted small">Lista, borrado seguro y papelera</div>
+        </div>
+      </div>
 
-  <section class="grid">
-    <div class="card">
-      <h4 style="margin:0 0 10px;">Datos</h4>
-      <div class="small" id="datos">—</div>
-    </div>
+      <div class="tabs">
+        <button class="tab active" id="tabActivos" onclick="setTab('activos')">Activos</button>
+        <button class="tab" id="tabPapelera" onclick="setTab('papelera')">Papelera</button>
+      </div>
 
-    <div class="card">
-      <h4 style="margin:0 0 10px;">Alertas</h4>
-      <div class="small" id="alertas">—</div>
-    </div>
-  </section>
+      <div id="list"></div>
+    </section>
+
+    <aside class="card">
+      <h4 style="margin:0 0 8px;">Crear inmueble</h4>
+      <div class="muted small">Rellena lo mínimo para empezar</div>
+
+      <label>Dirección</label>
+      <input id="dir" type="text" placeholder="Calle, número, piso..." />
+
+      <label>Municipio</label>
+      <input id="mun" type="text" placeholder="Barcelona, Madrid..." />
+
+      <label>Comunidad Autónoma</label>
+      <input id="ca" type="text" placeholder="Cataluña, Madrid..." />
+
+      <label>Renta propuesta (€)</label>
+      <input id="renta" type="number" step="0.01" placeholder="1000" />
+
+      <label>Renta anterior (€) (opcional)</label>
+      <input id="rentaAnt" type="number" step="0.01" placeholder="950" />
+
+      <button class="btn primary" style="width:100%; justify-content:center;" onclick="createInmueble()">+ Crear</button>
+      <div id="msg" class="muted small" style="margin-top:8px;"></div>
+
+      <hr />
+
+      <div class="muted small">
+        Consejo: al crear, entra en la ficha del inmueble y descarga el informe PDF.
+      </div>
+    </aside>
+  </div>
 </main>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
 
+  if(!token){
+    window.location.href="/static/index.html";
+  }
+
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
-    window.location.href = "/static/index.html";
+    window.location.href="/static/index.html";
   }
 
-  const params = new URLSearchParams(location.search);
-  const id = params.get("id");
+  let currentTab = "activos";
 
-  if(!token){ logout(); }
-  if(!id){ alert("Falta id"); window.location.href="/static/dashboard.html"; }
-
-  function pillSemaforo(s){
-    if(s === "VERDE") return `<span class="pill green">🟢 OK</span>`;
-    if(s === "ROJO") return `<span class="pill red">🔴 Riesgo</span>`;
-    return `<span class="pill">—</span>`;
+  function setTab(tab){
+    currentTab = tab;
+    document.getElementById("tabActivos").classList.toggle("active", tab === "activos");
+    document.getElementById("tabPapelera").classList.toggle("active", tab === "papelera");
+    loadList();
   }
 
-  async function load(){
+  async function loadList(){
+    const container = document.getElementById("list");
+    container.innerHTML = `<div class="muted small">Cargando…</div>`;
+
+    const endpoint = currentTab === "activos" ? "/inmuebles" : "/inmuebles/trash";
+
     try{
-      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+      const res = await fetch(`${apiUrl}${endpoint}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
+
       if(res.status === 401){ logout(); return; }
-      const inm = await res.json();
 
-      document.getElementById("title").textContent = inm.direccion || `Inmueble #${id}`;
-      document.getElementById("subtitle").textContent = `${inm.municipio || "—"} · ${inm.comunidad_autonoma || "—"} · Análisis: ${inm.fecha_analisis || "—"}`;
+      const items = await res.json();
+      container.innerHTML = "";
 
-      const zona = inm.zona_tensionada ? "Sí" : "No";
-      document.getElementById("pills").innerHTML = `
-        ${pillSemaforo(inm.semaforo)}
-        <span class="pill">Zona tensionada: ${zona}</span>
-        ${inm.zona_tensionada_fuente ? `<span class="pill">Fuente: ${escapeHtml(inm.zona_tensionada_fuente)}</span>` : ""}
-      `;
-
-      document.getElementById("datos").innerHTML = `
-        <b>Renta propuesta:</b> ${inm.renta_propuesta ?? "—"} €<br>
-        <b>Renta anterior:</b> ${inm.renta_anterior ?? "—"}<br>
-        <b>Tipo arrendamiento:</b> ${escapeHtml(inm.tipo_arrendamiento || "—")}<br>
-        <b>Tipo arrendador:</b> ${escapeHtml(inm.tipo_arrendador || "—")}<br>
-        <b>CP:</b> ${escapeHtml(inm.codigo_postal || "—")}<br>
-        <b>Superficie:</b> ${inm.superficie_m2 ?? "—"} m²<br>
-      `;
-
-      const alertas = Array.isArray(inm.alertas) ? inm.alertas : [];
-      document.getElementById("alertas").innerHTML = alertas.length
-        ? `<ul>${alertas.map(a => `<li>${escapeHtml(a)}</li>`).join("")}</ul>`
-        : "—";
-
-    }catch(e){
-      alert("Error cargando ficha");
-      window.location.href="/static/dashboard.html";
-    }
-  }
-
-  async function downloadPdf(){
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${id}/pdf`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
-      if(!res.ok){
-        const t = await res.text().catch(()=> "");
-        alert("No se pudo generar el PDF: " + t);
+      if(!items || items.length === 0){
+        container.innerHTML = `<div class="muted small">No hay inmuebles en esta sección.</div>`;
         return;
       }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      items.forEach(i=>{
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <div class="item-title">${escapeHtml(i.direccion || "Inmueble")}</div>
+          <div class="item-sub">
+            ${escapeHtml(i.municipio || "—")} · ${escapeHtml(i.comunidad_autonoma || "—")}
+            · Semáforo: <b>${escapeHtml(i.semaforo || "—")}</b>
+            ${i.zona_tensionada ? "· Zona tensionada: Sí" : ""}
+          </div>
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `lexia360_informe_inmueble_${id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+          <div class="actions">
+            ${currentTab === "activos"
+              ? `
+                <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">Abrir ficha</a>
+                <button class="btn danger" onclick="softDelete(${i.id_inmueble})">Mover a papelera</button>
+              `
+              : `
+                <button class="btn" onclick="restore(${i.id_inmueble})">Restaurar</button>
+                <button class="btn danger" onclick="purge(${i.id_inmueble})">Borrado definitivo</button>
+              `
+            }
+          </div>
+        `;
+        container.appendChild(el);
+      });
+
     }catch(e){
-      alert("Error descargando PDF");
+      container.innerHTML = `<div class="muted small">⚠️ No se pudo cargar la lista.</div>`;
     }
+  }
+
+  async function createInmueble(){
+    const msg = document.getElementById("msg");
+    msg.textContent = "Creando…";
+
+    const payload = {
+      direccion: document.getElementById("dir").value.trim(),
+      municipio: document.getElementById("mun").value.trim(),
+      comunidad_autonoma: document.getElementById("ca").value.trim(),
+      renta_propuesta: Number(document.getElementById("renta").value),
+      renta_anterior: document.getElementById("rentaAnt").value ? Number(document.getElementById("rentaAnt").value) : null
+    };
+
+    if(!payload.direccion || !payload.municipio || !payload.comunidad_autonoma || !payload.renta_propuesta){
+      msg.textContent = "⚠️ Rellena dirección, municipio, comunidad y renta.";
+      return;
+    }
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles`, {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if(!res.ok){
+        msg.textContent = data.detail || "Error creando inmueble.";
+        return;
+      }
+
+      msg.textContent = "✅ Inmueble creado.";
+      document.getElementById("dir").value = "";
+      document.getElementById("mun").value = "";
+      document.getElementById("ca").value = "";
+      document.getElementById("renta").value = "";
+      document.getElementById("rentaAnt").value = "";
+
+      setTab("activos");
+      loadList();
+
+    }catch(e){
+      msg.textContent = "⚠️ No se pudo crear.";
+    }
+  }
+
+  async function softDelete(id){
+    if(!confirm("¿Mover a papelera? (No es borrado definitivo)")) return;
+
+    const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+      method:"DELETE",
+      headers:{ "Authorization": `Bearer ${token}` }
+    });
+
+    if(res.status === 401){ logout(); return; }
+
+    if(!res.ok){
+      const t = await res.text().catch(()=> "");
+      alert("Error: " + t);
+      return;
+    }
+
+    loadList();
+  }
+
+  async function restore(id){
+    const res = await fetch(`${apiUrl}/inmuebles/${id}/restore`, {
+      method:"POST",
+      headers:{ "Authorization": `Bearer ${token}` }
+    });
+
+    if(res.status === 401){ logout(); return; }
+
+    if(!res.ok){
+      const t = await res.text().catch(()=> "");
+      alert("Error: " + t);
+      return;
+    }
+
+    loadList();
+  }
+
+  async function purge(id){
+    if(!confirm("⚠️ Esto borra DEFINITIVAMENTE. ¿Continuar?")) return;
+
+    const res = await fetch(`${apiUrl}/inmuebles/${id}/purge`, {
+      method:"DELETE",
+      headers:{ "Authorization": `Bearer ${token}` }
+    });
+
+    if(res.status === 401){ logout(); return; }
+
+    if(!res.ok){
+      const t = await res.text().catch(()=> "");
+      alert("Error: " + t);
+      return;
+    }
+
+    loadList();
   }
 
   function escapeHtml(str){
@@ -161,7 +317,7 @@
       .replaceAll("'","&#039;");
   }
 
-  load();
+  loadList();
 </script>
 </body>
 </html>
