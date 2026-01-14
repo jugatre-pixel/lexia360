@@ -6,3 +6,4 @@ python-jose
 python-multipart
 psycopg2-binary
 reportlab
+email-validator
