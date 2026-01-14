@@ -1,55 +1,287 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lexia360 · Crear inmueble</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Nuevo expediente</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <style>
+    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318; --ok:#027a48; }
+    body{ margin:0; background:var(--bg); }
+    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
+    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 14px 28px rgba(11,95,255,.18); }
+    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
+    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+    .btn.danger{ border-color:#f0c9c8; color:var(--danger); }
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
+    .muted{ color:var(--muted); }
+    .small{ font-size:13px; }
+    .steps{ display:flex; gap:8px; flex-wrap:wrap; }
+    .step{ padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; font-weight:1000; font-size:12px; color:var(--muted); }
+    .step.active{ border-color:rgba(11,95,255,.35); color:#101828; box-shadow:0 10px 26px rgba(11,95,255,.12); }
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:900px){ .row{ grid-template-columns:1fr; } }
+    input, select{ border-radius:12px !important; }
+    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
+    .toast.ok{ color:var(--ok); }
+    .toast.err{ color:var(--danger); }
+    .hint{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:12px; }
+  </style>
 </head>
-
 <body>
-<main class="container">
-  <h2>Crear inmueble</h2>
+<header>
+  <div class="wrap top">
+    <a class="brand" href="/static/dashboard.html">
+      <div class="badge">⚖️</div>
+      <div>Lexia360</div>
+    </a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn" href="/static/inmuebles.html">📁 Expedientes</a>
+      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
+      <button class="btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
 
-  <label>Dirección</label>
-  <input id="direccion">
+<main class="wrap">
+  <section class="card">
+    <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div>
+        <h3 style="margin:0;">Nuevo expediente</h3>
+        <div class="muted small">MVP: crea inmueble + análisis + checklist. Sprint 2: wizard por producto.</div>
+      </div>
+      <div class="steps">
+        <span class="step active" id="s1">1) Datos</span>
+        <span class="step" id="s2">2) Condiciones</span>
+        <span class="step" id="s3">3) Confirmación</span>
+      </div>
+    </div>
 
-  <label>Municipio</label>
-  <input id="municipio">
+    <hr/>
 
-  <label>Comunidad Autónoma</label>
-  <input id="ca">
+    <div id="toast" class="toast"></div>
 
-  <label>Renta propuesta (€)</label>
-  <input id="renta" type="number">
+    <!-- Step 1 -->
+    <div id="step1">
+      <div class="row">
+        <div>
+          <label>Dirección *</label>
+          <input id="direccion" type="text" placeholder="Calle, número, piso..." />
+        </div>
+        <div>
+          <label>Código postal</label>
+          <input id="cp" type="text" placeholder="28001" />
+        </div>
+      </div>
 
-  <button onclick="crear()">Guardar y analizar</button>
+      <div class="row">
+        <div>
+          <label>Municipio *</label>
+          <input id="municipio" type="text" placeholder="Madrid" />
+        </div>
+        <div>
+          <label>Comunidad Autónoma *</label>
+          <input id="ca" type="text" placeholder="Comunidad de Madrid" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Superficie (m²)</label>
+          <input id="m2" type="number" min="0" placeholder="80" />
+        </div>
+        <div class="hint">
+          <b>Tip</b>
+          <div class="muted small" style="margin-top:6px;">
+            Este expediente alimentará el “Contrato de alquiler + anexos + checklist”.
+            Próximamente añadiremos “Burofax/Requerimiento” como producto.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn primary" onclick="next(2)">Continuar</button>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="step2" style="display:none;">
+      <div class="row">
+        <div>
+          <label>Tipo de arrendamiento</label>
+          <select id="tipoArr">
+            <option value="vivienda_habitual">Vivienda habitual</option>
+            <option value="temporada">Temporada</option>
+            <option value="habitacion">Habitación</option>
+          </select>
+        </div>
+        <div>
+          <label>Tipo de arrendador</label>
+          <select id="tipoArrendador">
+            <option value="persona_fisica">Persona física</option>
+            <option value="persona_juridica">Persona jurídica</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Renta propuesta (€) *</label>
+          <input id="renta" type="number" min="0" step="0.01" placeholder="1200" />
+        </div>
+        <div>
+          <label>Renta anterior (€)</label>
+          <input id="rentaAnterior" type="number" min="0" step="0.01" placeholder="1100" />
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn" onclick="next(1)">Atrás</button>
+        <button class="btn primary" onclick="next(3)">Continuar</button>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="step3" style="display:none;">
+      <h4 style="margin:0 0 6px;">Revisión</h4>
+      <div class="muted small">Comprueba los datos antes de crear el expediente.</div>
+
+      <div id="review" style="margin-top:12px;"></div>
+
+      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px;">
+        <button class="btn" onclick="next(2)">Atrás</button>
+        <button class="btn primary" onclick="create()">Crear expediente</button>
+      </div>
+    </div>
+
+  </section>
 </main>
 
 <script>
-const api = location.origin;
-const token = localStorage.getItem("token");
-if(!token) location.href="/static/index.html";
+  const apiUrl = location.origin;
+  const token = localStorage.getItem("token");
+  if(!token) location.href="/static/index.html";
 
-async function crear(){
-  const r = await fetch(`${api}/inmuebles`,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":`Bearer ${token}`
-    },
-    body:JSON.stringify({
-      direccion:direccion.value,
-      municipio:municipio.value,
-      comunidad_autonoma:ca.value,
-      renta_propuesta:Number(renta.value)
-    })
-  });
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    location.href="/static/index.html";
+  }
 
-  const d = await r.json();
-  if(!r.ok) return alert(d.detail || "Error");
-  location.href = `/static/inmueble.html?id=${d.id_inmueble}`;
-}
+  function esc(s){
+    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function setToast(text, ok=true){
+    const el = document.getElementById("toast");
+    el.className = "toast " + (ok ? "ok" : "err");
+    el.textContent = text || "";
+    if(text){
+      setTimeout(()=>{ el.textContent=""; }, 2600);
+    }
+  }
+
+  function setStep(n){
+    document.getElementById("step1").style.display = (n===1) ? "block" : "none";
+    document.getElementById("step2").style.display = (n===2) ? "block" : "none";
+    document.getElementById("step3").style.display = (n===3) ? "block" : "none";
+    document.getElementById("s1").classList.toggle("active", n===1);
+    document.getElementById("s2").classList.toggle("active", n===2);
+    document.getElementById("s3").classList.toggle("active", n===3);
+  }
+
+  function next(n){
+    if(n===2){
+      const direccion = document.getElementById("direccion").value.trim();
+      const municipio = document.getElementById("municipio").value.trim();
+      const ca = document.getElementById("ca").value.trim();
+      if(!direccion || !municipio || !ca){
+        setToast("Completa Dirección, Municipio y Comunidad Autónoma.", false);
+        return;
+      }
+    }
+    if(n===3){
+      const renta = document.getElementById("renta").value;
+      if(!renta || Number(renta)<=0){
+        setToast("Indica una renta propuesta válida.", false);
+        return;
+      }
+      buildReview();
+    }
+    setToast("");
+    setStep(n);
+  }
+
+  function buildReview(){
+    const payload = collect();
+    const div = document.getElementById("review");
+    div.innerHTML = `
+      <div class="hint">
+        <b>${esc(payload.direccion)}</b><br/>
+        <span class="muted small">${esc(payload.municipio)} · ${esc(payload.comunidad_autonoma)} · CP: ${esc(payload.codigo_postal||"—")} · ${esc(payload.superficie_m2 ?? "—")} m²</span>
+        <hr/>
+        <span class="muted small">Arrendamiento: <b>${esc(payload.tipo_arrendamiento)}</b> · Arrendador: <b>${esc(payload.tipo_arrendador)}</b></span><br/>
+        <span class="muted small">Renta propuesta: <b>${esc(payload.renta_propuesta)}€</b> · Renta anterior: <b>${payload.renta_anterior==null ? "—" : esc(payload.renta_anterior+"€")}</b></span>
+      </div>
+    `;
+  }
+
+  function collect(){
+    const direccion = document.getElementById("direccion").value.trim();
+    const municipio = document.getElementById("municipio").value.trim();
+    const comunidad_autonoma = document.getElementById("ca").value.trim();
+    const codigo_postal = document.getElementById("cp").value.trim() || null;
+    const superficie_m2_raw = document.getElementById("m2").value;
+    const superficie_m2 = superficie_m2_raw ? Number(superficie_m2_raw) : null;
+
+    const tipo_arrendamiento = document.getElementById("tipoArr").value;
+    const tipo_arrendador = document.getElementById("tipoArrendador").value;
+
+    const renta_propuesta = Number(document.getElementById("renta").value);
+    const rentaAnteriorRaw = document.getElementById("rentaAnterior").value;
+    const renta_anterior = rentaAnteriorRaw ? Number(rentaAnteriorRaw) : null;
+
+    return {
+      direccion, municipio, comunidad_autonoma, codigo_postal, superficie_m2,
+      tipo_arrendamiento, tipo_arrendador,
+      renta_propuesta, renta_anterior
+    };
+  }
+
+  async function create(){
+    const payload = collect();
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles`, {
+        method:"POST",
+        headers:{
+          "Authorization": `Bearer ${token}`,
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if(res.status===401) return logout();
+
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){
+        setToast(data.detail || "Error creando expediente", false);
+        return;
+      }
+
+      setToast("✅ Expediente creado", true);
+      setTimeout(()=>location.href=`/static/inmueble.html?id=${data.id_inmueble}`, 650);
+
+    }catch(e){
+      setToast("⚠️ No se pudo conectar con el servidor", false);
+    }
+  }
+
+  setStep(1);
 </script>
 </body>
 </html>
