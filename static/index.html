@@ -16,13 +16,13 @@
     <h3>Accede</h3>
 
     <label>Email</label>
-    <input id="email" type="email">
+    <input id="loginEmail" type="email" placeholder="tucorreo@...">
 
     <label>Contraseña</label>
-    <input id="password" type="password">
+    <input id="loginPassword" type="password" placeholder="••••••••">
 
-    <button onclick="login()">Entrar</button>
-    <p id="msg"></p>
+    <button id="loginBtn" type="button">Entrar</button>
+    <p id="loginMsg" style="color:#b42318; font-weight:700; margin-top:10px;"></p>
   </article>
 
   <hr>
@@ -31,53 +31,135 @@
     <h3>Crear cuenta</h3>
 
     <label>Nombre</label>
-    <input id="rNombre">
+    <input id="regNombre" placeholder="Nombre y apellidos">
 
     <label>Email</label>
-    <input id="rEmail" type="email">
+    <input id="regEmail" type="email" placeholder="tucorreo@...">
 
     <label>Contraseña</label>
-    <input id="rPassword" type="password">
+    <input id="regPassword" type="password" placeholder="mínimo 8 caracteres">
 
-    <button onclick="register()">Crear cuenta</button>
+    <button id="regBtn" type="button">Crear cuenta</button>
+    <p id="regMsg" style="color:#b42318; font-weight:700; margin-top:10px;"></p>
   </article>
 </main>
 
 <script>
-const api = location.origin;
+  const api = location.origin;
 
-(async()=>{
-  const t = localStorage.getItem("token");
-  if(!t) return;
-  const r = await fetch(`${api}/me`,{headers:{Authorization:`Bearer ${t}`}});
-  if(r.ok) location.href="/static/dashboard.html";
-})();
+  const $ = (id) => document.getElementById(id);
 
-async function login(){
-  const f = new URLSearchParams();
-  f.append("username", email.value);
-  f.append("password", password.value);
-  const r = await fetch(`${api}/token`,{method:"POST",body:f});
-  const d = await r.json();
-  if(d.access_token){
-    localStorage.setItem("token",d.access_token);
-    localStorage.setItem("email",email.value);
-    location.href="/static/dashboard.html";
-  } else msg.textContent="Credenciales incorrectas";
-}
+  async function safeJson(res){
+    try { return await res.json(); } catch { return {}; }
+  }
 
-async function register(){
-  await fetch(`${api}/register`,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      nombre:rNombre.value,
-      email:rEmail.value,
-      password:rPassword.value
-    })
+  // Auto-redirect si token válido
+  (async()=>{
+    const t = localStorage.getItem("token");
+    if(!t) return;
+    try{
+      const r = await fetch(`${api}/me`, { headers:{ "Authorization": `Bearer ${t}` } });
+      if(r.ok) location.href="/static/dashboard.html";
+      else localStorage.removeItem("token");
+    }catch(e){
+      // si falla red, no bloqueamos la página
+    }
+  })();
+
+  async function login(){
+    $("loginMsg").textContent = "";
+    $("loginBtn").disabled = true;
+
+    const email = $("loginEmail").value.trim();
+    const password = $("loginPassword").value;
+
+    if(!email || !password){
+      $("loginMsg").textContent = "Introduce email y contraseña.";
+      $("loginBtn").disabled = false;
+      return;
+    }
+
+    const form = new URLSearchParams();
+    form.append("username", email);
+    form.append("password", password);
+
+    try{
+      const res = await fetch(`${api}/token`, {
+        method: "POST",
+        headers: { "Content-Type":"application/x-www-form-urlencoded" },
+        body: form
+      });
+
+      const data = await safeJson(res);
+
+      if(!res.ok){
+        $("loginMsg").textContent = data.detail || `Error login (HTTP ${res.status})`;
+        $("loginBtn").disabled = false;
+        return;
+      }
+
+      if(!data.access_token){
+        $("loginMsg").textContent = "No se recibió token. Revisa /token.";
+        $("loginBtn").disabled = false;
+        return;
+      }
+
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("email", email);
+      location.href = "/static/dashboard.html";
+
+    }catch(e){
+      $("loginMsg").textContent = "No se pudo conectar con el servidor.";
+      $("loginBtn").disabled = false;
+    }
+  }
+
+  async function register(){
+    $("regMsg").textContent = "";
+    $("regBtn").disabled = true;
+
+    const nombre = $("regNombre").value.trim();
+    const email = $("regEmail").value.trim();
+    const password = $("regPassword").value;
+
+    if(!nombre || !email || !password){
+      $("regMsg").textContent = "Rellena nombre, email y contraseña.";
+      $("regBtn").disabled = false;
+      return;
+    }
+
+    try{
+      const res = await fetch(`${api}/register`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ nombre, email, password })
+      });
+
+      const data = await safeJson(res);
+
+      if(!res.ok){
+        $("regMsg").textContent = data.detail || `Error registro (HTTP ${res.status})`;
+        $("regBtn").disabled = false;
+        return;
+      }
+
+      $("regMsg").style.color = "#027a48";
+      $("regMsg").textContent = "✅ Cuenta creada. Ahora inicia sesión arriba.";
+      $("regBtn").disabled = false;
+
+    }catch(e){
+      $("regMsg").textContent = "No se pudo conectar con el servidor.";
+      $("regBtn").disabled = false;
+    }
+  }
+
+  $("loginBtn").addEventListener("click", login);
+  $("regBtn").addEventListener("click", register);
+
+  // Enter para login
+  $("loginPassword").addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") login();
   });
-  alert("Cuenta creada. Ahora inicia sesión.");
-}
 </script>
 </body>
 </html>
