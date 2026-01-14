@@ -1,96 +1,50 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Ficha de inmueble</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Ficha expediente</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{
-      --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085;
-      --brand:#0b5fff; --brand2:#3a7bff; --text:#0b1220; --danger:#b42318;
-      --shadow: 0 18px 40px rgba(16,24,40,.08); --radius:18px;
-      --ok:#067647;
-    }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
-
-    header{
-      position:sticky; top:0; z-index:30;
-      background: rgba(246,247,251,.86);
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid var(--border);
-    }
-    .wrap{ max-width:1120px; margin:0 auto; padding: 14px 18px; }
+    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318; --ok:#027a48; }
+    body{ margin:0; background:var(--bg); }
+    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
     .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:900; }
-    .badge{
-      width:36px;height:36px;border-radius:12px;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-      display:flex;align-items:center;justify-content:center;color:#fff;
-      box-shadow:0 14px 26px rgba(11,95,255,.20);
-    }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:12px;
-      border:1px solid var(--border); background:#fff;
-      cursor:pointer; font-weight:900; text-decoration:none; color:inherit;
-      transition: transform .08s ease;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .btn:hover{ transform: translateY(-1px); }
-    .btn.primary{ background: linear-gradient(135deg, var(--brand), var(--brand2)); color:#fff; border-color:transparent; }
-    .btn.danger{ border-color:#ffd0d0; color:var(--danger); background:#fff; }
-
-    .grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; margin-top:16px; align-items:start; }
-    @media(max-width: 980px){ .grid{ grid-template-columns:1fr; } }
-
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
+    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 14px 28px rgba(11,95,255,.18); }
+    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
+    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+    .btn.danger{ border-color:#f0c9c8; color:var(--danger); }
+    .grid{ display:grid; grid-template-columns:1.05fr .95fr; gap:14px; margin-top:14px; align-items:start; }
+    @media(max-width:980px){ .grid{ grid-template-columns:1fr; } }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
     .muted{ color:var(--muted); }
     .small{ font-size:13px; }
-
-    .pill{
-      display:inline-flex; align-items:center; gap:6px;
-      border:1px solid var(--border);
-      background:#f7f8fb;
-      border-radius:999px;
-      padding:6px 10px;
-      font-size:12px;
-      font-weight:900;
-    }
-    .pill.ok{ border-color: rgba(6,118,71,.25); background: rgba(6,118,71,.06); color: var(--ok); }
-    .pill.bad{ border-color: rgba(180,35,24,.25); background: rgba(180,35,24,.06); color: var(--danger); }
-
-    .kv{ display:grid; grid-template-columns: 160px 1fr; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
-    .kv b{ font-size:12px; color:#374151; }
-    .kv span{ color:#111827; }
-
-    .alert{
-      border-left: 3px solid var(--border);
-      padding-left: 10px;
-      margin: 8px 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
+    .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; font-weight:1000; font-size:12px; }
+    .pill.ok{ border-color:rgba(2,122,72,.25); color:var(--ok); }
+    .pill.warn{ border-color:rgba(180,35,24,.25); color:var(--danger); }
+    .kv{ display:grid; grid-template-columns:160px 1fr; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+    .kv:last-child{ border-bottom:none; }
+    .kv b{ color:#101828; }
+    .list{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+    .alert{ border:1px solid var(--border); background:#fff; border-radius:12px; padding:10px 12px; }
+    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
+    .toast.ok{ color:var(--ok); }
+    .toast.err{ color:var(--danger); }
   </style>
 </head>
-
 <body>
 <header>
   <div class="wrap top">
-    <a class="brand" href="/static/inmuebles.html">
+    <a class="brand" href="/static/dashboard.html">
       <div class="badge">⚖️</div>
-      <div>Ficha de inmueble</div>
+      <div>Lexia360</div>
     </a>
-
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn" href="/static/inmuebles.html">← Inmuebles</a>
-      <a class="btn" href="/static/dashboard.html">Panel</a>
+      <a class="btn" href="/static/inmuebles.html">📁 Expedientes</a>
+      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
+      <a class="btn primary" href="/static/wizard.html">➕ Nuevo expediente</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
@@ -99,42 +53,37 @@
 <main class="wrap">
   <div class="grid">
     <section class="card">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <div>
-          <h2 id="title" style="margin:0;">Cargando…</h2>
-          <div class="muted small" id="subtitle">—</div>
+          <h3 style="margin:0;" id="title">Expediente</h3>
+          <div class="muted small" id="subtitle">Cargando…</div>
         </div>
-        <div id="riskPill" class="pill">—</div>
+        <div id="semaforoPill"></div>
       </div>
 
-      <div style="margin-top:12px;">
-        <div class="kv"><b>Municipio</b><span id="mun">—</span></div>
-        <div class="kv"><b>Comunidad</b><span id="ca">—</span></div>
-        <div class="kv"><b>Renta propuesta</b><span id="renta">—</span></div>
-        <div class="kv"><b>Renta anterior</b><span id="rentaAnt">—</span></div>
-        <div class="kv"><b>Zona tensionada</b><span id="zona">—</span></div>
-        <div class="kv"><b>Fecha análisis</b><span id="fecha">—</span></div>
-        <div class="kv"><b>Fuente oficial</b><span id="fuente">—</span></div>
+      <div id="toast" class="toast"></div>
+
+      <hr/>
+
+      <div id="kvBox"></div>
+
+      <hr/>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn primary" onclick="downloadPdf()">📄 Descargar PDF</button>
+        <button class="btn danger" onclick="moveToTrash()">Eliminar (a papelera)</button>
+      </div>
+
+      <div class="muted small" style="margin-top:10px;">
+        El PDF se genera en el momento a partir del análisis (MVP). Próximo sprint: contrato + anexos versionados.
       </div>
     </section>
 
     <aside class="card">
-      <h3 style="margin:0 0 8px;">Acciones</h3>
-      <div class="muted small">Descarga informe PDF y revisa alertas.</div>
+      <h4 style="margin:0 0 6px;">Alertas & Recomendaciones</h4>
+      <div class="muted small">Basadas en reglas automatizadas (MVP). No es asesoramiento jurídico personalizado.</div>
 
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-        <button class="btn primary" style="width:100%;" onclick="downloadPdf()">📄 Descargar informe PDF</button>
-        <button class="btn danger" style="width:100%;" onclick="moveToTrash()">🗑️ Mover a papelera</button>
-      </div>
-
-      <hr style="border:none; border-top:1px solid var(--border); margin:14px 0;">
-
-      <h3 style="margin:0 0 8px;">Alertas</h3>
-      <div id="alerts"></div>
-
-      <div class="muted small" style="margin-top:12px;">
-        Nota: esto es un diagnóstico automatizado (MVP). Próximo paso: reglas avanzadas + documentos guiados.
-      </div>
+      <div class="list" id="alerts"></div>
     </aside>
   </div>
 </main>
@@ -142,121 +91,137 @@
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
-  if(!token){ window.location.href="/static/index.html"; }
+  if(!token) location.href="/static/index.html";
+
+  const id = new URLSearchParams(location.search).get("id");
+  if(!id) location.href="/static/inmuebles.html";
+
+  let current = null;
 
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
-    window.location.href="/static/index.html";
+    location.href="/static/index.html";
   }
 
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  function esc(s){
+    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
 
-  function getId(){
-    const url = new URL(location.href);
-    return url.searchParams.get("id");
-  }
-
-  const inmuebleId = getId();
-  if(!inmuebleId){ location.href="/static/inmuebles.html"; }
-
-  let inmueble = null;
-
-  async function load(){
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${inmuebleId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok){
-        alert(data.detail || "No se pudo cargar el inmueble");
-        location.href="/static/inmuebles.html";
-        return;
-      }
-      inmueble = data;
-      render(data);
-    }catch(e){
-      alert("Error de conexión");
-      location.href="/static/inmuebles.html";
+  function setToast(text, ok=true){
+    const el = document.getElementById("toast");
+    el.className = "toast " + (ok ? "ok" : "err");
+    el.textContent = text || "";
+    if(text){
+      setTimeout(()=>{ el.textContent=""; }, 2600);
     }
   }
 
-  function render(i){
-    document.getElementById("title").textContent = i.direccion || "Inmueble";
-    document.getElementById("subtitle").textContent = `ID ${i.id_inmueble} · Perfil legal (MVP)`;
-
-    document.getElementById("mun").textContent = i.municipio || "—";
-    document.getElementById("ca").textContent = i.comunidad_autonoma || "—";
-    document.getElementById("renta").textContent = (i.renta_propuesta != null) ? `${i.renta_propuesta} €` : "—";
-    document.getElementById("rentaAnt").textContent = (i.renta_anterior != null) ? `${i.renta_anterior} €` : "—";
-    document.getElementById("zona").textContent = i.zona_tensionada === true ? "Sí" : (i.zona_tensionada === false ? "No" : "—");
-    document.getElementById("fecha").textContent = i.fecha_analisis || "—";
-    document.getElementById("fuente").textContent = i.zona_tensionada_fuente || "—";
-
-    const sem = i.semaforo || "—";
-    const pill = document.getElementById("riskPill");
-    if(sem === "VERDE"){ pill.className = "pill ok"; pill.textContent = "🟢 VERDE (OK)"; }
-    else if(sem === "ROJO"){ pill.className = "pill bad"; pill.textContent = "🔴 ROJO (Riesgo)"; }
-    else { pill.className = "pill"; pill.textContent = "—"; }
-
-    const alerts = Array.isArray(i.alertas) ? i.alertas : [];
-    const el = document.getElementById("alerts");
-    el.innerHTML = alerts.length
-      ? alerts.map(a => `<div class="alert">${escapeHtml(a)}</div>`).join("")
-      : `<div class="muted small">Sin alertas.</div>`;
+  async function api(path, opts={}){
+    const res = await fetch(`${apiUrl}${path}`, {
+      ...opts,
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        ...(opts.headers||{})
+      }
+    });
+    if(res.status===401) logout();
+    return res;
   }
 
-  // ✅ Descarga PDF con token: usa fetch + blob (no abre 401 en nueva pestaña)
+  function semPill(value){
+    if(value==="VERDE") return `<span class="pill ok">● VERDE</span>`;
+    if(value==="ROJO") return `<span class="pill warn">● ROJO</span>`;
+    return `<span class="pill">● —</span>`;
+  }
+
+  function money(v){
+    if(v===null || v===undefined || v==="") return "—";
+    const n = Number(v);
+    if(Number.isNaN(n)) return esc(v);
+    return n.toLocaleString("es-ES",{maximumFractionDigits:2}) + " €";
+  }
+
+  async function load(){
+    const res = await api(`/inmuebles/${id}`);
+    const data = await res.json().catch(()=>null);
+    if(!res.ok || !data){
+      setToast("No se pudo cargar el expediente", false);
+      return;
+    }
+    current = data;
+
+    document.getElementById("title").textContent = data.direccion || `Expediente #${id}`;
+    document.getElementById("subtitle").textContent =
+      `${data.municipio||"—"} · ${data.comunidad_autonoma||"—"} · Análisis: ${data.fecha_analisis || "—"}`;
+    document.getElementById("semaforoPill").innerHTML = semPill(data.semaforo);
+
+    const kv = document.getElementById("kvBox");
+    kv.innerHTML = `
+      <div class="kv"><span class="muted small">Dirección</span><b>${esc(data.direccion||"—")}</b></div>
+      <div class="kv"><span class="muted small">Municipio</span><b>${esc(data.municipio||"—")}</b></div>
+      <div class="kv"><span class="muted small">Comunidad Autónoma</span><b>${esc(data.comunidad_autonoma||"—")}</b></div>
+      <div class="kv"><span class="muted small">Código Postal</span><b>${esc(data.codigo_postal||"—")}</b></div>
+      <div class="kv"><span class="muted small">Superficie</span><b>${esc(data.superficie_m2 ?? "—")} m²</b></div>
+      <div class="kv"><span class="muted small">Tipo arrendamiento</span><b>${esc(data.tipo_arrendamiento||"—")}</b></div>
+      <div class="kv"><span class="muted small">Tipo arrendador</span><b>${esc(data.tipo_arrendador||"—")}</b></div>
+      <div class="kv"><span class="muted small">Renta propuesta</span><b>${money(data.renta_propuesta)}</b></div>
+      <div class="kv"><span class="muted small">Renta anterior</span><b>${data.renta_anterior===null||data.renta_anterior===undefined ? "—" : money(data.renta_anterior)}</b></div>
+      <div class="kv"><span class="muted small">Zona tensionada</span><b>${data.zona_tensionada ? "Sí" : "No"}</b></div>
+      <div class="kv"><span class="muted small">Fuente (si aplica)</span><b>${esc(data.zona_tensionada_fuente || "—")}</b></div>
+    `;
+
+    const alerts = document.getElementById("alerts");
+    const list = (data.alertas || []);
+    alerts.innerHTML = "";
+    if(list.length===0){
+      alerts.innerHTML = `<div class="muted small">—</div>`;
+      return;
+    }
+    for(const a of list){
+      const el = document.createElement("div");
+      el.className = "alert";
+      el.innerHTML = `• ${esc(a)}`;
+      alerts.appendChild(el);
+    }
+  }
+
   async function downloadPdf(){
+    // Descarga directa (no requiere token aparte, porque la API lo requiere via Authorization)
+    // Abrimos en nueva pestaña para permitir descarga por navegador
+    const url = `${apiUrl}/documents/inmuebles/${id}/pdf`;
+    // Para enviar Authorization en descargas directas haría falta fetch+blob.
+    // Usamos fetch+blob para que funcione siempre.
     try{
-      const res = await fetch(`${apiUrl}/inmuebles/${inmuebleId}/pdf`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
+      const res = await api(`/documents/inmuebles/${id}/pdf`);
       if(!res.ok){
-        const t = await res.text().catch(()=> "");
-        alert("Error descargando PDF: " + t);
+        const d = await res.json().catch(()=>({}));
+        setToast(d.detail || "Error descargando PDF", false);
         return;
       }
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `lexia360_informe_inmueble_${inmuebleId}.pdf`;
+      a.href = URL.createObjectURL(blob);
+      a.download = `lexia360_informe_inmueble_${id}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setToast("✅ PDF descargado", true);
     }catch(e){
-      alert("Error de conexión");
+      setToast("⚠️ Error descargando PDF", false);
     }
   }
 
   async function moveToTrash(){
-    if(!confirm("¿Mover a papelera? Podrás restaurarlo.")) return;
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${inmuebleId}`, {
-        method:"DELETE",
-        headers:{ "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok){
-        alert(data.detail || "Error moviendo a papelera");
-        return;
-      }
-      location.href = "/static/inmuebles.html"; // allí verás papelera también
-    }catch(e){
-      alert("Error de conexión");
+    if(!confirm("¿Mover a papelera? (Se puede restaurar)")) return;
+    const res = await api(`/inmuebles/${id}`, { method:"DELETE" });
+    const d = await res.json().catch(()=>({}));
+    if(!res.ok){
+      setToast(d.detail || "Error moviendo a papelera", false);
+      return;
     }
+    setToast("✅ Movido a papelera", true);
+    setTimeout(()=>location.href="/static/inmuebles.html", 650);
   }
 
   load();
