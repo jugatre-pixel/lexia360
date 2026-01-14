@@ -4,7 +4,8 @@ sqlmodel
 sqlalchemy
 psycopg2-binary
 python-jose[cryptography]
-passlib
+passlib[pbkdf2]
 python-multipart
 email-validator
 reportlab
+alembic
