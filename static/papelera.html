@@ -1,12 +1,51 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Papelera</title>
-  <meta http-equiv="refresh" content="0; url=/static/inmuebles.html?tab=papelera">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lexia360 · Papelera</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
 </head>
+
 <body>
-  Redirigiendo a papelera…
+<main class="container">
+  <h2>🗑️ Papelera</h2>
+  <div id="list"></div>
+  <button onclick="location.href='/static/inmuebles.html'">← Volver</button>
+</main>
+
+<script>
+const api = location.origin;
+const token = localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
+
+fetch(`${api}/inmuebles/trash`,{
+  headers:{Authorization:`Bearer ${token}`}
+})
+.then(r=>r.json())
+.then(items=>{
+  list.innerHTML = items.map(i=>`
+    <article>
+      <b>${i.direccion}</b><br>
+      <button onclick="restore(${i.id_inmueble})">Restaurar</button>
+      <button onclick="purge(${i.id_inmueble})">Borrar definitivo</button>
+    </article>
+  `).join("");
+});
+
+function restore(id){
+  fetch(`${api}/inmuebles/${id}/restore`,{
+    method:"POST",
+    headers:{Authorization:`Bearer ${token}`}
+  }).then(()=>location.reload());
+}
+function purge(id){
+  if(!confirm("BORRADO DEFINITIVO")) return;
+  fetch(`${api}/inmuebles/${id}/purge`,{
+    method:"DELETE",
+    headers:{Authorization:`Bearer ${token}`}
+  }).then(()=>location.reload());
+}
+</script>
 </body>
 </html>
