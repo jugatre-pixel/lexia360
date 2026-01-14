@@ -394,140 +394,175 @@ def _wrap_lines(texto: str, max_chars: int = 95) -> list[str]:
     return lines
 
 def generar_pdf_informe(inmueble: dict) -> bytes:
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+
+    def wrap(texto: str, max_chars: int = 105) -> list[str]:
+        words = (texto or "").split()
+        lines, cur = [], ""
+        for w in words:
+            if len(cur) + len(w) + 1 <= max_chars:
+                cur = (cur + " " + w).strip()
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     w, h = A4
 
     left = 18 * mm
     right = w - 18 * mm
-    y = h - 18 * mm
+    top = h - 18 * mm
+    y = top
 
-    # Header
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(left, y, "Lexia360 — Informe legal del inmueble")
-    y -= 6 * mm
+    # helpers
+    def header(page_num: int):
+        nonlocal y
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(left, top, "Lexia360")
+        c.setFont("Helvetica", 10)
+        c.drawRightString(right, top, "Informe legal del inmueble")
 
-    c.setFont("Helvetica", 9)
-    c.drawString(left, y, f"Generado: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} · Versión: {APP_VERSION}")
-    y -= 10 * mm
+        c.setLineWidth(1)
+        c.line(left, top - 6*mm, right, top - 6*mm)
+        y = top - 12*mm
 
-    # Línea
-    c.setLineWidth(1)
-    c.line(left, y, right, y)
-    y -= 8 * mm
+        # footer
+        c.setFont("Helvetica", 8)
+        c.setFillGray(0.35)
+        c.drawString(left, 12*mm, "Confidencial · Generado por Lexia360")
+        c.drawRightString(right, 12*mm, f"Página {page_num}")
+        c.setFillGray(0)
 
-    # Datos inmueble
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(left, y, "1) Datos del inmueble")
-    y -= 7 * mm
+    def section_title(t: str):
+        nonlocal y
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(left, y, t)
+        y -= 6 * mm
+        c.setLineWidth(0.5)
+        c.setStrokeGray(0.8)
+        c.line(left, y, right, y)
+        c.setStrokeGray(0)
+        y -= 7 * mm
 
-    c.setFont("Helvetica", 10)
-    datos = [
-        ("Dirección", inmueble.get("direccion")),
-        ("Municipio", inmueble.get("municipio")),
-        ("Comunidad", inmueble.get("comunidad_autonoma")),
-        ("CP", inmueble.get("codigo_postal") or "—"),
-        ("Superficie (m²)", str(inmueble.get("superficie_m2") or "—")),
-        ("Tipo arrendamiento", inmueble.get("tipo_arrendamiento") or "—"),
-        ("Tipo arrendador", inmueble.get("tipo_arrendador") or "—"),
-        ("Renta propuesta", f"{inmueble.get('renta_propuesta')} €"),
-        ("Renta anterior", f"{inmueble.get('renta_anterior')} €" if inmueble.get("renta_anterior") is not None else "—"),
-    ]
-    for k, v in datos:
+    def kv(k: str, v: str):
+        nonlocal y
         c.setFont("Helvetica-Bold", 10)
         c.drawString(left, y, f"{k}:")
         c.setFont("Helvetica", 10)
-        c.drawString(left + 42*mm, y, str(v))
+        c.drawString(left + 48*mm, y, v)
         y -= 6 * mm
 
-    y -= 2 * mm
-    c.setLineWidth(0.5)
-    c.line(left, y, right, y)
-    y -= 8 * mm
+    def ensure_space(min_y: float, page_num: int) -> int:
+        nonlocal y
+        if y < min_y:
+            c.showPage()
+            page_num += 1
+            header(page_num)
+        return page_num
 
-    # Resultados
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(left, y, "2) Resultado automático (MVP)")
-    y -= 7 * mm
+    # ---- PAGE 1
+    page = 1
+    header(page)
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(left, y, "Resumen ejecutivo")
+    y -= 8 * mm
 
     res = inmueble.get("resultados") or {}
     sem = res.get("semaforo") or inmueble.get("semaforo") or "—"
     zona = "Sí" if res.get("zona_tensionada") else "No"
     fuente = res.get("zona_tensionada_fuente") or "—"
+    fecha_analisis = res.get("fecha_analisis") or inmueble.get("fecha_analisis") or "—"
     dur = res.get("duracion_minima_anios", "—")
     renta_max = res.get("renta_maxima_mvp", None)
-    renta_max_txt = f"{renta_max} €" if renta_max is not None else "—"
     fianza = res.get("fianza_minima", None)
-    fianza_txt = f"{fianza} €" if fianza is not None else "—"
 
+    c.setFont("Helvetica", 10)
     resumen = [
-        ("Semáforo", sem),
-        ("Zona tensionada", zona),
-        ("Fuente oficial", fuente),
-        ("Duración mínima", f"{dur} años"),
-        ("Renta máxima (MVP)", renta_max_txt),
-        ("Fianza mínima (MVP)", fianza_txt),
-        ("Fecha análisis", res.get("fecha_analisis") or inmueble.get("fecha_analisis") or "—"),
+        f"Semáforo: {sem}",
+        f"Zona tensionada: {zona}",
+        f"Fecha de análisis: {fecha_analisis}",
+        f"Duración mínima aplicable: {dur} años",
     ]
-    for k, v in resumen:
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(left, y, f"{k}:")
-        c.setFont("Helvetica", 10)
-        c.drawString(left + 48*mm, y, str(v))
-        y -= 6 * mm
+    for line in resumen:
+        c.drawString(left, y, line)
+        y -= 5.5 * mm
 
     y -= 2 * mm
     c.setLineWidth(0.5)
+    c.setStrokeGray(0.85)
     c.line(left, y, right, y)
-    y -= 8 * mm
+    c.setStrokeGray(0)
+    y -= 9 * mm
 
-    # Alertas
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(left, y, "3) Alertas y notas")
-    y -= 7 * mm
-    c.setFont("Helvetica", 10)
+    section_title("1) Datos del inmueble")
+    page = ensure_space(40*mm, page)
+
+    kv("Dirección", inmueble.get("direccion") or "—")
+    kv("Municipio", inmueble.get("municipio") or "—")
+    kv("Comunidad", inmueble.get("comunidad_autonoma") or "—")
+    kv("Código postal", inmueble.get("codigo_postal") or "—")
+    kv("Superficie", f"{inmueble.get('superficie_m2') or '—'} m²")
+    kv("Tipo arrendamiento", inmueble.get("tipo_arrendamiento") or "—")
+    kv("Tipo arrendador", inmueble.get("tipo_arrendador") or "—")
+    kv("Renta propuesta", f"{inmueble.get('renta_propuesta') if inmueble.get('renta_propuesta') is not None else '—'} €")
+    kv("Renta anterior", f"{inmueble.get('renta_anterior')} €" if inmueble.get("renta_anterior") is not None else "—")
+
+    y -= 2 * mm
+    section_title("2) Resultado automático (MVP)")
+    page = ensure_space(45*mm, page)
+
+    kv("Semáforo de riesgo", sem)
+    kv("Zona tensionada", zona)
+    kv("Fuente oficial", fuente)
+    kv("Duración mínima", f"{dur} años")
+    kv("Renta máxima (MVP)", f"{renta_max} €" if renta_max is not None else "—")
+    kv("Fianza mínima (MVP)", f"{fianza} €" if fianza is not None else "—")
+
+    y -= 2 * mm
+    section_title("3) Alertas y recomendaciones")
+    page = ensure_space(45*mm, page)
 
     alertas = inmueble.get("alertas") or []
     if not alertas:
         alertas = ["—"]
 
+    c.setFont("Helvetica", 10)
     for a in alertas:
-        for line in _wrap_lines(f"• {a}", max_chars=105):
-            if y < 22 * mm:
-                c.showPage()
-                y = h - 18 * mm
-                c.setFont("Helvetica", 10)
+        page = ensure_space(28*mm, page)
+        for line in wrap(f"• {a}", max_chars=110):
             c.drawString(left, y, line)
-            y -= 5.5 * mm
+            y -= 5.2 * mm
 
-    # Disclaimer
-    if y < 30 * mm:
-        c.showPage()
-        y = h - 18 * mm
+    y -= 3 * mm
+    section_title("4) Aviso legal")
+    page = ensure_space(35*mm, page)
 
-    y -= 6 * mm
-    c.setLineWidth(0.5)
-    c.line(left, y, right, y)
-    y -= 7 * mm
-
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(left, y, "Disclaimer")
-    y -= 6 * mm
-    c.setFont("Helvetica", 9)
-    disclaimer = (
-        "Este informe es una ayuda informativa automatizada y no constituye asesoramiento jurídico individualizado. "
-        "Para una revisión completa del caso y redacción final del contrato, consulta con un profesional."
+    aviso = (
+        "Este informe es informativo y se genera mediante reglas automatizadas (MVP). "
+        "No constituye asesoramiento jurídico personalizado. "
+        "Para un análisis completo y/o redacción contractual final, consulta con un profesional o usa la versión Pro."
     )
-    for line in _wrap_lines(disclaimer, max_chars=110):
+    c.setFont("Helvetica", 9)
+    for line in wrap(aviso, max_chars=110):
         c.drawString(left, y, line)
         y -= 4.8 * mm
 
     c.showPage()
     c.save()
 
-    pdf = buf.getvalue()
+    out = buf.getvalue()
     buf.close()
-    return pdf
+    return out
+
 
 
 # ============================================================
