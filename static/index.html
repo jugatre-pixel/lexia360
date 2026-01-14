@@ -1,165 +1,370 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Lexia360 · Legal inmobiliario claro</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lexia360 · Legal inmobiliario, claro y accionable</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --bg2:#0f1b33;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#0b1220;
+      --border:#e6e8ef;
+      --brand:#0b5fff;
+      --brand2:#3a7bff;
+      --ok:#067647;
+      --danger:#b42318;
+      --shadow: 0 18px 45px rgba(16,24,40,.18);
+      --shadow2: 0 12px 25px rgba(16,24,40,.10);
+      --radius: 18px;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:#fff;
+      background:
+        radial-gradient(900px 540px at 18% 0%, rgba(11,95,255,.28), transparent 55%),
+        radial-gradient(900px 540px at 88% 6%, rgba(58,123,255,.20), transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 56%, #f6f7fb 56%, #f6f7fb 100%);
+    }
+
+    a{ color:inherit; }
+
+    .wrap{ max-width:1120px; margin:0 auto; padding: 0 18px; }
+    .nav{
+      position: sticky; top:0; z-index:50;
+      backdrop-filter: blur(10px);
+      background: rgba(11,18,32,.55);
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .navRow{
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 14px 0;
+      gap:12px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .badge{
+      width:36px; height:36px; border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      box-shadow: 0 14px 28px rgba(11,95,255,.25);
+      font-weight:900;
+    }
+
+    .navActions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:10px 14px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:#fff;
+      cursor:pointer;
+      font-weight:900;
+      text-decoration:none;
+      transition: transform .08s ease, background .12s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.09); }
+    .btn.primary{
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      border-color: transparent;
+    }
+    .btn.primary:hover{ background: linear-gradient(135deg, #0a52e0, #2f6cff); }
+
+    .hero{ padding: 52px 0 30px; }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 22px;
+      align-items:start;
+    }
+    @media(max-width: 960px){ .grid{ grid-template-columns:1fr; } }
+
+    h1{
+      margin:0;
+      font-size: 44px;
+      line-height:1.02;
+      letter-spacing:-.8px;
+      font-weight: 900;
+    }
+    .sub{
+      margin: 14px 0 18px;
+      color: rgba(255,255,255,.80);
+      font-size: 16px;
+      line-height:1.5;
+      max-width: 56ch;
+    }
+
+    .trust{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 14px;
+    }
+    .pill{
+      font-size: 12px;
+      font-weight: 800;
+      color: rgba(255,255,255,.86);
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      padding: 7px 10px;
+      border-radius: 999px;
+    }
+
+    .card{
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card h3{ margin:0 0 6px; }
+    .muted{ color: var(--muted); font-size: 13px; line-height:1.45; }
+
+    label{ display:block; margin-top:10px; font-size: 12px; font-weight: 900; color:#374151; }
+    input{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      outline:none;
+      font-size: 14px;
+      margin-top:6px;
+      background:#fff;
+    }
+    input:focus{ border-color: rgba(11,95,255,.35); box-shadow: 0 0 0 4px rgba(11,95,255,.10); }
+
+    .formActions{ display:flex; gap:10px; margin-top: 14px; }
+    .formActions .btn{ width:100%; border:1px solid #d1d5db; background:#fff; color:#111827; }
+    .formActions .btn.primary{ color:#fff; border:0; }
+
+    .msg{ margin-top:10px; font-size:13px; font-weight:800; }
+    .msg.err{ color: var(--danger); }
+    .msg.ok{ color: var(--ok); }
+
+    .section{
+      padding: 30px 0 60px;
+      color: var(--text);
+    }
+    .features{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:14px;
+    }
+    @media(max-width: 960px){ .features{ grid-template-columns:1fr; } }
+
+    .feat{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow2);
+    }
+    .feat b{ display:block; margin-bottom:6px; }
+    footer{
+      max-width:1120px; margin:0 auto;
+      padding: 18px 18px 40px;
+      color: #98a2b3;
+      font-size: 12px;
+    }
+    .links{ display:flex; gap:14px; flex-wrap:wrap; margin-top: 8px; }
+    .links a{ text-decoration:none; color:#98a2b3; }
+    .links a:hover{ text-decoration:underline; }
+  </style>
 </head>
 
 <body>
-<main class="container" style="max-width:900px;">
-  <h1>⚖️ Lexia360</h1>
-  <p>Diagnóstico legal inmobiliario claro, rápido y documentado.</p>
+  <div class="nav">
+    <div class="wrap navRow">
+      <a class="brand" href="/static/index.html" title="Inicio">
+        <div class="badge">⚖️</div>
+        <div>Lexia360</div>
+      </a>
 
-  <article>
-    <h3>Accede</h3>
+      <div class="navActions">
+        <button class="btn" onclick="show('login')">Iniciar sesión</button>
+        <button class="btn primary" onclick="show('register')">Crear cuenta</button>
+      </div>
+    </div>
+  </div>
 
-    <label>Email</label>
-    <input id="loginEmail" type="email" placeholder="tucorreo@...">
+  <section class="hero">
+    <div class="wrap grid">
+      <div>
+        <h1>Tu “LegalZoom” inmobiliario.<br>Hecho para España.</h1>
+        <p class="sub">
+          Crea fichas de inmuebles, ejecuta reglas automatizadas (MVP), identifica zona tensionada según dataset
+          y descarga un informe PDF profesional. Pensado para escalar a contratación y documentos.
+        </p>
 
-    <label>Contraseña</label>
-    <input id="loginPassword" type="password" placeholder="••••••••">
+        <div class="trust">
+          <span class="pill">✅ Fichas e histórico</span>
+          <span class="pill">✅ Informe PDF</span>
+          <span class="pill">✅ Papelera & restauración</span>
+          <span class="pill">🔒 Preparado para Pro</span>
+        </div>
+      </div>
 
-    <button id="loginBtn" type="button">Entrar</button>
-    <p id="loginMsg" style="color:#b42318; font-weight:700; margin-top:10px;"></p>
-  </article>
+      <div class="card">
+        <section id="loginBox">
+          <h3>Acceso</h3>
+          <div class="muted">Entra al panel y gestiona tus inmuebles.</div>
 
-  <hr>
+          <label>Email</label>
+          <input id="loginEmail" type="email" placeholder="tucorreo@..." autocomplete="email" />
 
-  <article>
-    <h3>Crear cuenta</h3>
+          <label>Contraseña</label>
+          <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
 
-    <label>Nombre</label>
-    <input id="regNombre" placeholder="Nombre y apellidos">
+          <div class="formActions">
+            <button class="btn primary" onclick="login()">Entrar</button>
+          </div>
 
-    <label>Email</label>
-    <input id="regEmail" type="email" placeholder="tucorreo@...">
+          <div id="loginMsg" class="msg err"></div>
+        </section>
 
-    <label>Contraseña</label>
-    <input id="regPassword" type="password" placeholder="mínimo 8 caracteres">
+        <section id="registerBox" style="display:none;">
+          <h3>Crear cuenta</h3>
+          <div class="muted">Crea tu cuenta en 30 segundos.</div>
 
-    <button id="regBtn" type="button">Crear cuenta</button>
-    <p id="regMsg" style="color:#b42318; font-weight:700; margin-top:10px;"></p>
-  </article>
-</main>
+          <label>Nombre</label>
+          <input id="regNombre" type="text" placeholder="Nombre y apellidos" autocomplete="name" />
 
-<script>
-  const api = location.origin;
+          <label>Email</label>
+          <input id="regEmail" type="email" placeholder="tucorreo@..." autocomplete="email" />
 
-  const $ = (id) => document.getElementById(id);
+          <label>Contraseña</label>
+          <input id="regPassword" type="password" placeholder="mínimo 8 caracteres" autocomplete="new-password" />
 
-  async function safeJson(res){
-    try { return await res.json(); } catch { return {}; }
-  }
+          <div class="formActions">
+            <button class="btn primary" onclick="register()">Crear cuenta</button>
+            <button class="btn" onclick="show('login')">Ya tengo cuenta</button>
+          </div>
 
-  // Auto-redirect si token válido
-  (async()=>{
-    const t = localStorage.getItem("token");
-    if(!t) return;
-    try{
-      const r = await fetch(`${api}/me`, { headers:{ "Authorization": `Bearer ${t}` } });
-      if(r.ok) location.href="/static/dashboard.html";
-      else localStorage.removeItem("token");
-    }catch(e){
-      // si falla red, no bloqueamos la página
+          <div id="regMsg" class="msg err"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap features">
+      <div class="feat">
+        <b>📌 Perfil legal por inmueble</b>
+        <div class="muted">Datos, reglas y alertas en un único sitio. Base para automatizar documentos.</div>
+      </div>
+      <div class="feat">
+        <b>📄 Informe PDF descargable</b>
+        <div class="muted">Salida profesional para archivo o cliente, con trazabilidad por fecha.</div>
+      </div>
+      <div class="feat">
+        <b>🧱 Arquitectura para escalar</b>
+        <div class="muted">Papelera, restore, purga, y motor de reglas preparado para versionado.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    © 2026 Lexia360 · Todos los derechos reservados
+    <div class="links">
+      <a href="#">Aviso legal</a>
+      <a href="#">Privacidad</a>
+      <a href="#">Contacto</a>
+    </div>
+  </footer>
+
+  <script>
+    const apiUrl = location.origin;
+
+    (async()=>{
+      const token = localStorage.getItem("token");
+      if(!token) return;
+      try{
+        const res = await fetch(`${apiUrl}/me`, { headers:{ "Authorization": `Bearer ${token}` }});
+        if(res.ok) window.location.href="/static/dashboard.html";
+        else localStorage.removeItem("token");
+      }catch(e){}
+    })();
+
+    function show(which){
+      document.getElementById("loginBox").style.display = which === "login" ? "block" : "none";
+      document.getElementById("registerBox").style.display = which === "register" ? "block" : "none";
+      document.getElementById("loginMsg").textContent = "";
+      document.getElementById("regMsg").textContent = "";
     }
-  })();
 
-  async function login(){
-    $("loginMsg").textContent = "";
-    $("loginBtn").disabled = true;
+    async function register(){
+      const nombre = document.getElementById("regNombre").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value;
 
-    const email = $("loginEmail").value.trim();
-    const password = $("loginPassword").value;
+      const msg = document.getElementById("regMsg");
+      msg.className = "msg err";
+      msg.textContent = "";
 
-    if(!email || !password){
-      $("loginMsg").textContent = "Introduce email y contraseña.";
-      $("loginBtn").disabled = false;
-      return;
-    }
-
-    const form = new URLSearchParams();
-    form.append("username", email);
-    form.append("password", password);
-
-    try{
-      const res = await fetch(`${api}/token`, {
-        method: "POST",
-        headers: { "Content-Type":"application/x-www-form-urlencoded" },
-        body: form
-      });
-
-      const data = await safeJson(res);
-
-      if(!res.ok){
-        $("loginMsg").textContent = data.detail || `Error login (HTTP ${res.status})`;
-        $("loginBtn").disabled = false;
-        return;
+      try{
+        const res = await fetch(`${apiUrl}/register`, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ nombre, email, password })
+        });
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){
+          msg.textContent = data.detail || "Error al registrar.";
+          return;
+        }
+        msg.className = "msg ok";
+        msg.textContent = "✅ Cuenta creada. Ahora inicia sesión.";
+        setTimeout(()=>show("login"), 900);
+      }catch(e){
+        msg.textContent = "⚠️ No se pudo conectar con el servidor.";
       }
+    }
 
-      if(!data.access_token){
-        $("loginMsg").textContent = "No se recibió token. Revisa /token.";
-        $("loginBtn").disabled = false;
-        return;
+    async function login(){
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      const msg = document.getElementById("loginMsg");
+      msg.className = "msg err";
+      msg.textContent = "";
+
+      const formData = new URLSearchParams();
+      formData.append("username", email);
+      formData.append("password", password);
+
+      try{
+        const res = await fetch(`${apiUrl}/token`, { method:"POST", body: formData });
+        const data = await res.json().catch(()=>({}));
+        if(data.access_token){
+          localStorage.setItem("token", data.access_token);
+          localStorage.setItem("email", email);
+          window.location.href = "/static/dashboard.html";
+        }else{
+          msg.textContent = data.detail || "❌ Credenciales incorrectas.";
+        }
+      }catch(e){
+        msg.textContent = "⚠️ No se pudo conectar con el servidor.";
       }
-
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("email", email);
-      location.href = "/static/dashboard.html";
-
-    }catch(e){
-      $("loginMsg").textContent = "No se pudo conectar con el servidor.";
-      $("loginBtn").disabled = false;
     }
-  }
-
-  async function register(){
-    $("regMsg").textContent = "";
-    $("regBtn").disabled = true;
-
-    const nombre = $("regNombre").value.trim();
-    const email = $("regEmail").value.trim();
-    const password = $("regPassword").value;
-
-    if(!nombre || !email || !password){
-      $("regMsg").textContent = "Rellena nombre, email y contraseña.";
-      $("regBtn").disabled = false;
-      return;
-    }
-
-    try{
-      const res = await fetch(`${api}/register`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ nombre, email, password })
-      });
-
-      const data = await safeJson(res);
-
-      if(!res.ok){
-        $("regMsg").textContent = data.detail || `Error registro (HTTP ${res.status})`;
-        $("regBtn").disabled = false;
-        return;
-      }
-
-      $("regMsg").style.color = "#027a48";
-      $("regMsg").textContent = "✅ Cuenta creada. Ahora inicia sesión arriba.";
-      $("regBtn").disabled = false;
-
-    }catch(e){
-      $("regMsg").textContent = "No se pudo conectar con el servidor.";
-      $("regBtn").disabled = false;
-    }
-  }
-
-  $("loginBtn").addEventListener("click", login);
-  $("regBtn").addEventListener("click", register);
-
-  // Enter para login
-  $("loginPassword").addEventListener("keydown", (e)=>{
-    if(e.key === "Enter") login();
-  });
-</script>
+  </script>
 </body>
 </html>
