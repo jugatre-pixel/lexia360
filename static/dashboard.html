@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lexia360 · Panel</title>
 
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
 
   <style>
     :root{
@@ -29,50 +28,20 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .wrap{
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 18px;
-    }
+    .wrap{ max-width: 1100px; margin: 0 auto; padding: 18px; }
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap: 12px; }
 
-    .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 12px;
-    }
-
-    .brand{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-    }
+    .brand{ display:flex; align-items:center; gap: 10px; }
 
     .btn{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:10px 14px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:#fff;
-      cursor:pointer;
-      text-decoration:none;
-      font-weight: 600;
-      white-space: nowrap;
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:10px;
+      border:1px solid var(--border); background:#fff;
+      cursor:pointer; text-decoration:none; font-weight: 700; white-space: nowrap;
     }
 
-    .btn.primary{
-      background: var(--accent);
-      color:#fff;
-      border-color: var(--accent);
-    }
-
-    .btn.danger{
-      background:#fff;
-      border-color:#ffb3b3;
-      color: var(--danger);
-    }
+    .btn.primary{ background: var(--accent); color:#fff; border-color: var(--accent); }
+    .btn.danger{ border-color:#ffb3b3; color: var(--danger); }
 
     .muted{ color: var(--muted); }
     .small{ font-size: 13px; }
@@ -85,121 +54,25 @@
       box-shadow: 0 8px 18px rgba(16,24,40,0.04);
     }
 
-    .list{
-      display:flex;
-      flex-direction:column;
-      gap: 12px;
-      margin-top: 12px;
-    }
+    .list{ display:flex; flex-direction:column; gap: 12px; margin-top: 12px; }
 
     .row{
-      display:flex;
-      justify-content:space-between;
-      gap: 14px;
-      align-items:flex-start;
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
+      display:flex; justify-content:space-between; gap: 14px; align-items:flex-start;
+      padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: #fff;
     }
 
-    .row h4{
-      margin:0 0 6px 0;
-      font-size: 16px;
-    }
+    .row h4{ margin:0 0 6px 0; font-size: 16px; }
 
-    .meta{
-      display:flex;
-      flex-wrap:wrap;
-      gap: 8px 14px;
-    }
+    .meta{ display:flex; flex-wrap:wrap; gap: 8px 14px; }
 
-    .pill{
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fafafa;
-    }
-
+    .pill{ font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: #fafafa; }
     .pill.green{ border-color:#b7ebc6; background:#f0fff4; }
     .pill.red{ border-color:#ffc4c4; background:#fff5f5; }
     .pill.gray{ border-color: var(--border); background:#f8fafc; }
 
-    .actions{
-      display:flex;
-      gap: 10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-      min-width: 260px;
-    }
+    .actions{ display:flex; gap: 10px; flex-wrap:wrap; justify-content:flex-end; min-width: 320px; }
 
-    footer{
-      text-align:center;
-      padding: 18px 0 40px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    /* ====== Modal (LegalZoom-like) ====== */
-    .overlay{
-      position:fixed;
-      inset:0;
-      background: rgba(16,24,40,0.45);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index: 999;
-      padding: 18px;
-    }
-
-    .modal{
-      width: min(560px, 100%);
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 18px 50px rgba(16,24,40,0.18);
-    }
-
-    .modal h3{ margin: 0 0 6px 0; }
-    .modal .muted{ margin: 0 0 14px 0; }
-
-    .modal-actions{
-      display:flex;
-      justify-content:flex-end;
-      gap:10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-
-    /* ====== Toast ====== */
-    .toast{
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: 18px;
-      background:#111827;
-      color:#fff;
-      border-radius: 999px;
-      padding: 10px 14px;
-      display:none;
-      align-items:center;
-      gap: 10px;
-      z-index: 1000;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.25);
-      max-width: calc(100% - 30px);
-    }
-
-    .toast button{
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.25);
-      background: rgba(255,255,255,0.08);
-      color:#fff;
-      padding: 6px 10px;
-      cursor:pointer;
-      font-weight: 700;
-    }
+    footer{ text-align:center; padding: 18px 0 40px; color: var(--muted); font-size: 13px; }
   </style>
 </head>
 
@@ -214,7 +87,8 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;align-items:center;">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
       <a class="btn primary" href="/static/wizard.html">➕ Crear inmueble</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
@@ -244,39 +118,13 @@
   </section>
 </main>
 
-<footer>
-  © 2026 Lexia360 · Estilo LegalZoom (toque europeo)
-</footer>
-
-<!-- Modal -->
-<div id="overlay" class="overlay" onclick="closeModal(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <h3>Eliminar inmueble</h3>
-    <p class="muted small" id="modalText"></p>
-
-    <div class="modal-actions">
-      <button class="btn" onclick="hideModal()">Cancelar</button>
-      <button class="btn danger" onclick="confirmDelete()">Sí, eliminar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div id="toast" class="toast">
-  <span id="toastText" class="small">Eliminado.</span>
-  <button onclick="undoDelete()">Deshacer</button>
-</div>
+<footer>© 2026 Lexia360</footer>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
   const userEmail = localStorage.getItem("email");
   document.getElementById("userEmail").textContent = userEmail || "Usuario";
-
-  let pendingDeleteId = null;
-  let pendingDeleteLabel = "";
-  let lastDeletedId = null;
-  let toastTimer = null;
 
   function logout(){
     localStorage.removeItem("token");
@@ -315,7 +163,6 @@
 
     const list = document.getElementById("list");
     const empty = document.getElementById("empty");
-
     list.innerHTML = `<div class="muted small">Cargando…</div>`;
     empty.style.display = "none";
 
@@ -323,7 +170,6 @@
       const res = await fetch(`${apiUrl}/inmuebles`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
-
       if(res.status === 401){ logout(); return; }
       const items = await res.json();
 
@@ -349,7 +195,7 @@
 
           <div class="actions">
             <a class="btn" href="/static/inmueble.html?id=${inm.id_inmueble}">📄 Ver ficha</a>
-            <button class="btn danger" onclick="openDeleteModal(${inm.id_inmueble}, '${escapeHtml(inm.direccion || "Inmueble")}')">🗑️ Eliminar</button>
+            <button class="btn danger" onclick="trash(${inm.id_inmueble})">🗑️ Enviar a papelera</button>
           </div>
         </div>
       `).join("");
@@ -359,93 +205,23 @@
     }
   }
 
-  // ===== Modal =====
-  function openDeleteModal(id, label){
-    pendingDeleteId = id;
-    pendingDeleteLabel = label;
-    document.getElementById("modalText").innerHTML =
-      `Vas a eliminar <b>${label}</b>. Se moverá a la papelera y podrás <b>deshacer</b> la acción.`;
-    document.getElementById("overlay").style.display = "flex";
-  }
-
-  function hideModal(){
-    document.getElementById("overlay").style.display = "none";
-    pendingDeleteId = null;
-    pendingDeleteLabel = "";
-  }
-
-  function closeModal(e){
-    // click fuera del modal
-    if(e.target.id === "overlay") hideModal();
-  }
-
-  async function confirmDelete(){
-    if(!pendingDeleteId) return;
-    const id = pendingDeleteId;
-    const label = pendingDeleteLabel || "Inmueble";
-    hideModal();
+  async function trash(id){
+    const ok = confirm("¿Enviar este inmueble a la papelera? Podrás restaurarlo.");
+    if(!ok) return;
 
     try{
       const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
-        method: "DELETE",
+        method:"DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
-
       const data = await res.json().catch(()=>({}));
-
-      if(!res.ok){
-        alert(data.detail || "Error eliminando inmueble");
-        return;
-      }
-
-      lastDeletedId = id;
-      showToast(`✅ Eliminado: ${label}.`, true);
-
+      if(!res.ok){ alert(data.detail || "Error enviando a papelera"); return; }
       await loadInmuebles();
     }catch(e){
       alert("Error de conexión");
     }
   }
 
-  // ===== Toast + Undo =====
-  function showToast(text, withUndo){
-    const t = document.getElementById("toast");
-    document.getElementById("toastText").textContent = text;
-    t.style.display = "flex";
-    t.querySelector("button").style.display = withUndo ? "inline-flex" : "none";
-
-    if(toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      t.style.display = "none";
-      toastTimer = null;
-    }, 8000);
-  }
-
-  async function undoDelete(){
-    if(!lastDeletedId) return;
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${lastDeletedId}/restore`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-
-      const data = await res.json().catch(()=>({}));
-
-      if(!res.ok){
-        alert(data.detail || "No se pudo deshacer");
-        return;
-      }
-
-      showToast("✅ Acción deshecha. Inmueble restaurado.", false);
-      lastDeletedId = null;
-      await loadInmuebles();
-    }catch(e){
-      alert("Error de conexión");
-    }
-  }
-
-  // init
   if(!token){ logout(); }
   loadStatus();
   loadInmuebles();
