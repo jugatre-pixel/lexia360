@@ -6,169 +6,201 @@
   <title>Lexia360 · Papelera</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318; --ok:#027a48; }
-    body{ margin:0; background:var(--bg); }
-    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
-    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
-    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
-    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 14px 28px rgba(11,95,255,.18); }
-    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
-    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
-    .btn.danger{ border-color:#f0c9c8; color:var(--danger); }
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
-    .muted{ color:var(--muted); }
-    .small{ font-size:13px; }
-    .row-actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
-    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
-    .toast.ok{ color:var(--ok); }
-    .toast.err{ color:var(--danger); }
-    .empty{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:16px; color:var(--muted); }
-    input{ border-radius:12px !important; }
+    :root{
+      --brand:#0b5fff; --brand2:#5b8cff;
+      --bg:#0b1220; --muted:rgba(255,255,255,.72);
+      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --radius:16px;
+    }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 62%, #f6f7fb 62%, #f6f7fb 100%);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:rgba(11,18,32,.62);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
+    .badge{
+      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 14px 28px rgba(11,95,255,.22);
+    }
+    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:8px 12px;border-radius:999px;
+      text-decoration:none;font-weight:900;font-size:13px;
+    }
+    .chip.active{background:rgba(255,255,255,.12)}
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:10px 14px;border-radius:12px;
+      font-weight:900;cursor:pointer;
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
+    .hero{padding:28px 0 10px;}
+    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
+    .sub{color:var(--muted);margin:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .muted2{color:#667085;font-size:13px}
+    table{border-radius:16px;overflow:hidden}
+    .pill{
+      font-size:12px;color:#111827;border:1px solid var(--border);background:#fff;
+      padding:6px 10px;border-radius:999px;font-weight:900;
+    }
+    .toast{
+      position:fixed;left:18px;bottom:18px;z-index:9999;
+      background:#111827;color:#fff;border:1px solid rgba(255,255,255,.12);
+      padding:12px 14px;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.25);
+      display:none;max-width:560px;
+    }
+    .toast.show{display:block}
+    .danger{background:#b42318 !important;border-color:#b42318 !important}
+    .warn{background:#b54708 !important;border-color:#b54708 !important}
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap top">
-    <a class="brand" href="/static/dashboard.html">
-      <div class="badge">⚖️</div>
-      <div>Lexia360</div>
-    </a>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn" href="/static/dashboard.html">🏠 Dashboard</a>
-      <a class="btn" href="/static/inmuebles.html">📁 Expedientes</a>
-      <a class="btn primary" href="/static/wizard.html">➕ Nuevo expediente</a>
-      <button class="btn" onclick="logout()">Cerrar sesión</button>
+  <div class="topbar">
+    <div class="wrap toprow">
+      <a class="brand" href="/static/dashboard.html">
+        <div class="badge">⚖️</div>
+        <div>Lexia360</div>
+      </a>
+
+      <div class="navlinks">
+        <a class="chip" href="/static/dashboard.html">Dashboard</a>
+        <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
+        <a class="chip" href="/static/wizard.html">Wizard</a>
+        <a class="chip active" href="/static/papelera.html">Papelera</a>
+        <button class="btn" onclick="logout()">Salir</button>
+      </div>
     </div>
   </div>
-</header>
 
-<main class="wrap">
-  <section class="card">
-    <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-      <div>
-        <h3 style="margin:0;">Papelera</h3>
-        <div class="muted small">Recupera expedientes eliminados o bórralos definitivamente.</div>
+  <section class="wrap hero">
+    <h2 class="headline">Papelera</h2>
+    <p class="sub">Elementos eliminados (recuperables). Puedes restaurar o borrar definitivamente.</p>
+  </section>
+
+  <section class="wrap">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <b>Elementos en papelera</b>
+          <div class="muted2">Si tu sesión no está activa, verás 401 y te mandará al login.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="load()">Actualizar</button>
+          <a href="/static/inmuebles.html" role="button" class="secondary">Volver a activos</a>
+        </div>
       </div>
-      <div class="muted small" id="countText">—</div>
-    </div>
 
-    <hr/>
+      <figure style="margin:0;">
+        <table role="grid">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Referencia / Dirección</th>
+              <th>Eliminado</th>
+              <th style="width:310px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </figure>
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <input id="q" type="search" placeholder="Buscar en papelera..." style="min-width:260px;" oninput="render()"/>
-    </div>
+      <div class="muted2" id="empty" style="display:none;margin-top:12px;">
+        La papelera está vacía.
+      </div>
 
-    <div id="toast" class="toast"></div>
-
-    <div style="overflow:auto; margin-top:10px;">
-      <table role="grid">
-        <thead>
-          <tr>
-            <th>Dirección</th>
-            <th>Municipio</th>
-            <th>CA</th>
-            <th>Renta</th>
-            <th style="text-align:right;">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-
-    <div id="empty" class="empty" style="display:none; margin-top:10px;">
-      La papelera está vacía.
+      <details style="margin-top:12px;">
+        <summary>Si al restaurar/borrar definitivo te da error</summary>
+        <div class="muted2" style="margin-top:8px;">
+          He puesto endpoints estándar:
+          <ul>
+            <li><code>POST /inmuebles/{id}/restore</code> (restaurar)</li>
+            <li><code>DELETE /inmuebles/{id}/hard</code> (borrar definitivo)</li>
+          </ul>
+          Si tu backend usa otros nombres, dime cuáles y te lo ajusto en 10 segundos.
+        </div>
+      </details>
     </div>
   </section>
-</main>
+
+  <div id="toast" class="toast"></div>
 
 <script>
   const apiUrl = location.origin;
-  const token = localStorage.getItem("token");
-  if(!token) location.href="/static/index.html";
+  let trash = [];
 
-  let items = [];
-
+  function token(){ return localStorage.getItem("token"); }
+  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+  function guard(){
+    const t = token();
+    if(!t){ window.location.href="/static/index.html"; return false; }
+    return true;
+  }
   function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    location.href="/static/index.html";
+    localStorage.removeItem("token"); localStorage.removeItem("email");
+    window.location.href="/static/index.html";
   }
-
-  function esc(s){
-    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  function toast(msg){
+    const el=document.getElementById("toast");
+    el.textContent=msg; el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"), 4200);
   }
+  async function safeJson(res){ try{return await res.json();}catch{return {};} }
 
-  function setToast(text, ok=true){
-    const el = document.getElementById("toast");
-    el.className = "toast " + (ok ? "ok" : "err");
-    el.textContent = text || "";
-    if(text){
-      setTimeout(()=>{ el.textContent=""; }, 2600);
-    }
+  function escapeHtml(s){
+    return (s??"").toString()
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
-
-  function money(v){
-    if(v===null || v===undefined || v==="") return "—";
-    const n = Number(v);
-    if(Number.isNaN(n)) return esc(v);
-    return n.toLocaleString("es-ES",{maximumFractionDigits:2}) + " €";
+  function getId(i){
+    return i.id ?? i.id_inmueble ?? i.idInmueble ?? i.id_inmuebles;
   }
-
-  async function api(path, opts={}){
-    const res = await fetch(`${apiUrl}${path}`, {
-      ...opts,
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        ...(opts.headers||{})
-      }
-    });
-    if(res.status===401) logout();
-    return res;
-  }
-
-  async function load(){
-    const res = await api("/inmuebles/trash");
-    if(!res.ok){
-      const d = await res.json().catch(()=>({}));
-      setToast(d.detail || "Error cargando papelera", false);
-      items = [];
-      render();
-      return;
-    }
-    items = await res.json().catch(()=>[]);
-    render();
-  }
-
-  function filtered(){
-    const q = document.getElementById("q").value.trim().toLowerCase();
-    return (items||[]).filter(i=>{
-      const hay = `${i.direccion||""} ${i.municipio||""} ${i.comunidad_autonoma||""}`.toLowerCase();
-      if(q && !hay.includes(q)) return false;
-      return true;
-    });
+  function labelFor(i){
+    const ref = i.referencia || i.ref || i.codigo || i.nombre || `Inmueble ${getId(i) ?? ""}`.trim();
+    const dir = i.direccion || i.dirección || i.address || i.ubicacion || "";
+    const owner = i.propietario || i.arrendador || i.cliente || "";
+    const main = [ref, dir].filter(Boolean).join(" · ");
+    const sub = [owner].filter(Boolean).join(" ");
+    return { main: main || (ref||"—"), sub };
   }
 
   function render(){
-    const rows = filtered();
-    document.getElementById("countText").textContent = `${rows.length} elemento(s)`;
-    const tbody = document.getElementById("tbody");
+    const tbody = document.getElementById("rows");
     tbody.innerHTML = "";
+    document.getElementById("empty").style.display = (trash.length===0) ? "block" : "none";
 
-    document.getElementById("empty").style.display = rows.length ? "none" : "block";
+    for(const i of trash){
+      const id = getId(i);
+      const {main, sub} = labelFor(i);
+      const deletedAt = i.eliminado_en || i.deleted_at || i.deletedAt || "—";
 
-    for(const i of rows){
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><b>${esc(i.direccion || "—")}</b></td>
-        <td>${esc(i.municipio || "—")}</td>
-        <td>${esc(i.comunidad_autonoma || "—")}</td>
-        <td>${money(i.renta_propuesta)}</td>
-        <td style="text-align:right;">
-          <div class="row-actions">
-            <button class="btn" onclick="restore(${i.id_inmueble})">Restaurar</button>
-            <button class="btn danger" onclick="purge(${i.id_inmueble})">Borrar definitivo</button>
+        <td><b>${id ?? "—"}</b></td>
+        <td>
+          <div style="font-weight:950;">${escapeHtml(main)}</div>
+          <div class="muted2">${escapeHtml(sub || "")}</div>
+        </td>
+        <td><span class="pill">${escapeHtml(deletedAt)}</span></td>
+        <td>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="warn" onclick="restore(${Number(id)})">↩︎ Restaurar</button>
+            <button class="danger" onclick="hardDelete(${Number(id)})">Eliminar definitivo</button>
           </div>
         </td>
       `;
@@ -176,21 +208,84 @@
     }
   }
 
-  async function restore(id){
-    const res = await api(`/inmuebles/${id}/restore`, { method:"POST" });
-    const d = await res.json().catch(()=>({}));
-    if(!res.ok){ setToast(d.detail || "Error restaurando", false); return; }
-    setToast("✅ Restaurado", true);
-    await load();
+  async function load(){
+    if(!guard()) return;
+
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/trash`, { headers: authHeaders() });
+      if(res.status===401){ logout(); return; }
+      const data = await safeJson(res);
+
+      if(!res.ok){
+        toast(data.detail || "No se pudo cargar la papelera.");
+        trash = [];
+        render();
+        return;
+      }
+
+      trash = Array.isArray(data) ? data : [];
+      render();
+    }catch(e){
+      toast("⚠️ Error de conexión.");
+    }
   }
 
-  async function purge(id){
-    if(!confirm("⚠️ Borrado definitivo. ¿Seguro?")) return;
-    const res = await api(`/inmuebles/${id}/purge`, { method:"DELETE" });
-    const d = await res.json().catch(()=>({}));
-    if(!res.ok){ setToast(d.detail || "Error en borrado definitivo", false); return; }
-    setToast("🧨 Borrado definitivo completado", true);
-    await load();
+  async function restore(id){
+    if(!guard()) return;
+    if(!confirm("¿Restaurar este inmueble?")) return;
+
+    // Endpoint principal
+    const endpoints = [
+      { method:"POST", url:`${apiUrl}/inmuebles/${id}/restore` },
+      { method:"PUT",  url:`${apiUrl}/inmuebles/${id}/restore` },
+      { method:"POST", url:`${apiUrl}/inmuebles/${id}/undelete` },
+      { method:"PUT",  url:`${apiUrl}/inmuebles/${id}/undelete` }
+    ];
+
+    for(const ep of endpoints){
+      try{
+        const res = await fetch(ep.url, { method: ep.method, headers: authHeaders() });
+        if(res.status===401){ logout(); return; }
+
+        if(res.ok){
+          toast("✅ Restaurado.");
+          await load();
+          return;
+        }
+      }catch(e){
+        // seguimos probando
+      }
+    }
+
+    toast("❌ No se pudo restaurar. El backend quizá no tenga el endpoint /restore (ver desplegable).");
+  }
+
+  async function hardDelete(id){
+    if(!guard()) return;
+    if(!confirm("⚠️ Esto borra definitivamente. ¿Continuar?")) return;
+
+    const endpoints = [
+      { method:"DELETE", url:`${apiUrl}/inmuebles/${id}/hard` },
+      { method:"DELETE", url:`${apiUrl}/inmuebles/${id}/purge` },
+      { method:"DELETE", url:`${apiUrl}/inmuebles/${id}/destroy` }
+    ];
+
+    for(const ep of endpoints){
+      try{
+        const res = await fetch(ep.url, { method: ep.method, headers: authHeaders() });
+        if(res.status===401){ logout(); return; }
+
+        if(res.ok){
+          toast("🧹 Eliminado definitivamente.");
+          await load();
+          return;
+        }
+      }catch(e){
+        // seguimos probando
+      }
+    }
+
+    toast("❌ No se pudo borrar definitivo. El backend quizá no tenga /hard (ver desplegable).");
   }
 
   load();
