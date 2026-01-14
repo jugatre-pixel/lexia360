@@ -39,13 +39,11 @@
       color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer;
     }
     .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
-    .btn.ghost{ background:transparent; }
-    .hero{ padding:26px 0 14px; }
+    .hero{ padding:22px 0 12px; }
     .headline{ color:#fff; font-size:34px; line-height:1.06; margin:0 0 8px; font-weight:1000; letter-spacing:-.2px; }
     .sub{ color:var(--muted); margin:0; font-size:14px; }
-    .grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; align-items:start; }
+    .grid{ display:grid; grid-template-columns: 1.25fr .75fr; gap:14px; align-items:start; }
     @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
-
     .card{
       background:var(--card);
       border:1px solid var(--border);
@@ -56,45 +54,14 @@
     .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
     @media(max-width:900px){ .kpis{ grid-template-columns:repeat(2,1fr); } }
     .kpi{ border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff; }
-    .kpi .label{ color:#667085; font-size:12px; font-weight:800; margin-bottom:6px; }
+    .kpi .label{ color:#667085; font-size:12px; font-weight:900; margin-bottom:6px; }
     .kpi .value{ font-size:22px; font-weight:1000; color:var(--ink); }
-    .kpi .hint{ color:#98a2b3; font-size:12px; margin-top:6px; }
-
-    .actions{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
-    @media(max-width:900px){ .actions{ grid-template-columns:1fr; } }
-    .action{
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:14px;
-      background:#fff;
-      cursor:pointer;
-      transition: transform .06s ease;
-    }
-    .action:hover{ transform: translateY(-1px); }
-    .action b{ display:block; margin-bottom:6px; }
     .muted2{ color:#667085; font-size:13px; }
-
-    table{ margin:0; }
-    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-    .smallbtn{
-      padding:8px 10px;
-      border-radius:10px;
-      font-weight:900;
-      border:1px solid var(--border);
-      background:#fff;
-      cursor:pointer;
-    }
-    .smallbtn.primary{
-      border-color:transparent;
-      color:#fff;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-    }
-    .msg{ margin-top:10px; font-size:13px; font-weight:800; }
+    .msg{ margin-top:10px; font-size:13px; font-weight:900; }
     .msg.error{ color:#b42318; }
     .msg.ok{ color:#027a48; }
   </style>
 </head>
-
 <body>
   <div class="nav">
     <div class="wrap nav-row">
@@ -106,102 +73,54 @@
         <span id="who" style="color:rgba(255,255,255,.85); font-weight:900;"></span>
         <button class="btn" onclick="go('/static/wizard.html')">Wizard</button>
         <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
-        <button class="btn ghost" onclick="go('/static/papelera.html')">Papelera</button>
-        <button class="btn primary" onclick="logout()">Cerrar sesión</button>
+        <button class="btn" onclick="go('/static/papelera.html')">Papelera</button>
+        <button class="btn primary" onclick="logout()">Salir</button>
       </div>
     </div>
   </div>
 
   <section class="wrap hero">
     <h1 class="headline">Panel de control</h1>
-    <p class="sub">Tu centro de operaciones: expedientes, documentos y trazabilidad.</p>
+    <p class="sub">Centro de operaciones: expedientes, documentos y trazabilidad.</p>
   </section>
 
   <section class="wrap">
     <div class="grid">
       <div class="card">
-        <h3 style="margin:0 0 10px;">Estado del sistema</h3>
+        <h3 style="margin:0 0 10px;">Estado</h3>
 
         <div class="kpis">
-          <div class="kpi">
-            <div class="label">Usuarios</div>
-            <div class="value" id="k_users">—</div>
-            <div class="hint">Registrados</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Inmuebles</div>
-            <div class="value" id="k_inm">—</div>
-            <div class="hint">Activos</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Papelera</div>
-            <div class="value" id="k_trash">—</div>
-            <div class="hint">Eliminados</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Docs</div>
-            <div class="value" id="k_docs">—</div>
-            <div class="hint">Generados</div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <div class="action" onclick="go('/static/wizard.html')">
-            <b>🧭 Crear contrato (Wizard)</b>
-            <div class="muted2">Contrato de alquiler + anexos y checklist (MVP).</div>
-          </div>
-          <div class="action" onclick="go('/static/inmuebles.html')">
-            <b>🏠 Gestionar inmuebles</b>
-            <div class="muted2">Alta, edición, ficha y descarga de PDF.</div>
-          </div>
-          <div class="action" onclick="go('/static/papelera.html')">
-            <b>🗑️ Ver papelera</b>
-            <div class="muted2">Recupera o elimina definitivamente.</div>
-          </div>
+          <div class="kpi"><div class="label">Usuarios</div><div class="value" id="k_users">—</div></div>
+          <div class="kpi"><div class="label">Inmuebles</div><div class="value" id="k_inm">—</div></div>
+          <div class="kpi"><div class="label">Papelera</div><div class="value" id="k_trash">—</div></div>
+          <div class="kpi"><div class="label">Docs</div><div class="value" id="k_docs">—</div></div>
         </div>
 
         <div id="sysMsg" class="msg"></div>
       </div>
 
       <div class="card">
-        <h3 style="margin:0 0 10px;">Últimos inmuebles</h3>
-        <div class="muted2" style="margin-bottom:10px;">Acceso rápido a fichas recientes.</div>
-
-        <div style="overflow:auto;">
-          <table role="grid">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tbody">
-              <tr><td colspan="3" class="muted2">Cargando…</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div id="listMsg" class="msg"></div>
+        <h3 style="margin:0 0 10px;">Atajos</h3>
+        <div class="muted2" style="margin-bottom:10px;">Acciones rápidas.</div>
+        <button class="btn primary" style="width:100%;margin-bottom:10px;" onclick="go('/static/wizard.html')">Crear contrato (Wizard)</button>
+        <button class="btn" style="width:100%;margin-bottom:10px;" onclick="go('/static/inmuebles.html')">Gestionar inmuebles</button>
+        <button class="btn" style="width:100%;" onclick="go('/static/papelera.html')">Ver papelera</button>
       </div>
     </div>
   </section>
 
 <script>
   const apiUrl = location.origin;
-  let __loaded = false;
 
   function token(){ return localStorage.getItem("token"); }
-  function authHeaders(){
-    return { "Authorization": `Bearer ${token()}` };
-  }
+  function authHeaders(){ return { "Authorization": `Bearer ${token()}` }; }
   function go(path){ window.location.href = path; }
-
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
-    window.location.href = "/static/index.html";
+    window.location.href="/static/index.html";
   }
+  function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
 
   async function guard(){
     const t = token();
@@ -210,92 +129,36 @@
     if(res.status === 401){ logout(); return false; }
     if(!res.ok){ return false; }
     const me = await res.json().catch(()=>null);
-    const label = me?.email || localStorage.getItem("email") || "Cuenta";
-    document.getElementById("who").textContent = label;
+    document.getElementById("who").textContent = me?.email || localStorage.getItem("email") || "";
     return true;
   }
-
-  function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
 
   async function loadStatus(){
     const msg = document.getElementById("sysMsg");
     msg.textContent = "";
     try{
       const res = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
-      if(res.status === 401){ logout(); return; }
+      if(res.status===401){ logout(); return; }
       const data = await res.json().catch(()=>null);
 
-      // Si /status no está protegido o cambia el formato, no rompemos:
-      const u = data?.usuarios_registrados ?? data?.usuarios ?? data?.users ?? null;
-      const a = data?.inmuebles_activos ?? data?.inmuebles ?? data?.activos ?? null;
-      const tr = data?.inmuebles_eliminados ?? data?.papelera ?? data?.trash ?? null;
-      const d = data?.documentos ?? data?.docs ?? null;
-
-      setText("k_users", u ?? "—");
-      setText("k_inm", a ?? "—");
-      setText("k_trash", tr ?? "—");
-      setText("k_docs", d ?? "—");
+      setText("k_users", data?.usuarios_registrados ?? "—");
+      setText("k_inm", data?.inmuebles_activos ?? "—");
+      setText("k_trash", data?.inmuebles_eliminados ?? "—");
+      setText("k_docs", data?.documentos ?? "—");
 
       msg.className = "msg ok";
       msg.textContent = "✅ Estado cargado.";
-      setTimeout(()=>{ msg.textContent=""; }, 1200);
+      setTimeout(()=>{ msg.textContent=""; }, 900);
     }catch(e){
       msg.className = "msg error";
-      msg.textContent = "⚠️ No se pudo cargar /status (no es crítico).";
+      msg.textContent = "⚠️ No se pudo cargar /status.";
     }
-  }
-
-  async function loadInmuebles(){
-    const tbody = document.getElementById("tbody");
-    const msg = document.getElementById("listMsg");
-    msg.textContent = "";
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles?limit=10`, { headers: authHeaders() });
-      if(res.status === 401){ logout(); return; }
-      const items = await res.json().catch(()=>[]);
-      const arr = Array.isArray(items) ? items : (items?.items || []);
-
-      if(!arr.length){
-        tbody.innerHTML = `<tr><td colspan="3" class="muted2">No hay inmuebles todavía.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = arr.slice(0,10).map(x => {
-        const id = x.id ?? x.id_inmueble ?? x.idInmueble ?? "";
-        const nombre = x.nombre ?? x.titulo ?? x.direccion ?? "Inmueble";
-        return `
-          <tr>
-            <td><b>${id}</b></td>
-            <td>${escapeHtml(String(nombre))}</td>
-            <td>
-              <div class="row-actions">
-                <button class="smallbtn primary" onclick="go('/static/inmueble.html?id=${id}')">Abrir</button>
-                <button class="smallbtn" onclick="go('/static/inmuebles.html')">Ver lista</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join("");
-    }catch(e){
-      tbody.innerHTML = `<tr><td colspan="3" class="muted2">No se pudo cargar la lista.</td></tr>`;
-      msg.className = "msg error";
-      msg.textContent = "⚠️ Error cargando /inmuebles.";
-    }
-  }
-
-  function escapeHtml(s){
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   }
 
   (async function init(){
-    if(__loaded) return;
-    __loaded = true;
-
     const ok = await guard();
     if(!ok) return;
-
-    await Promise.all([ loadStatus(), loadInmuebles() ]);
+    await loadStatus();
   })();
 </script>
 </body>
