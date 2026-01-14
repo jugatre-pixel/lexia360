@@ -824,3 +824,11 @@ def chat_assistant(payload: ChatRequest, user: Usuario = Depends(get_current_use
 
     respuesta, requiere_pro = mock_chat_engine(payload.mensaje)
     return {"respuesta": respuesta, "requiere_pro": requiere_pro}
+@app.get("/debug/db")
+def debug_db():
+    u = os.getenv("DATABASE_URL","")
+    return {
+        "starts_with": u[:30],
+        "has_postgres": u.startswith("postgres"),
+        "host_fragment": (u.split("@")[-1].split("/")[0] if "@" in u else "no-at"),
+    }
