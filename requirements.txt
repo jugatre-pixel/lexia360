@@ -1,10 +1,16 @@
 fastapi
 uvicorn[standard]
+
 sqlmodel
 sqlalchemy
+
 psycopg2-binary
+
 python-jose[cryptography]
 passlib
 python-multipart
 email-validator
+
 reportlab
+
+pydantic
