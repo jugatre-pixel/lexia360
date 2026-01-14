@@ -90,7 +90,7 @@
 
   <section class="wrap hero">
     <h2 class="headline">Papelera</h2>
-    <p class="sub">Elementos eliminados (recuperables). Puedes restaurar o borrar definitivamente.</p>
+    <p class="sub">Inmuebles eliminados (recuperables). Puedes restaurar o borrar definitivamente.</p>
   </section>
 
   <section class="wrap">
@@ -98,7 +98,7 @@
       <div class="row" style="margin-bottom:10px;">
         <div>
           <b>Elementos en papelera</b>
-          <div class="muted2">Si tu sesión no está activa, verás 401 y te mandará al login.</div>
+          <div class="muted2">Si no hay token válido te mandará al login (401).</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn" onclick="load()">Actualizar</button>
@@ -111,9 +111,10 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>Referencia / Dirección</th>
+              <th>Dirección</th>
+              <th>Municipio</th>
               <th>Eliminado</th>
-              <th style="width:310px;">Acciones</th>
+              <th style="width:340px;">Acciones</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -123,18 +124,6 @@
       <div class="muted2" id="empty" style="display:none;margin-top:12px;">
         La papelera está vacía.
       </div>
-
-      <details style="margin-top:12px;">
-        <summary>Si al restaurar/borrar definitivo te da error</summary>
-        <div class="muted2" style="margin-top:8px;">
-          He puesto endpoints estándar:
-          <ul>
-            <li><code>POST /inmuebles/{id}/restore</code> (restaurar)</li>
-            <li><code>DELETE /inmuebles/{id}/hard</code> (borrar definitivo)</li>
-          </ul>
-          Si tu backend usa otros nombres, dime cuáles y te lo ajusto en 10 segundos.
-        </div>
-      </details>
     </div>
   </section>
 
@@ -146,20 +135,25 @@
 
   function token(){ return localStorage.getItem("token"); }
   function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
-  function guard(){
-    const t = token();
-    if(!t){ window.location.href="/static/index.html"; return false; }
-    return true;
-  }
+
   function logout(){
-    localStorage.removeItem("token"); localStorage.removeItem("email");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
     window.location.href="/static/index.html";
   }
+
+  function guard(){
+    const t = token();
+    if(!t){ logout(); return false; }
+    return true;
+  }
+
   function toast(msg){
     const el=document.getElementById("toast");
     el.textContent=msg; el.classList.add("show");
     setTimeout(()=>el.classList.remove("show"), 4200);
   }
+
   async function safeJson(res){ try{return await res.json();}catch{return {};} }
 
   function escapeHtml(s){
@@ -167,16 +161,20 @@
       .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
       .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
+
   function getId(i){
-    return i.id ?? i.id_inmueble ?? i.idInmueble ?? i.id_inmuebles;
+    return i.id_inmueble ?? i.id ?? i.idInmueble ?? i.id_inmuebles;
   }
-  function labelFor(i){
-    const ref = i.referencia || i.ref || i.codigo || i.nombre || `Inmueble ${getId(i) ?? ""}`.trim();
-    const dir = i.direccion || i.dirección || i.address || i.ubicacion || "";
-    const owner = i.propietario || i.arrendador || i.cliente || "";
-    const main = [ref, dir].filter(Boolean).join(" · ");
-    const sub = [owner].filter(Boolean).join(" ");
-    return { main: main || (ref||"—"), sub };
+
+  function fmtDate(iso){
+    if(!iso) return "—";
+    try{
+      const d = new Date(iso);
+      if(isNaN(d.getTime())) return iso;
+      return d.toLocaleString("es-ES");
+    }catch(e){
+      return iso;
+    }
   }
 
   function render(){
@@ -186,17 +184,16 @@
 
     for(const i of trash){
       const id = getId(i);
-      const {main, sub} = labelFor(i);
-      const deletedAt = i.eliminado_en || i.deleted_at || i.deletedAt || "—";
+      const direccion = i.direccion || "—";
+      const municipio = i.municipio || "—";
+      const eliminado = fmtDate(i.eliminado_en || i.deleted_at || i.eliminadoEn);
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><b>${id ?? "—"}</b></td>
-        <td>
-          <div style="font-weight:950;">${escapeHtml(main)}</div>
-          <div class="muted2">${escapeHtml(sub || "")}</div>
-        </td>
-        <td><span class="pill">${escapeHtml(deletedAt)}</span></td>
+        <td>${escapeHtml(direccion)}</td>
+        <td>${escapeHtml(municipio)}</td>
+        <td><span class="pill">${escapeHtml(eliminado)}</span></td>
         <td>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="warn" onclick="restore(${Number(id)})">↩︎ Restaurar</button>
@@ -211,81 +208,78 @@
   async function load(){
     if(!guard()) return;
 
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/trash`, { headers: authHeaders() });
-      if(res.status===401){ logout(); return; }
-      const data = await safeJson(res);
+    const endpoints = [
+      `${apiUrl}/inmuebles/trash`,
+      `${apiUrl}/inmuebles/_trash`
+    ];
 
-      if(!res.ok){
-        toast(data.detail || "No se pudo cargar la papelera.");
-        trash = [];
-        render();
-        return;
-      }
+    for(const url of endpoints){
+      try{
+        const res = await fetch(url, { headers: authHeaders() });
+        if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
+        const data = await safeJson(res);
 
-      trash = Array.isArray(data) ? data : [];
-      render();
-    }catch(e){
-      toast("⚠️ Error de conexión.");
+        if(res.ok){
+          trash = Array.isArray(data) ? data : [];
+          render();
+          return;
+        }
+      }catch(e){}
     }
+
+    toast("❌ No se pudo cargar la papelera (endpoint no disponible o error).");
+    trash = [];
+    render();
   }
 
   async function restore(id){
     if(!guard()) return;
     if(!confirm("¿Restaurar este inmueble?")) return;
 
-    // Endpoint principal
-    const endpoints = [
-      { method:"POST", url:`${apiUrl}/inmuebles/${id}/restore` },
-      { method:"PUT",  url:`${apiUrl}/inmuebles/${id}/restore` },
-      { method:"POST", url:`${apiUrl}/inmuebles/${id}/undelete` },
-      { method:"PUT",  url:`${apiUrl}/inmuebles/${id}/undelete` }
-    ];
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}/restore`, {
+        method:"POST",
+        headers: authHeaders()
+      });
+      if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
+      const data = await safeJson(res);
 
-    for(const ep of endpoints){
-      try{
-        const res = await fetch(ep.url, { method: ep.method, headers: authHeaders() });
-        if(res.status===401){ logout(); return; }
-
-        if(res.ok){
-          toast("✅ Restaurado.");
-          await load();
-          return;
-        }
-      }catch(e){
-        // seguimos probando
+      if(!res.ok){
+        toast(data.detail || "❌ No se pudo restaurar.");
+        return;
       }
-    }
 
-    toast("❌ No se pudo restaurar. El backend quizá no tenga el endpoint /restore (ver desplegable).");
+      toast("✅ Restaurado.");
+      await load();
+    }catch(e){
+      toast("⚠️ Error de conexión al restaurar.");
+    }
   }
 
   async function hardDelete(id){
     if(!guard()) return;
-    if(!confirm("⚠️ Esto borra definitivamente. ¿Continuar?")) return;
+    if(!confirm("⚠️ Esto borra definitivamente (no se puede recuperar). ¿Continuar?")) return;
 
     const endpoints = [
-      { method:"DELETE", url:`${apiUrl}/inmuebles/${id}/hard` },
-      { method:"DELETE", url:`${apiUrl}/inmuebles/${id}/purge` },
-      { method:"DELETE", url:`${apiUrl}/inmuebles/${id}/destroy` }
+      `${apiUrl}/inmuebles/${id}/purge`,
+      `${apiUrl}/inmuebles/${id}/hard`
     ];
 
-    for(const ep of endpoints){
+    for(const url of endpoints){
       try{
-        const res = await fetch(ep.url, { method: ep.method, headers: authHeaders() });
-        if(res.status===401){ logout(); return; }
+        const res = await fetch(url, { method:"DELETE", headers: authHeaders() });
+        if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
+        const data = await safeJson(res);
 
         if(res.ok){
           toast("🧹 Eliminado definitivamente.");
           await load();
           return;
         }
-      }catch(e){
-        // seguimos probando
-      }
+      }catch(e){}
     }
 
-    toast("❌ No se pudo borrar definitivo. El backend quizá no tenga /hard (ver desplegable).");
+    toast("❌ No se pudo borrar definitivo.");
   }
 
   load();
