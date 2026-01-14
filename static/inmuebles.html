@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lexia360 · Inmuebles</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085;
+      --brand:#0b5fff; --danger:#b42318;
+    }
+    body{ background:var(--bg); margin:0; }
+    header{
+      position:sticky; top:0; z-index:20;
+      background:rgba(246,247,251,.92);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:14px 18px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; color:inherit; font-weight:900;
+    }
+    .badge{
+      width:34px;height:34px;border-radius:10px;
+      background:linear-gradient(135deg,var(--brand),#5b8cff);
+      display:flex;align-items:center;justify-content:center;color:#fff;
+      box-shadow:0 10px 18px rgba(11,95,255,.18);
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:12px;
+      border:1px solid var(--border); background:#fff;
+      cursor:pointer; font-weight:800; text-decoration:none; color:inherit;
+    }
+    .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    .btn.danger{ border-color:#ffd0d0; color:var(--danger); }
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:16px;
+      box-shadow:0 18px 40px rgba(16,24,40,.07);
+    }
+    .muted{ color:var(--muted); }
+    .small{ font-size:13px; }
+    .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 10px; }
+    .tab{
+      padding:8px 12px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .tab.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    .list{ margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+    .item{
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:#fff;
+      padding:12px;
+    }
+    .item-title{ font-weight:900; }
+    .item-sub{ color:var(--muted); font-size:13px; margin-top:4px; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .pill{
+      display:inline-flex; align-items:center;
+      padding:4px 10px; border-radius:999px;
+      font-size:12px; font-weight:900;
+      border:1px solid var(--border); background:#f7f8fb;
+      margin-right:6px;
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap top">
+    <a class="brand" href="/static/dashboard.html" title="Volver al panel">
+      <div class="badge">⚖️</div>
+      <div>Lexia360</div>
+    </a>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn" href="/static/wizard.html">➕ Crear inmueble</a>
+      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
+      <button class="btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0;">Inmuebles</h3>
+        <div class="muted small">Gestiona activos y papelera (soft delete + purge).</div>
+      </div>
+      <button class="btn" onclick="loadList()">🔄 Actualizar</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabActivos" onclick="setTab('activos')">Activos</button>
+      <button class="tab" id="tabPapelera" onclick="setTab('papelera')">Papelera</button>
+    </div>
+
+    <div id="list" class="list"></div>
+    <div id="empty" class="muted small" style="margin-top:10px; display:none;">No hay inmuebles en esta sección.</div>
+  </section>
+</main>
+
+<script>
+  const apiUrl = location.origin;
+  const token = localStorage.getItem("token");
+  if(!token) window.location.href="/static/index.html";
+
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    window.location.href="/static/index.html";
+  }
+
+  let currentTab = "activos";
+
+  function setTab(tab){
+    currentTab = tab;
+    document.getElementById("tabActivos").classList.toggle("active", tab === "activos");
+    document.getElementById("tabPapelera").classList.toggle("active", tab === "papelera");
+    loadList();
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  async function loadList(){
+    const list = document.getElementById("list");
+    const empty = document.getElementById("empty");
+    list.innerHTML = `<div class="muted small">Cargando…</div>`;
+    empty.style.display = "none";
+
+    const endpoint = currentTab === "activos" ? "/inmuebles" : "/inmuebles/trash";
+
+    try{
+      const res = await fetch(`${apiUrl}${endpoint}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(res.status === 401){ logout(); return; }
+
+      const items = await res.json();
+      if(!Array.isArray(items) || items.length === 0){
+        list.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+
+      list.innerHTML = items.map(i => {
+        const zonaTxt = (i.zona_tensionada === true) ? "Sí" : (i.zona_tensionada === false ? "No" : "—");
+        return `
+          <div class="item">
+            <div class="item-title">${escapeHtml(i.direccion || "Inmueble")}</div>
+            <div class="item-sub">
+              <span class="pill">${escapeHtml(i.municipio || "—")}</span>
+              <span class="pill">${escapeHtml(i.comunidad_autonoma || "—")}</span>
+              <span class="pill">Semáforo: ${escapeHtml(i.semaforo || "—")}</span>
+              <span class="pill">Zona: ${zonaTxt}</span>
+              <span class="pill">ID: ${i.id_inmueble}</span>
+            </div>
+
+            <div class="actions">
+              ${currentTab === "activos" ? `
+                <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">📄 Ver ficha</a>
+                <button class="btn danger" onclick="softDelete(${i.id_inmueble})">🗑️ Enviar a papelera</button>
+              ` : `
+                <button class="btn" onclick="restore(${i.id_inmueble})">♻️ Restaurar</button>
+                <button class="btn danger" onclick="purge(${i.id_inmueble})">🧨 Borrar definitivo</button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+    }catch(e){
+      list.innerHTML = `<div class="muted small">⚠️ No se pudo cargar la lista.</div>`;
+    }
+  }
+
+  async function softDelete(id){
+    if(!confirm("¿Enviar a papelera? (Podrás restaurarlo)")) return;
+    const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
+      method:"DELETE",
+      headers:{ "Authorization": `Bearer ${token}` }
+    });
+    if(res.status === 401){ logout(); return; }
+    if(!res.ok){
+      const data = await res.json().catch(()=>({}));
+      alert(data.detail || "Error enviando a papelera");
+      return;
+    }
+    loadList();
+  }
+
+  async function restore(id){
+    if(!confirm("¿Restaurar este inmueble?")) return;
+    const res = await fetch(`${apiUrl}/inmuebles/${id}/restore`, {
+      method:"POST",
+      headers:{ "Authorization": `Bearer ${token}` }
+    });
+    if(res.status === 401){ logout(); return; }
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(data.detail || "Error restaurando"); return; }
+    loadList();
+  }
+
+  async function purge(id){
+    const ok = confirm("ATENCIÓN: esto borrará el inmueble y su historial para siempre. ¿Continuar?");
+    if(!ok) return;
+
+    const res = await fetch(`${apiUrl}/inmuebles/${id}/purge`, {
+      method:"DELETE",
+      headers:{ "Authorization": `Bearer ${token}` }
+    });
+    if(res.status === 401){ logout(); return; }
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(data.detail || "Error borrando definitivo"); return; }
+    alert("✅ Borrado definitivo completado");
+    loadList();
+  }
+
+  loadList();
+</script>
+</body>
+</html>
