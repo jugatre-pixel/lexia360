@@ -1,121 +1,44 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lexia360 · Inmuebles</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Expedientes</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{
-      --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085;
-      --brand:#0b5fff; --brand2:#3a7bff; --text:#0b1220; --danger:#b42318;
-      --shadow: 0 18px 40px rgba(16,24,40,.08); --radius:18px;
-    }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
-
-    header{
-      position:sticky; top:0; z-index:30;
-      background: rgba(246,247,251,.86);
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid var(--border);
-    }
-    .wrap{ max-width:1120px; margin:0 auto; padding: 14px 18px; }
+    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318; --ok:#027a48; }
+    body{ margin:0; background:var(--bg); }
+    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
     .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:900; }
-    .badge{
-      width:36px;height:36px;border-radius:12px;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-      display:flex;align-items:center;justify-content:center;color:#fff;
-      box-shadow:0 14px 26px rgba(11,95,255,.20);
-    }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:12px;
-      border:1px solid var(--border); background:#fff;
-      cursor:pointer; font-weight:900; text-decoration:none; color:inherit;
-      transition: transform .08s ease;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .btn:hover{ transform: translateY(-1px); }
-    .btn.primary{ background: linear-gradient(135deg, var(--brand), var(--brand2)); color:#fff; border-color:transparent; }
-    .btn.danger{ border-color:#ffd0d0; color:var(--danger); background:#fff; }
-
-    .grid{ display:grid; grid-template-columns: 1.25fr .75fr; gap:14px; margin-top:16px; align-items:start; }
-    @media(max-width: 980px){ .grid{ grid-template-columns:1fr; } }
-
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
+    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 14px 28px rgba(11,95,255,.18); }
+    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
+    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+    .btn.danger{ border-color:#f0c9c8; color:var(--danger); }
+    .btn.ghost{ background:transparent; }
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
     .muted{ color:var(--muted); }
     .small{ font-size:13px; }
-
-    .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    .tab{
-      padding:8px 12px;
-      border:1px solid var(--border);
-      border-radius:999px;
-      background:#fff;
-      cursor:pointer;
-      font-weight:900;
-    }
-    .tab.active{ background: linear-gradient(135deg, var(--brand), var(--brand2)); color:#fff; border-color:transparent; }
-
-    .list{ margin-top:12px; display:flex; flex-direction:column; gap:10px; }
-    .item{ border:1px solid var(--border); border-radius:14px; background:#fff; padding:12px; }
-    .title{ font-weight:900; }
-    .sub{ margin-top:4px; font-size:13px; color:var(--muted); }
-    .actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-
-    label{ display:block; margin-top:10px; font-size:12px; font-weight:900; color:#374151; }
-    input, select{
-      width:100%;
-      padding:12px 12px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      outline:none;
-      font-size:14px;
-      margin-top:6px;
-      background:#fff;
-    }
-    input:focus{ border-color: rgba(11,95,255,.35); box-shadow: 0 0 0 4px rgba(11,95,255,.10); }
-
-    .toast{
-      position: fixed;
-      right: 16px;
-      bottom: 16px;
-      background:#0b1220;
-      color:#fff;
-      border:1px solid rgba(255,255,255,.14);
-      border-radius:14px;
-      padding:12px 12px;
-      box-shadow: 0 18px 45px rgba(16,24,40,.25);
-      display:none;
-      max-width: 360px;
-      z-index: 100;
-    }
-    .toast b{ display:block; margin-bottom:3px; }
-    .toast .row{ display:flex; gap:10px; margin-top:10px; }
-    .toast .tbtn{
-      flex:1;
-      padding:9px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.16);
-      background: rgba(255,255,255,.08);
-      color:#fff;
-      font-weight:900;
-      cursor:pointer;
-    }
-    .toast .tbtn.primary{
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-      border-color: transparent;
-    }
+    .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .lefttools{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+    .tab{ border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:999px; cursor:pointer; font-weight:900; }
+    .tab.active{ border-color:rgba(11,95,255,.35); box-shadow:0 10px 26px rgba(11,95,255,.12); }
+    input, select{ border-radius:12px !important; }
+    table{ font-size:14px; }
+    .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; font-weight:900; font-size:12px; }
+    .pill.ok{ border-color:rgba(2,122,72,.25); color:var(--ok); }
+    .pill.warn{ border-color:rgba(180,35,24,.25); color:var(--danger); }
+    .pill.neutral{ color:var(--muted); }
+    .row-actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
+    .toast.ok{ color:var(--ok); }
+    .toast.err{ color:var(--danger); }
+    .empty{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:16px; color:var(--muted); }
   </style>
 </head>
-
 <body>
 <header>
   <div class="wrap top">
@@ -123,11 +46,10 @@
       <div class="badge">⚖️</div>
       <div>Lexia360</div>
     </a>
-
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn" href="/static/dashboard.html">← Panel</a>
-      <a class="btn" href="/static/wizard.html">➕ Crear perfil</a>
+      <a class="btn" href="/static/dashboard.html">🏠 Dashboard</a>
       <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
+      <a class="btn primary" href="/static/wizard.html">➕ Nuevo expediente</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
@@ -136,284 +58,225 @@
 <main class="wrap">
   <div class="grid">
     <section class="card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+      <div class="toolbar">
         <div>
-          <h2 style="margin:0;">Inmuebles</h2>
-          <div class="muted small">Activos y Papelera. Restauración y borrado definitivo.</div>
+          <h3 style="margin:0;">Expedientes</h3>
+          <div class="muted small">Gestión de inmuebles (MVP). Borrado seguro con papelera.</div>
         </div>
-        <button class="btn" onclick="loadList()">🔄 Actualizar</button>
+
+        <div class="lefttools">
+          <div class="tabs">
+            <button class="tab active" id="tabActivos" onclick="setTab('activos')">Activos</button>
+            <button class="tab" id="tabTrash" onclick="setTab('trash')">Papelera</button>
+          </div>
+        </div>
       </div>
 
-      <div class="tabs">
-        <button class="tab active" id="tabActivos" onclick="setTab('activos')">Activos <span id="countActivos"></span></button>
-        <button class="tab" id="tabPapelera" onclick="setTab('papelera')">Papelera <span id="countTrash"></span></button>
+      <hr/>
+
+      <div class="toolbar" style="justify-content:space-between;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input id="q" type="search" placeholder="Buscar por dirección, municipio..." style="min-width:260px;" oninput="render()"/>
+          <select id="fSem" onchange="render()">
+            <option value="">Semáforo: todos</option>
+            <option value="VERDE">VERDE</option>
+            <option value="ROJO">ROJO</option>
+          </select>
+        </div>
+        <div class="muted small" id="countText">—</div>
       </div>
 
-      <div id="list" class="list"></div>
-      <div id="empty" class="muted small" style="margin-top:10px; display:none;">No hay inmuebles aquí.</div>
+      <div id="toast" class="toast"></div>
+
+      <div style="overflow:auto; margin-top:10px;">
+        <table role="grid">
+          <thead>
+            <tr>
+              <th>Dirección</th>
+              <th>Municipio</th>
+              <th>CA</th>
+              <th>Renta</th>
+              <th>Semáforo</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div id="empty" class="empty" style="display:none; margin-top:10px;">
+        No hay expedientes aquí todavía. Crea uno desde “Nuevo expediente”.
+      </div>
     </section>
-
-    <aside class="card">
-      <h3 style="margin:0 0 8px;">Crear inmueble rápido</h3>
-      <div class="muted small">Para una experiencia más “LegalZoom”, usa el wizard. Esto es un atajo.</div>
-
-      <label>Dirección</label>
-      <input id="dir" type="text" placeholder="Calle, número, piso…" />
-
-      <label>Municipio</label>
-      <input id="mun" type="text" placeholder="Madrid, Barcelona…" />
-
-      <label>Comunidad Autónoma</label>
-      <input id="ca" type="text" placeholder="Comunidad de Madrid…" />
-
-      <label>Renta propuesta (€)</label>
-      <input id="renta" type="number" step="0.01" placeholder="1200" />
-
-      <label>Renta anterior (€) (opcional)</label>
-      <input id="rentaAnt" type="number" step="0.01" placeholder="1100" />
-
-      <button class="btn primary" style="width:100%; margin-top:12px;" onclick="createInmueble()">+ Crear</button>
-      <div id="msg" class="muted small" style="margin-top:10px;"></div>
-    </aside>
   </div>
 </main>
-
-<div class="toast" id="toast">
-  <b id="toastTitle">—</b>
-  <div class="small" id="toastText">—</div>
-  <div class="row">
-    <button class="tbtn" onclick="hideToast()">Cerrar</button>
-    <button class="tbtn primary" onclick="goTrash()">Ver Papelera</button>
-  </div>
-</div>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
+  if(!token) location.href="/static/index.html";
 
-  if(!token){ window.location.href="/static/index.html"; }
-
-  let currentTab = "activos";
+  let tab = "activos";
+  let activos = [];
+  let trash = [];
 
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
-    window.location.href="/static/index.html";
+    location.href="/static/index.html";
   }
 
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  function esc(s){
+    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
 
-  function setTab(tab){
-    currentTab = tab;
-    document.getElementById("tabActivos").classList.toggle("active", tab === "activos");
-    document.getElementById("tabPapelera").classList.toggle("active", tab === "papelera");
-    loadList();
-  }
-
-  function showToast(title, text){
-    const t = document.getElementById("toast");
-    document.getElementById("toastTitle").textContent = title;
-    document.getElementById("toastText").textContent = text;
-    t.style.display = "block";
-  }
-  function hideToast(){ document.getElementById("toast").style.display = "none"; }
-  function goTrash(){ hideToast(); setTab("papelera"); }
-
-  async function loadCounters(){
-    try{
-      const [a, tr] = await Promise.all([
-        fetch(`${apiUrl}/inmuebles`, { headers:{ "Authorization": `Bearer ${token}` }}),
-        fetch(`${apiUrl}/inmuebles/trash`, { headers:{ "Authorization": `Bearer ${token}` }})
-      ]);
-      if(a.status===401 || tr.status===401){ logout(); return; }
-      const activos = await a.json().catch(()=>[]);
-      const trash = await tr.json().catch(()=>[]);
-      document.getElementById("countActivos").textContent = `(${(activos||[]).length})`;
-      document.getElementById("countTrash").textContent = `(${(trash||[]).length})`;
-    }catch(e){
-      document.getElementById("countActivos").textContent = "";
-      document.getElementById("countTrash").textContent = "";
+  function setToast(text, ok=true){
+    const el = document.getElementById("toast");
+    el.className = "toast " + (ok ? "ok" : "err");
+    el.textContent = text || "";
+    if(text){
+      setTimeout(()=>{ el.textContent=""; }, 2600);
     }
   }
 
-  async function loadList(){
-    const list = document.getElementById("list");
-    const empty = document.getElementById("empty");
-    list.innerHTML = `<div class="muted small">Cargando…</div>`;
-    empty.style.display = "none";
+  function setTab(t){
+    tab = t;
+    document.getElementById("tabActivos").classList.toggle("active", t==="activos");
+    document.getElementById("tabTrash").classList.toggle("active", t==="trash");
+    // si vas a trash, cargo trash
+    if(t==="trash") loadTrash();
+    render();
+  }
 
-    const endpoint = currentTab === "activos" ? "/inmuebles" : "/inmuebles/trash";
-
-    try{
-      const res = await fetch(`${apiUrl}${endpoint}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
-      const items = await res.json().catch(()=>[]);
-
-      list.innerHTML = "";
-      if(!Array.isArray(items) || items.length === 0){
-        empty.style.display = "block";
-        await loadCounters();
-        return;
+  async function api(path, opts={}){
+    const res = await fetch(`${apiUrl}${path}`, {
+      ...opts,
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        ...(opts.headers||{})
       }
-
-      items.forEach(i=>{
-        const el = document.createElement("div");
-        el.className = "item";
-        el.innerHTML = `
-          <div class="title">${escapeHtml(i.direccion || "Inmueble")}</div>
-          <div class="sub">
-            ${escapeHtml(i.municipio || "—")} · ${escapeHtml(i.comunidad_autonoma || "—")}
-            · Semáforo: <b>${escapeHtml(i.semaforo || "—")}</b>
-            ${i.zona_tensionada ? " · Zona tensionada: Sí" : ""}
-          </div>
-
-          <div class="actions">
-            ${currentTab === "activos"
-              ? `
-                <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">Abrir ficha</a>
-                <button class="btn danger" onclick="softDelete(${i.id_inmueble})">Mover a papelera</button>
-              `
-              : `
-                <button class="btn" onclick="restore(${i.id_inmueble})">Restaurar</button>
-                <button class="btn danger" onclick="purge(${i.id_inmueble})">Borrado definitivo</button>
-              `
-            }
-          </div>
-        `;
-        list.appendChild(el);
-      });
-
-      await loadCounters();
-    }catch(e){
-      list.innerHTML = `<div class="muted small">⚠️ No se pudo cargar la lista.</div>`;
-    }
+    });
+    if(res.status===401) logout();
+    return res;
   }
 
-  async function createInmueble(){
-    const msg = document.getElementById("msg");
-    msg.textContent = "Creando…";
+  async function loadActivos(){
+    const res = await api("/inmuebles");
+    activos = await res.json().catch(()=>[]);
+  }
 
-    const payload = {
-      direccion: document.getElementById("dir").value.trim(),
-      municipio: document.getElementById("mun").value.trim(),
-      comunidad_autonoma: document.getElementById("ca").value.trim(),
-      renta_propuesta: Number(document.getElementById("renta").value),
-      renta_anterior: document.getElementById("rentaAnt").value ? Number(document.getElementById("rentaAnt").value) : null
-    };
-
-    if(!payload.direccion || !payload.municipio || !payload.comunidad_autonoma || !payload.renta_propuesta){
-      msg.textContent = "⚠️ Rellena dirección, municipio, comunidad y renta.";
+  async function loadTrash(){
+    const res = await api("/inmuebles/trash");
+    if(!res.ok){
+      const d = await res.json().catch(()=>({}));
+      setToast(d.detail || "Error cargando papelera", false);
+      trash = [];
       return;
     }
+    trash = await res.json().catch(()=>[]);
+  }
 
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles`, {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+  function semPill(value){
+    if(value==="VERDE") return `<span class="pill ok">● VERDE</span>`;
+    if(value==="ROJO") return `<span class="pill warn">● ROJO</span>`;
+    return `<span class="pill neutral">● —</span>`;
+  }
 
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok){
-        msg.textContent = data.detail || "Error creando inmueble.";
-        return;
-      }
+  function money(v){
+    if(v===null || v===undefined || v==="") return "—";
+    const n = Number(v);
+    if(Number.isNaN(n)) return esc(v);
+    return n.toLocaleString("es-ES",{maximumFractionDigits:2}) + " €";
+  }
 
-      msg.textContent = "✅ Inmueble creado.";
-      document.getElementById("dir").value = "";
-      document.getElementById("mun").value = "";
-      document.getElementById("ca").value = "";
-      document.getElementById("renta").value = "";
-      document.getElementById("rentaAnt").value = "";
+  function filteredRows(){
+    const q = document.getElementById("q").value.trim().toLowerCase();
+    const fSem = document.getElementById("fSem").value;
+    const data = (tab==="activos" ? activos : trash);
 
-      setTab("activos");
-      await loadList();
-      await loadCounters();
-    }catch(e){
-      msg.textContent = "⚠️ No se pudo crear.";
+    return (data||[]).filter(i=>{
+      const hay = `${i.direccion||""} ${i.municipio||""} ${i.comunidad_autonoma||""}`.toLowerCase();
+      if(q && !hay.includes(q)) return false;
+      if(fSem && (i.semaforo||"") !== fSem) return false;
+      return true;
+    });
+  }
+
+  function render(){
+    const rows = filteredRows();
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+
+    document.getElementById("countText").textContent =
+      `${rows.length} resultado(s) · vista: ${tab==="activos" ? "Activos" : "Papelera"}`;
+
+    const empty = document.getElementById("empty");
+    empty.style.display = rows.length ? "none" : "block";
+
+    for(const i of rows){
+      const tr = document.createElement("tr");
+
+      const actions = (tab==="activos")
+        ? `
+          <div class="row-actions">
+            <a class="btn" href="/static/inmueble.html?id=${i.id_inmueble}">Abrir</a>
+            <button class="btn danger" onclick="moveToTrash(${i.id_inmueble})">Eliminar</button>
+          </div>
+        `
+        : `
+          <div class="row-actions">
+            <button class="btn" onclick="restore(${i.id_inmueble})">Restaurar</button>
+            <button class="btn danger" onclick="purge(${i.id_inmueble})">Borrar definitivo</button>
+          </div>
+        `;
+
+      tr.innerHTML = `
+        <td><b>${esc(i.direccion || "—")}</b></td>
+        <td>${esc(i.municipio || "—")}</td>
+        <td>${esc(i.comunidad_autonoma || "—")}</td>
+        <td>${money(i.renta_propuesta)}</td>
+        <td>${semPill(i.semaforo)}</td>
+        <td style="text-align:right;">${actions}</td>
+      `;
+      tbody.appendChild(tr);
     }
   }
 
-  // ✅ FIX UX: al borrar -> cambia a Papelera automáticamente
-  async function softDelete(id){
-    if(!confirm("¿Mover a papelera? Podrás restaurarlo.")) return;
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
-        method:"DELETE",
-        headers:{ "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok){
-        alert(data.detail || "Error moviendo a papelera");
-        return;
-      }
-
-      // ✅ Cambia a papelera y recarga: así lo ves “moverse”
-      showToast("Movido a Papelera", "Puedes restaurarlo o borrarlo definitivamente desde la Papelera.");
-      setTab("papelera");
-      await loadList();
-    }catch(e){
-      alert("Error de conexión");
-    }
+  async function moveToTrash(id){
+    if(!confirm("¿Mover a papelera? (Se puede restaurar)")) return;
+    const res = await api(`/inmuebles/${id}`, { method:"DELETE" });
+    const d = await res.json().catch(()=>({}));
+    if(!res.ok){ setToast(d.detail || "Error moviendo a papelera", false); return; }
+    setToast("✅ Movido a papelera", true);
+    await loadActivos();
+    await loadTrash();
+    render();
   }
 
   async function restore(id){
-    if(!confirm("¿Restaurar este inmueble a Activos?")) return;
-
-    const res = await fetch(`${apiUrl}/inmuebles/${id}/restore`, {
-      method:"POST",
-      headers:{ "Authorization": `Bearer ${token}` }
-    });
-
-    if(res.status === 401){ logout(); return; }
-
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok){
-      alert(data.detail || "Error restaurando");
-      return;
-    }
-
-    showToast("Restaurado", "El inmueble ha vuelto a Activos.");
-    setTab("activos");
-    await loadList();
+    const res = await api(`/inmuebles/${id}/restore`, { method:"POST" });
+    const d = await res.json().catch(()=>({}));
+    if(!res.ok){ setToast(d.detail || "Error restaurando", false); return; }
+    setToast("✅ Restaurado", true);
+    await loadActivos();
+    await loadTrash();
+    render();
   }
 
   async function purge(id){
-    if(!confirm("⚠️ Esto borra DEFINITIVAMENTE el inmueble y su historial. ¿Continuar?")) return;
-
-    const res = await fetch(`${apiUrl}/inmuebles/${id}/purge`, {
-      method:"DELETE",
-      headers:{ "Authorization": `Bearer ${token}` }
-    });
-
-    if(res.status === 401){ logout(); return; }
-
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok){
-      alert(data.detail || "Error borrando definitivo");
-      return;
-    }
-
-    showToast("Borrado definitivo", "Se ha eliminado el inmueble y su historial.");
-    await loadList();
+    if(!confirm("⚠️ Borrado definitivo. ¿Seguro?")) return;
+    const res = await api(`/inmuebles/${id}/purge`, { method:"DELETE" });
+    const d = await res.json().catch(()=>({}));
+    if(!res.ok){ setToast(d.detail || "Error en borrado definitivo", false); return; }
+    setToast("🧨 Borrado definitivo completado", true);
+    await loadTrash();
+    render();
   }
 
-  loadCounters();
-  loadList();
+  (async()=>{
+    await loadActivos();
+    render();
+  })();
 </script>
 </body>
 </html>
