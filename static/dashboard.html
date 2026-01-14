@@ -9,122 +9,122 @@
 
   <style>
     :root{
-      --accent:#0b5fff;
-      --muted:#667085;
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --border:#e6e8ef;
-      --danger:#b42318;
+      --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff;
     }
-
-    body{ background: var(--bg); }
-
+    body{ background:var(--bg); margin:0; }
     header{
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(246,247,251,0.9);
+      position:sticky; top:0; z-index:20;
+      background:rgba(246,247,251,.92);
       backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
+      border-bottom:1px solid var(--border);
     }
-
-    .wrap{ max-width: 1100px; margin: 0 auto; padding: 18px; }
-    .topbar{ display:flex; align-items:center; justify-content:space-between; gap: 12px; }
-
-    .brand{ display:flex; align-items:center; gap: 10px; }
-
+    .wrap{ max-width:1100px; margin:0 auto; padding:14px 18px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; color:inherit; font-weight:900;
+    }
+    .badge{
+      width:34px;height:34px;border-radius:10px;
+      background:linear-gradient(135deg,var(--brand),#5b8cff);
+      display:flex;align-items:center;justify-content:center;color:#fff;
+      box-shadow:0 10px 18px rgba(11,95,255,.18);
+    }
     .btn{
       display:inline-flex; align-items:center; gap:8px;
-      padding:10px 14px; border-radius:10px;
+      padding:10px 14px; border-radius:12px;
       border:1px solid var(--border); background:#fff;
-      cursor:pointer; text-decoration:none; font-weight: 700; white-space: nowrap;
+      cursor:pointer; font-weight:800; text-decoration:none; color:inherit;
     }
-
-    .btn.primary{ background: var(--accent); color:#fff; border-color: var(--accent); }
-    .btn.danger{ border-color:#ffb3b3; color: var(--danger); }
-
-    .muted{ color: var(--muted); }
-    .small{ font-size: 13px; }
-
+    .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:16px; }
+    @media(min-width:950px){ .grid{ grid-template-columns: 1.2fr .8fr; } }
     .card{
-      background: var(--card);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:16px;
-      box-shadow: 0 8px 18px rgba(16,24,40,0.04);
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:16px;
+      box-shadow:0 18px 40px rgba(16,24,40,.07);
     }
-
-    .list{ display:flex; flex-direction:column; gap: 12px; margin-top: 12px; }
-
-    .row{
-      display:flex; justify-content:space-between; gap: 14px; align-items:flex-start;
-      padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: #fff;
-    }
-
-    .row h4{ margin:0 0 6px 0; font-size: 16px; }
-
-    .meta{ display:flex; flex-wrap:wrap; gap: 8px 14px; }
-
-    .pill{ font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: #fafafa; }
-    .pill.green{ border-color:#b7ebc6; background:#f0fff4; }
-    .pill.red{ border-color:#ffc4c4; background:#fff5f5; }
-    .pill.gray{ border-color: var(--border); background:#f8fafc; }
-
-    .actions{ display:flex; gap: 10px; flex-wrap:wrap; justify-content:flex-end; min-width: 320px; }
-
-    footer{ text-align:center; padding: 18px 0 40px; color: var(--muted); font-size: 13px; }
+    .muted{ color:var(--muted); }
+    .small{ font-size:13px; }
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    .pill{ font-size:12px; padding:6px 10px; border-radius:999px; background:#f7f8fb; border:1px solid var(--border); }
+    .list{ margin:0; padding:0; list-style:none; }
+    .item{ padding:12px; border:1px solid var(--border); border-radius:14px; background:#fff; margin-bottom:10px; }
+    .item a{ text-decoration:none; color:inherit; }
+    .item-title{ font-weight:900; }
+    .item-sub{ color:var(--muted); font-size:13px; margin-top:3px; }
   </style>
 </head>
 
 <body>
 <header>
-  <div class="wrap topbar">
-    <div class="brand">
-      <div style="font-size:20px">⚖️</div>
-      <div>
-        <b>Lexia360</b>
-        <div class="muted small">Panel de inmuebles</div>
-      </div>
-    </div>
+  <div class="wrap top">
+    <!-- ✅ Click en Lexia360 => vuelve al panel (home) -->
+    <a class="brand" href="/static/dashboard.html" title="Volver al panel">
+      <div class="badge">⚖️</div>
+      <div>Lexia360</div>
+    </a>
 
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
-      <a class="btn primary" href="/static/wizard.html">➕ Crear inmueble</a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn" href="/static/inmuebles.html">🏠 Inmuebles</a>
+      <a class="btn" href="/static/index.html">Inicio público</a>
       <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <section class="card">
-    <h3 style="margin:0 0 6px;">Hola, <span id="userEmail"></span> 👋</h3>
-    <div class="muted small">Gestiona tus inmuebles y revisa su estado legal en un clic.</div>
-    <div id="statusLine" class="small muted" style="margin-top:10px;"></div>
-  </section>
-
-  <section class="card" style="margin-top:14px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div>
-        <h3 style="margin:0 0 6px;">Tus inmuebles</h3>
-        <div class="muted small">Ver ficha, alertas y semáforo.</div>
+  <div class="grid">
+    <section class="card">
+      <div class="row">
+        <div>
+          <h3 style="margin:0;">Panel</h3>
+          <div class="muted small">Gestiona tu cuenta y tus inmuebles</div>
+        </div>
+        <div class="pill" id="userPill">—</div>
       </div>
-      <button class="btn" onclick="loadInmuebles()">🔄 Actualizar</button>
-    </div>
 
-    <div id="list" class="list"></div>
-    <div id="empty" class="muted small" style="margin-top:12px; display:none;">
-      Aún no tienes inmuebles. Pulsa <b>“Crear inmueble”</b> para empezar.
-    </div>
-  </section>
+      <hr />
+
+      <div class="row">
+        <div>
+          <b>Acceso rápido</b>
+          <div class="muted small">Ir directo a tus inmuebles y acciones</div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="btn primary" href="/static/inmuebles.html">Ver inmuebles</a>
+        </div>
+      </div>
+
+      <hr />
+
+      <b>Últimos inmuebles</b>
+      <div class="muted small" style="margin-bottom:10px;">Los 5 más recientes</div>
+      <ul class="list" id="latestList"></ul>
+    </section>
+
+    <aside class="card">
+      <h4 style="margin:0 0 8px;">Estado del sistema</h4>
+      <div class="muted small" id="statusText">Cargando…</div>
+
+      <hr />
+
+      <h4 style="margin:0 0 8px;">Tu plan</h4>
+      <div class="muted small" id="billingText">Cargando…</div>
+    </aside>
+  </div>
 </main>
-
-<footer>© 2026 Lexia360</footer>
 
 <script>
   const apiUrl = location.origin;
   const token = localStorage.getItem("token");
-  const userEmail = localStorage.getItem("email");
-  document.getElementById("userEmail").textContent = userEmail || "Usuario";
+  const email = localStorage.getItem("email");
+
+  if(!token){
+    window.location.href = "/static/index.html";
+  }
+
+  document.getElementById("userPill").textContent = email ? `👤 ${email}` : "👤 Usuario";
 
   function logout(){
     localStorage.removeItem("token");
@@ -132,10 +132,66 @@
     window.location.href = "/static/index.html";
   }
 
-  function semaforoPill(semaforo){
-    if(semaforo === "ROJO") return `<span class="pill red">🔴 Riesgo</span>`;
-    if(semaforo === "VERDE") return `<span class="pill green">🟢 OK</span>`;
-    return `<span class="pill gray">—</span>`;
+  async function loadStatus(){
+    try{
+      const res = await fetch(`${apiUrl}/status`);
+      const data = await res.json();
+      document.getElementById("statusText").innerHTML = `
+        <b>${data.status || "—"}</b><br>
+        Usuarios: ${data.usuarios_registrados ?? "—"}<br>
+        Zonas tensionadas: ${data.zonas_tensionadas ?? "—"}<br>
+        Versión: ${data.version ?? "—"}
+      `;
+    }catch(e){
+      document.getElementById("statusText").textContent = "⚠️ No se pudo cargar el estado.";
+    }
+  }
+
+  async function loadBilling(){
+    // Si no tienes /billing/me aún, esto fallará y no pasa nada
+    try{
+      const res = await fetch(`${apiUrl}/billing/me`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(!res.ok){
+        document.getElementById("billingText").textContent = "Plan: Free (por ahora)";
+        return;
+      }
+      const data = await res.json();
+      document.getElementById("billingText").innerHTML = `Plan Pro: <b>${data.pro ? "Sí" : "No"}</b>`;
+    }catch(e){
+      document.getElementById("billingText").textContent = "Plan: Free (por ahora)";
+    }
+  }
+
+  async function loadLatest(){
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(res.status === 401){ logout(); return; }
+      const items = await res.json();
+      const list = document.getElementById("latestList");
+      list.innerHTML = "";
+
+      (items || []).slice(0,5).forEach(i=>{
+        const li = document.createElement("li");
+        li.className = "item";
+        li.innerHTML = `
+          <a href="/static/inmueble.html?id=${i.id_inmueble}">
+            <div class="item-title">${escapeHtml(i.direccion || "Inmueble")}</div>
+            <div class="item-sub">${escapeHtml(i.municipio || "—")} · ${escapeHtml(i.comunidad_autonoma || "—")} · Semáforo: ${escapeHtml(i.semaforo || "—")}</div>
+          </a>
+        `;
+        list.appendChild(li);
+      });
+
+      if((items || []).length === 0){
+        list.innerHTML = `<div class="muted small">Aún no tienes inmuebles. Ve a “Inmuebles” para crear el primero.</div>`;
+      }
+    }catch(e){
+      document.getElementById("latestList").innerHTML = `<div class="muted small">⚠️ No se pudieron cargar tus inmuebles.</div>`;
+    }
   }
 
   function escapeHtml(str){
@@ -147,84 +203,9 @@
       .replaceAll("'","&#039;");
   }
 
-  async function loadStatus(){
-    const el = document.getElementById("statusLine");
-    try{
-      const res = await fetch(`${apiUrl}/status`);
-      const data = await res.json();
-      el.textContent = `Servidor: ${data.status} · Usuarios: ${data.usuarios_registrados} · Zonas: ${data.zonas_tensionadas ?? 0} · ${data.version}`;
-    }catch(e){
-      el.textContent = "Servidor: ⚠️ no disponible";
-    }
-  }
-
-  async function loadInmuebles(){
-    if(!token){ logout(); return; }
-
-    const list = document.getElementById("list");
-    const empty = document.getElementById("empty");
-    list.innerHTML = `<div class="muted small">Cargando…</div>`;
-    empty.style.display = "none";
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if(res.status === 401){ logout(); return; }
-      const items = await res.json();
-
-      if(!Array.isArray(items) || items.length === 0){
-        list.innerHTML = "";
-        empty.style.display = "block";
-        return;
-      }
-
-      list.innerHTML = items.map(inm => `
-        <div class="row">
-          <div style="flex:1;">
-            <h4>${escapeHtml(inm.direccion || "Sin dirección")}</h4>
-            <div class="meta">
-              <span class="pill gray">${escapeHtml(inm.municipio || "—")}</span>
-              <span class="pill gray">${escapeHtml(inm.comunidad_autonoma || "—")}</span>
-              ${semaforoPill(inm.semaforo)}
-              <span class="pill gray">Análisis: ${escapeHtml(inm.fecha_analisis || "—")}</span>
-              <span class="pill gray">Zona: ${inm.zona_tensionada ? "Sí" : "No"}</span>
-            </div>
-            ${inm.zona_tensionada_fuente ? `<div class="muted small" style="margin-top:8px;">Fuente: ${escapeHtml(inm.zona_tensionada_fuente)}</div>` : ""}
-          </div>
-
-          <div class="actions">
-            <a class="btn" href="/static/inmueble.html?id=${inm.id_inmueble}">📄 Ver ficha</a>
-            <button class="btn danger" onclick="trash(${inm.id_inmueble})">🗑️ Enviar a papelera</button>
-          </div>
-        </div>
-      `).join("");
-
-    }catch(e){
-      list.innerHTML = `<div class="muted small">⚠️ Error cargando inmuebles.</div>`;
-    }
-  }
-
-  async function trash(id){
-    const ok = confirm("¿Enviar este inmueble a la papelera? Podrás restaurarlo.");
-    if(!ok) return;
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${id}`, {
-        method:"DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok){ alert(data.detail || "Error enviando a papelera"); return; }
-      await loadInmuebles();
-    }catch(e){
-      alert("Error de conexión");
-    }
-  }
-
-  if(!token){ logout(); }
   loadStatus();
-  loadInmuebles();
+  loadBilling();
+  loadLatest();
 </script>
 </body>
 </html>
