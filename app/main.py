@@ -4,8 +4,9 @@ import traceback
 import secrets
 import io
 from datetime import datetime, timedelta, date
+from typing import Optional, Tuple
 
-from fastapi import FastAPI, HTTPException, Depends, Request, Response
+from fastapi import FastAPI, HTTPException, Depends, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -44,6 +45,7 @@ if len(SECRET_KEY) < 32:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+PDF_TOKEN_EXPIRE_MINUTES = int(os.getenv("PDF_TOKEN_EXPIRE_MINUTES", "10"))
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").strip()
 ALLOW_ORIGINS = ["*"] if CORS_ORIGINS == "*" else [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
@@ -53,7 +55,8 @@ engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 # Hash robusto (evita líos con bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# 👇 IMPORTANTE: auto_error=False para permitir endpoints con token en query (PDF) sin Authorization header
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
 def load_secret_from_env_or_file(env_name: str, file_path: str) -> str:
@@ -230,10 +233,9 @@ class ChatResponse(BaseModel):
     requiere_pro: bool = False
 
 
-# ✅ NUEVO: payload mínimo para contrato
+# ✅ NUEVO: payload mínimo para contrato (Wizard)
 class LeaseCreate(BaseModel):
     inmueble_id: int
-    # Puedes ampliar con datos del wizard (arrendatario, duración, fecha, etc.)
     arrendatario_nombre: str | None = None
     arrendatario_dni: str | None = None
     fecha_inicio: date | None = None
@@ -288,13 +290,17 @@ def _autofix_schema():
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
-        # document.payload_json
+        # document.payload_json (por si la tabla existía sin esa columna)
         exists_doc_payload = conn.execute(text("""
             SELECT 1 FROM information_schema.columns
             WHERE table_name='document' AND column_name='payload_json'
         """)).first()
-        if not exists_doc_payload:
+        if exists_doc_payload is None:
+            # si la tabla no existe aún, create_all la creará
+            pass
+        elif not exists_doc_payload:
             conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
+
 
 @app.on_event("startup")
 def on_startup():
@@ -323,31 +329,44 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(email: str) -> str:
-    PDF_TOKEN_EXPIRE_MINUTES = int(os.getenv("PDF_TOKEN_EXPIRE_MINUTES", "10"))
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {"sub": email, "exp": expire}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def create_pdf_token(user_id: int, inmueble_id: int) -> str:
     expire = datetime.utcnow() + timedelta(minutes=PDF_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": f"pdf:{user_id}:{inmueble_id}", "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-def verify_pdf_token(token: str, user_id: int, inmueble_id: int) -> bool:
+
+def decode_pdf_token(token: str) -> Optional[Tuple[int, int]]:
+    """
+    Devuelve (user_id, inmueble_id) si es válido, si no None.
+    """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         sub = payload.get("sub", "")
-        return sub == f"pdf:{user_id}:{inmueble_id}"
-    except JWTError:
-        return False
+        if not sub.startswith("pdf:"):
+            return None
+        parts = sub.split(":")
+        if len(parts) != 3:
+            return None
+        uid = int(parts[1])
+        iid = int(parts[2])
+        return uid, iid
+    except Exception:
+        return None
 
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": email, "exp": expire}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+def get_current_user(token: str | None = Depends(oauth2_scheme)) -> Usuario:
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
-        if not email:
+        if not email or str(email).startswith("pdf:"):
             raise HTTPException(status_code=401, detail="Token inválido")
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
@@ -668,10 +687,6 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
 # PDF GENERATOR (LEASE CONTRACT)
 # ============================================================
 def generar_pdf_contrato_arrendamiento(doc: dict, inmueble: dict) -> bytes:
-    """
-    MVP: contrato base “bonito” y consistente.
-    En Sprint 2/3 metemos cláusulas completas + anexos + versionado.
-    """
     payload = doc.get("payload") or {}
     arr_nom = payload.get("arrendatario_nombre") or "________________________"
     arr_dni = payload.get("arrendatario_dni") or "________________________"
@@ -746,20 +761,22 @@ def generar_pdf_contrato_arrendamiento(doc: dict, inmueble: dict) -> bytes:
 def version():
     return {"version": APP_VERSION}
 
+
 @app.get("/")
 def root():
     return {"mensaje": "Lexia360 API OK 🚀", "static": "/static/index.html", "version": APP_VERSION}
 
+
 @app.head("/")
 def head_root():
     return Response(status_code=200)
+
 
 @app.get("/status")
 def status():
     with Session(engine, expire_on_commit=False) as session:
         def scalar(q: str) -> int:
             v = session.exec(text(q)).one()
-            # .one() puede devolver int o Row
             if isinstance(v, int):
                 return int(v)
             return int(v[0])
@@ -768,7 +785,11 @@ def status():
         zonas_count = scalar("SELECT COUNT(*) FROM zonatensionada")
         inm_activos = scalar("SELECT COUNT(*) FROM inmueble WHERE activo = TRUE")
         inm_trash = scalar("SELECT COUNT(*) FROM inmueble WHERE activo = FALSE")
-        docs_count = scalar("SELECT COUNT(*) FROM document")
+        # por si la tabla document aún no existe en una BD vieja (primer arranque)
+        try:
+            docs_count = scalar("SELECT COUNT(*) FROM document")
+        except Exception:
+            docs_count = 0
 
         return {
             "status": "✅ OK",
@@ -801,6 +822,7 @@ def register(payload: RegisterPayload):
         session.commit()
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
+
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
     with Session(engine, expire_on_commit=False) as session:
@@ -809,6 +831,7 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
+
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
@@ -852,6 +875,7 @@ def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = Non
             "fuente_oficial": zona.fuente_oficial if zona else None
         }
 
+
 @app.post("/admin/zonas-tensionadas")
 def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
     with Session(engine, expire_on_commit=False) as session:
@@ -867,6 +891,7 @@ def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
         session.commit()
         session.refresh(z)
         return {"ok": True, "id_zona": z.id_zona}
+
 
 @app.get("/admin/zonas-tensionadas")
 def listar_zonas(admin: Usuario = Depends(require_admin)):
@@ -898,6 +923,7 @@ def listar_papelera(user: Usuario = Depends(get_current_user)):
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
 
+
 @app.post("/inmuebles/{id_inmueble}/restore")
 def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -916,6 +942,7 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
 
     return {"ok": True, "mensaje": "✅ Inmueble restaurado"}
 
+
 @app.delete("/inmuebles/{id_inmueble}/purge")
 def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -930,11 +957,17 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
             raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
 
         session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
-        # también borra docs vinculados si quieres (de momento no, para no destruir)
         session.delete(inm)
         session.commit()
 
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
+
+
+# Alias por compatibilidad con tu HTML viejo
+@app.delete("/inmuebles/{id_inmueble}/hard")
+def borrar_definitivo_alias(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    return borrar_definitivo(id_inmueble, user)
+
 
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
@@ -974,6 +1007,7 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"INMUEBLE_CREATE_ERROR: {type(e).__name__}: {str(e)}")
 
+
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -984,6 +1018,7 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             .order_by(Inmueble.id_inmueble.desc())
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
+
 
 @app.get("/inmuebles/{id_inmueble}")
 def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -997,6 +1032,7 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
         return inmueble_to_out(session, inm)
+
 
 @app.delete("/inmuebles/{id_inmueble}")
 def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -1033,29 +1069,56 @@ def inmueble_pdf_token(id_inmueble: int, user: Usuario = Depends(get_current_use
 
 
 @app.get("/inmuebles/{id_inmueble}/pdf")
-def inmueble_pdf(id_inmueble: int, t: str | None = None, user: Usuario = Depends(get_current_user)):
-    # Si viene token por query, lo validamos y permitimos descarga
-    if t:
-        if not verify_pdf_token(t, user.id_usuario, id_inmueble):
+def inmueble_pdf(
+    id_inmueble: int,
+    t: str | None = Query(default=None),
+    bearer: str | None = Depends(oauth2_scheme),
+):
+    """
+    ✅ Descarga PDF:
+    - Si viene Authorization Bearer normal -> OK
+    - Si viene token en query ?t=... -> OK (sin Authorization header)
+    """
+    # 1) Autenticación por Bearer normal
+    if bearer:
+        user = get_current_user(bearer)
+        with Session(engine, expire_on_commit=False) as session:
+            inm = session.exec(
+                select(Inmueble)
+                .where(Inmueble.id_inmueble == id_inmueble)
+                .where(Inmueble.id_usuario == user.id_usuario)
+                .where(Inmueble.activo == True)
+            ).first()
+            if not inm:
+                raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+            payload = inmueble_to_out(session, inm)
+
+    # 2) Autenticación por token PDF (query param)
+    else:
+        if not t:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        decoded = decode_pdf_token(t)
+        if not decoded:
             raise HTTPException(status_code=401, detail="Token PDF inválido o caducado")
+        uid, iid = decoded
+        if iid != id_inmueble:
+            raise HTTPException(status_code=401, detail="Token PDF no corresponde a este inmueble")
 
-    with Session(engine, expire_on_commit=False) as session:
-        inm = session.exec(
-            select(Inmueble)
-            .where(Inmueble.id_inmueble == id_inmueble)
-            .where(Inmueble.id_usuario == user.id_usuario)
-            .where(Inmueble.activo == True)
-        ).first()
-        if not inm:
-            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
-
-        payload = inmueble_to_out(session, inm)
+        with Session(engine, expire_on_commit=False) as session:
+            inm = session.exec(
+                select(Inmueble)
+                .where(Inmueble.id_inmueble == id_inmueble)
+                .where(Inmueble.id_usuario == uid)
+                .where(Inmueble.activo == True)
+            ).first()
+            if not inm:
+                raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+            payload = inmueble_to_out(session, inm)
 
     pdf_bytes = generar_pdf_informe(payload)
     filename = f"lexia360_informe_inmueble_{id_inmueble}.pdf"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
-
 
 
 # ============================================================
@@ -1092,7 +1155,6 @@ def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_curr
         session.commit()
         session.refresh(doc)
 
-        # Checklist base (MVP)
         base_items = [
             ("Verificar identidad del arrendatario", "DNI/NIE en vigor y coincidencia de datos."),
             ("Comprobar titularidad / autorización", "Nota simple o autorización si no es titular."),
@@ -1100,11 +1162,11 @@ def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_curr
             ("Entrega de llaves", "Acta de entrega / recepción."),
             ("Depósito de fianza", "Gestión conforme normativa autonómica (si aplica)."),
         ]
-        for t, d in base_items:
+        for t_, d_ in base_items:
             session.add(ChecklistItem(
                 id_document=doc.id_document,
-                titulo=t,
-                descripcion=d
+                titulo=t_,
+                descripcion=d_
             ))
         session.commit()
 
@@ -1116,6 +1178,7 @@ def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_curr
             "titulo": doc.titulo,
             "version": APP_VERSION
         }
+
 
 @app.get("/documents/{id_document}")
 def get_document(id_document: int, user: Usuario = Depends(get_current_user)):
@@ -1129,6 +1192,7 @@ def get_document(id_document: int, user: Usuario = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="Documento no encontrado")
         return document_to_out(session, doc)
 
+
 @app.get("/documents/{id_document}/pdf")
 def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -1140,7 +1204,6 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
         if not doc:
             raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-        inm = None
         inm_payload = {}
         if doc.id_inmueble:
             inm = session.exec(
@@ -1153,12 +1216,10 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
 
         doc_out = document_to_out(session, doc)
 
-    # PDF según tipo
     if doc.tipo == "lease":
         pdf_bytes = generar_pdf_contrato_arrendamiento(doc_out, inm_payload)
         filename = f"lexia360_contrato_arrendamiento_{id_document}.pdf"
     else:
-        # fallback
         pdf_bytes = b"%PDF-1.4\n% Lexia360 placeholder\n"
         filename = f"lexia360_document_{id_document}.pdf"
 
