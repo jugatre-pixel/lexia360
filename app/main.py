@@ -323,6 +323,21 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(email: str) -> str:
+    PDF_TOKEN_EXPIRE_MINUTES = int(os.getenv("PDF_TOKEN_EXPIRE_MINUTES", "10"))
+
+def create_pdf_token(user_id: int, inmueble_id: int) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=PDF_TOKEN_EXPIRE_MINUTES)
+    payload = {"sub": f"pdf:{user_id}:{inmueble_id}", "exp": expire}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_pdf_token(token: str, user_id: int, inmueble_id: int) -> bool:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        sub = payload.get("sub", "")
+        return sub == f"pdf:{user_id}:{inmueble_id}"
+    except JWTError:
+        return False
+
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
