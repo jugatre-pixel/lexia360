@@ -1,3 +1,4 @@
+# (Este es el main.py completo que reemplaza al existente)
 import os
 import json
 import traceback
@@ -13,7 +14,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse, JSONResponse
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from sqlmodel import SQLModel, Field, Session, select, create_engine
 from sqlalchemy import text
@@ -21,6 +21,9 @@ from sqlalchemy import text
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
+
+from core.security import validate_password, get_password_hash, verify_password, create_access_token, decode_token
+from core.config import settings
 
 # ============================================================
 # BASIC LOGGING
@@ -43,14 +46,8 @@ if DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
-if not SECRET_KEY:
-    raise RuntimeError("❌ Falta SECRET_KEY (Render -> Environment Variables)")
-if len(SECRET_KEY) < 32:
-    raise RuntimeError("❌ SECRET_KEY demasiado corto (mínimo 32 caracteres)")
-
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ALGORITHM = getattr(settings, "algorithm", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = getattr(settings, "access_token_expire_minutes", 60)
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").strip()
 ALLOW_ORIGINS = ["*"] if CORS_ORIGINS == "*" else [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
@@ -64,8 +61,7 @@ ALLOW_CREDENTIALS = USE_COOKIE_AUTH
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# Hash robust (avoid bcrypt 72 bytes limitation)
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# OAuth2 scheme (kept for compatibility if needed)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def load_secret_from_env_or_file(env_name: str, file_path: str) -> str:
@@ -301,24 +297,8 @@ def on_startup():
     logger.info("✅ STARTUP OK -> %s (AUTO_FIX_SCHEMA=%s, USE_COOKIE_AUTH=%s)", APP_VERSION, AUTO_FIX_SCHEMA, USE_COOKIE_AUTH)
 
 # ============================================================
-# HELPERS (AUTH)
+# AUTH HELPERS
 # ============================================================
-
-def validate_password(password: str):
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
-
-def create_access_token(email: str) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": email, "exp": expire}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
 def _get_token_from_request(request: Request) -> Optional[str]:
     # Prefer Authorization header
     auth = request.headers.get("Authorization")
@@ -334,13 +314,7 @@ def get_current_user(request: Request) -> Usuario:
     token = _get_token_from_request(request)
     if not token:
         raise HTTPException(status_code=401, detail="Token inválido")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-        if not email:
-            raise HTTPException(status_code=401, detail="Token inválido")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token inválido")
+    email = decode_token(token)
 
     with Session(engine, expire_on_commit=False) as session:
         user = session.exec(select(Usuario).where(Usuario.email == email)).first()
