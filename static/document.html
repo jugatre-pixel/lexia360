@@ -8,9 +8,9 @@
   <style>
     :root{
       --brand:#0b5fff; --brand2:#5b8cff;
-      --bg:#0b1220; --muted:rgba(255,255,255,.72);
-      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
-      --radius:16px; --ink:#101828; --sub:#667085;
+      --bg:#0b1220; --muted:rgba(255,255,255,.74);
+      --card:#fff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --ink:#101828; --muted2:#667085;
       --ok:#027a48; --danger:#b42318;
     }
     body{
@@ -18,251 +18,246 @@
       background:
         radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
         radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 52%, #f6f7fb 52%, #f6f7fb 100%);
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 46%, #f6f7fb 46%, #f6f7fb 100%);
     }
-    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
-    .topbar{
-      position:sticky;top:0;z-index:50;
-      background:rgba(11,18,32,.62);
+    .wrap{ max-width:1050px; margin:0 auto; padding:18px; }
+    .nav{
+      position:sticky; top:0; z-index:30;
+      background:rgba(11,18,32,.55);
       backdrop-filter: blur(12px);
       border-bottom:1px solid rgba(255,255,255,.10);
     }
-    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
-    .badge{
-      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:0 14px 28px rgba(11,95,255,.22);
+    .nav-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .logo{ display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:1000; }
+    .badge{ width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2)); box-shadow:0 14px 28px rgba(11,95,255,.22);
     }
-    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .chip{
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.06);
-      color:#fff;padding:8px 12px;border-radius:999px;
-      text-decoration:none;font-weight:900;font-size:13px;
-    }
-    .chip.active{background:rgba(255,255,255,.12)}
     .btn{
       border:1px solid rgba(255,255,255,.18);
       background:rgba(255,255,255,.06);
-      color:#fff;padding:10px 14px;border-radius:12px;
-      font-weight:900;cursor:pointer;
+      color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer;
+      text-decoration:none; display:inline-flex; align-items:center; gap:8px;
     }
-    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
-    .hero{padding:26px 0 12px;}
-    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
-    .sub{color:var(--muted);margin:0}
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:start}
-    @media(max-width:1000px){.grid{grid-template-columns:1fr}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-    .muted2{color:var(--sub);font-size:13px}
-    .alert{margin-top:10px;font-weight:950;font-size:13px}
-    .alert.ok{color:var(--ok)}
-    .alert.err{color:var(--danger)}
-    .divider{height:1px;background:var(--border);margin:12px 0}
+    .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
+    .hero{ padding:20px 0 10px; }
+    .headline{ color:#fff; font-size:28px; line-height:1.1; margin:0 0 6px; font-weight:1000; }
+    .sub{ color:var(--muted); margin:0; font-size:14px; }
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      padding:16px; box-shadow:var(--shadow);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
     .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      font-size:12px;color:#111827;border:1px solid var(--border);background:#fff;
-      padding:6px 10px;border-radius:999px;font-weight:950;
+      display:inline-flex; align-items:center; gap:8px;
+      font-size:12px; padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border); background:#fff; font-weight:1000; color:#111827;
     }
-    .check{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff}
-    .check b{display:block;margin-bottom:6px}
+    .muted2{ color:var(--muted2); font-size:13px; }
+    .msg{ margin-top:10px; font-weight:900; font-size:13px; }
+    .msg.ok{ color:var(--ok); }
+    .msg.err{ color:var(--danger); }
     pre{
-      background:#0b1220;
-      color:#e5e7eb;
-      border-radius:14px;
-      padding:12px;
-      overflow:auto;
-      max-height:320px;
+      margin:0; white-space:pre-wrap; word-break:break-word;
+      background:#0b1220; color:#e6edf7;
+      border-radius:14px; padding:12px; border:1px solid rgba(255,255,255,.08);
       font-size:12px;
     }
-    .linkbtn{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:10px 14px;border-radius:12px;
-      border:1px solid var(--border);
-      background:#fff;text-decoration:none;color:var(--ink);
-      font-weight:950;
+    .list{ display:grid; gap:10px; margin-top:10px; }
+    .item{
+      border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff;
+      display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
     }
-    .linkbtn.primary{
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      color:#fff;border-color:transparent;
+    .left{ display:flex; gap:10px; align-items:flex-start; }
+    .check{
+      width:20px; height:20px; border-radius:6px; border:2px solid #cfd4e4;
+      display:inline-flex; align-items:center; justify-content:center; font-weight:1000;
+      margin-top:2px;
+    }
+    .check.done{ border-color:#027a48; color:#027a48; }
+    .t{ font-weight:1000; color:var(--ink); }
+    .d{ color:var(--muted2); font-size:13px; margin-top:3px; }
+    .smallbtn{
+      border:1px solid #e6e8ef; background:#fff; border-radius:12px; padding:8px 10px;
+      font-weight:900; cursor:pointer;
     }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="wrap toprow">
-      <a class="brand" href="/static/dashboard.html">
-        <div class="badge">⚖️</div>
-        <div>Lexia360</div>
+  <div class="nav">
+    <div class="wrap nav-row">
+      <a class="logo" href="/static/dashboard.html">
+        <div class="badge">⚖️</div><div>Lexia360</div>
       </a>
-
-      <div class="navlinks">
-        <a class="chip" href="/static/dashboard.html">Dashboard</a>
-        <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
-        <a class="chip" href="/static/wizard.html">Wizard</a>
-        <a class="chip active" href="#">Documento</a>
-        <button class="btn" onclick="logout()">Salir</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn" href="/static/inmuebles.html">📁 Inmuebles</a>
+        <a class="btn" id="backToInmueble" href="/static/inmuebles.html">↩︎ Volver</a>
+        <button class="btn primary" onclick="logout()">Salir</button>
       </div>
     </div>
   </div>
 
   <section class="wrap hero">
-    <h2 class="headline">Documento</h2>
-    <p class="sub">Resumen, checklist y descarga del PDF.</p>
+    <h1 class="headline" id="title">Documento</h1>
+    <p class="sub">Contrato + checklist (Sprint 1). PDF se descarga sin 401.</p>
   </section>
 
   <section class="wrap">
-    <div class="grid">
-
-      <div class="card">
-        <div id="alert" class="alert"></div>
-
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-          <div>
-            <b>Contrato de arrendamiento (MVP)</b>
-            <div class="muted2">ID: <span id="docId">—</span></div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a id="pdfLink" class="linkbtn primary" href="#" target="_blank" rel="noopener">⬇️ Descargar PDF</a>
-            <a class="linkbtn" href="/static/wizard.html">Crear otro</a>
-          </div>
+    <div class="card">
+      <div class="row">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <span class="pill" id="pill_doc">Doc: —</span>
+          <span class="pill" id="pill_tipo">Tipo: —</span>
+          <span class="pill" id="pill_estado">Estado: —</span>
         </div>
-
-        <div class="divider"></div>
-
-        <div id="summary" class="muted2">Cargando…</div>
-
-        <div class="divider"></div>
-
-        <h4 style="margin:0 0 8px;">Checklist</h4>
-        <div class="muted2">Sprint siguiente: marcar completado + auditoría.</div>
-
-        <div id="checklist" style="margin-top:10px; display:grid; gap:10px;"></div>
-
-        <div class="divider"></div>
-
-        <details>
-          <summary>Debug JSON</summary>
-          <pre id="debug"></pre>
-        </details>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="downloadPdf()">📄 PDF</button>
+          <button class="btn" onclick="reload()">Actualizar</button>
+        </div>
       </div>
 
-      <div class="card">
-        <h3 style="margin:0 0 10px;">Acciones</h3>
-        <div class="muted2">Atajos profesionales.</div>
+      <div id="msg" class="msg"></div>
 
-        <div class="divider"></div>
+      <hr/>
 
-        <a class="linkbtn" href="/static/inmuebles.html">📁 Volver a inmuebles</a>
-        <div style="height:10px;"></div>
-        <a class="linkbtn" href="/static/papelera.html">🗑️ Ir a papelera</a>
+      <h3 style="margin:0 0 6px;">Checklist</h3>
+      <div class="muted2">MVP: checklist generado. (En el siguiente sprint lo hacemos editable y persistente).</div>
 
-        <div class="divider"></div>
+      <div id="list" class="list"></div>
 
-        <div class="muted2" id="who"></div>
-      </div>
+      <hr/>
 
+      <details>
+        <summary>Ver JSON (debug)</summary>
+        <div style="margin-top:10px;">
+          <pre id="json">—</pre>
+        </div>
+      </details>
     </div>
   </section>
 
 <script>
-  const apiUrl = location.origin;
+const api = location.origin;
+const token = localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
 
-  function token(){ return localStorage.getItem("token"); }
-  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
-  function logout(){
-    localStorage.removeItem("token"); localStorage.removeItem("email");
-    window.location.href="/static/index.html";
+const id = new URLSearchParams(location.search).get("id");
+if(!id) location.href="/static/inmuebles.html";
+
+let doc = null;
+
+function logout(){
+  localStorage.removeItem("token");
+  localStorage.removeItem("email");
+  location.href="/static/index.html";
+}
+function authHeaders(extra={}){
+  return { ...extra, "Authorization": `Bearer ${token}` };
+}
+function setMsg(text, ok=true){
+  const el = document.getElementById("msg");
+  el.className = "msg " + (ok ? "ok" : "err");
+  el.textContent = text || "";
+}
+async function safeJson(res){
+  try{ return await res.json(); }catch{ return {}; }
+}
+function esc(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function render(){
+  document.getElementById("title").textContent = doc?.titulo ? doc.titulo : "Documento";
+  document.getElementById("pill_doc").textContent = `Doc: ${doc?.id_document ?? "—"}`;
+  document.getElementById("pill_tipo").textContent = `Tipo: ${doc?.tipo ?? "—"}`;
+  document.getElementById("pill_estado").textContent = `Estado: ${doc?.estado ?? "—"}`;
+  document.getElementById("json").textContent = JSON.stringify(doc, null, 2);
+
+  if(doc?.id_inmueble){
+    document.getElementById("backToInmueble").href = `/static/inmueble.html?id=${doc.id_inmueble}`;
   }
-  function setAlert(msg, ok=true){
-    const el = document.getElementById("alert");
-    el.className = "alert " + (ok ? "ok" : "err");
-    el.textContent = msg || "";
-  }
-  async function safeJson(res){ try{return await res.json();}catch{return {};} }
-  function esc(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  const items = Array.isArray(doc?.checklist) ? doc.checklist : [];
+  if(items.length === 0){
+    list.innerHTML = `<div class="muted2">Sin items de checklist.</div>`;
+    return;
   }
 
-  function getId(){
-    const params = new URLSearchParams(location.search);
-    const id = params.get("id");
-    return id ? Number(id) : null;
+  for(const it of items){
+    const done = it.completado === true;
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div class="left">
+        <div class="check ${done ? "done" : ""}">${done ? "✓" : ""}</div>
+        <div>
+          <div class="t">${esc(it.titulo)}</div>
+          <div class="d">${esc(it.descripcion || "")}</div>
+        </div>
+      </div>
+      <div>
+        <button class="smallbtn" onclick="toggleLocal(${it.id_item})">${done ? "Marcar pendiente" : "Marcar hecho"}</button>
+      </div>
+    `;
+    list.appendChild(div);
   }
+}
 
-  async function guardOnce(){
-    const t = token();
-    if(!t){ logout(); return false; }
-    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-    if(res.status===401){ logout(); return false; }
-    if(!res.ok){ return false; }
-    const me = await safeJson(res);
-    document.getElementById("who").textContent = `Sesión: ${me.email || localStorage.getItem("email") || ""}`;
-    return true;
+function toggleLocal(id_item){
+  // MVP: solo visual (no persistimos aún)
+  const items = doc?.checklist || [];
+  const it = items.find(x => x.id_item === id_item);
+  if(!it) return;
+  it.completado = !it.completado;
+  render();
+  setMsg("✅ Marcado (solo visual por ahora).", true);
+  setTimeout(()=>setMsg(""), 900);
+}
+
+async function reload(){
+  setMsg("");
+  const r = await fetch(`${api}/documents/${id}`, { headers: authHeaders() });
+  if(r.status===401) return logout();
+  const d = await safeJson(r);
+  if(!r.ok){
+    setMsg(d.detail || "No se pudo cargar el documento", false);
+    return;
   }
+  doc = d;
+  render();
+  setMsg("✅ Documento cargado.", true);
+  setTimeout(()=>setMsg(""), 900);
+}
 
-  async function loadDoc(id){
-    setAlert("Cargando documento…");
-    document.getElementById("docId").textContent = id;
-    document.getElementById("pdfLink").href = `${apiUrl}/documents/${id}/pdf`;
-
-    const res = await fetch(`${apiUrl}/documents/${id}`, { headers: authHeaders() });
-    if(res.status===401){ logout(); return; }
-    const data = await safeJson(res);
-
-    if(!res.ok){
-      setAlert(data.detail || "No se pudo cargar el documento.", false);
+async function downloadPdf(){
+  // Sin 401: descargamos por fetch + blob con Authorization
+  try{
+    const r = await fetch(`${api}/documents/${id}/pdf`, { headers: authHeaders() });
+    if(r.status===401) return logout();
+    if(!r.ok){
+      const d = await safeJson(r);
+      setMsg(d.detail || "No se pudo generar el PDF.", false);
       return;
     }
-
-    setAlert("✅ Documento cargado.");
-    setTimeout(()=>setAlert(""), 900);
-
-    const meta = data.meta || {};
-    const inm = data.inmueble || null;
-
-    let html = `<div class="pill">Tipo: ${esc(data.tipo || "lease")}</div> `;
-    html += `<div class="pill">Creado: ${esc(data.creado_en || "—")}</div> `;
-    if(inm){
-      html += `<div class="pill">Inmueble: ${esc(inm.direccion || "—")} · ${esc(inm.municipio || "")}</div>`;
-    }
-    document.getElementById("summary").innerHTML = html;
-
-    const box = document.getElementById("checklist");
-    box.innerHTML = "";
-    const items = Array.isArray(data.checklist) ? data.checklist : [];
-
-    if(items.length === 0){
-      box.innerHTML = `<div class="muted2">No hay checklist (aún).</div>`;
-    } else {
-      for(const it of items){
-        const el = document.createElement("div");
-        el.className = "check";
-        el.innerHTML = `
-          <b>☐ ${esc(it.titulo)}</b>
-          <div class="muted2">${esc(it.descripcion || "")}</div>
-        `;
-        box.appendChild(el);
-      }
-    }
-
-    document.getElementById("debug").textContent = JSON.stringify(data, null, 2);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lexia360_documento_${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setMsg("✅ PDF descargado.", true);
+  }catch(e){
+    setMsg("⚠️ Error de conexión al descargar PDF.", false);
   }
+}
 
-  (async function init(){
-    const ok = await guardOnce();
-    if(!ok) return;
-
-    const id = getId();
-    if(!id){
-      setAlert("Falta ?id= en la URL. Ejemplo: /static/documento.html?id=1", false);
-      return;
-    }
-    await loadDoc(id);
-  })();
+reload();
 </script>
 </body>
 </html>
