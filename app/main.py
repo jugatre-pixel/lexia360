@@ -3,6 +3,7 @@ import json
 import traceback
 import secrets
 import io
+import base64
 from datetime import datetime, timedelta, date
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
