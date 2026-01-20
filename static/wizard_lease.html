@@ -3,194 +3,130 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Lexia360 · Generar contrato</title>
+  <title>Lexia360 · Wizard Contrato (Lease)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{
-      --brand:#0b5fff; --brand2:#5b8cff;
-      --bg:#0b1220; --muted:rgba(255,255,255,.74);
-      --card:#fff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
-      --ink:#101828; --danger:#b42318; --ok:#027a48;
-    }
-    body{
-      margin:0;
-      background:
-        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
-        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 60%, #f6f7fb 60%, #f6f7fb 100%);
-    }
-    .wrap{ max-width:1100px; margin:0 auto; padding:18px; }
-    .nav{
-      position:sticky; top:0; z-index:20;
-      background:rgba(11,18,32,.55);
-      backdrop-filter: blur(12px);
-      border-bottom:1px solid rgba(255,255,255,.10);
-    }
-    .nav-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .logo{ display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:900; }
-    .badge{ width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:0 14px 28px rgba(11,95,255,.22);
-    }
-    .btn{
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.06);
-      color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer;
-    }
-    .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
-    .hero{ padding:22px 0 10px; }
-    .headline{ color:#fff; font-size:32px; line-height:1.06; margin:0 0 8px; font-weight:1000; letter-spacing:-.2px; }
-    .sub{ color:var(--muted); margin:0; font-size:14px; }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:16px;
-      box-shadow:var(--shadow);
-    }
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+    :root{ --brand:#0b5fff; --muted:#667085; --border:#e6e8ef; --danger:#b42318; --ok:#027a48; }
+    body{ margin:0; background:#f6f7fb; }
+    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
+    .wrap{ max-width:980px; margin:0 auto; padding:16px 18px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
+    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; }
+    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
+    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+    .card{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); margin-top:14px; }
+    .muted{ color:var(--muted); }
     .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     @media(max-width:900px){ .row{ grid-template-columns:1fr; } }
     input, select{ border-radius:12px !important; }
     .toast{ margin-top:10px; font-weight:900; font-size:13px; }
     .toast.ok{ color:var(--ok); }
     .toast.err{ color:var(--danger); }
-    .hint{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:12px; }
   </style>
 </head>
 <body>
-  <div class="nav">
-    <div class="wrap nav-row">
-      <a class="logo" href="/static/dashboard.html">
-        <div class="badge">⚖️</div>
-        <div>Lexia360</div>
-      </a>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
-        <button class="btn" onclick="go('/static/documentos.html')">Documentos</button>
-        <button class="btn" onclick="logout()">Salir</button>
-      </div>
+<header>
+  <div class="wrap top">
+    <a class="brand" href="/static/dashboard.html">
+      <div class="badge">⚖️</div>
+      <div>Lexia360</div>
+    </a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn" href="/static/inmuebles.html">🏠 Inmuebles</a>
+      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
+      <button class="btn" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
+</header>
 
-  <section class="wrap hero">
-    <h1 class="headline">Generar contrato de arrendamiento</h1>
-    <p class="sub">MVP: genera contrato base + checklist asociado (en Sprint siguiente lo hacemos editable y completo).</p>
+<main class="wrap">
+  <section class="card">
+    <h3 style="margin:0 0 6px;">Contrato de arrendamiento (MVP)</h3>
+    <div class="muted" style="margin-bottom:12px;">
+      Genera un documento “lease” y su checklist base.
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <label>Selecciona inmueble *</label>
+    <select id="inmuebleId"></select>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>Arrendatario (nombre)</label>
+        <input id="arrNombre" type="text" placeholder="Nombre y apellidos"/>
+      </div>
+      <div>
+        <label>DNI/NIE</label>
+        <input id="arrDni" type="text" placeholder="12345678X"/>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>Fecha inicio</label>
+        <input id="fechaInicio" type="date"/>
+      </div>
+      <div>
+        <label>Duración (meses)</label>
+        <input id="duracion" type="number" min="1" placeholder="12"/>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn primary" onclick="createLease()">Generar contrato</button>
+    </div>
   </section>
-
-  <main class="wrap">
-    <section class="card">
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-        <div>
-          <h3 style="margin:0;">Datos</h3>
-          <div style="color:#667085;font-size:13px;">Selecciona inmueble y completa los datos mínimos.</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn" onclick="loadInmuebles()">Actualizar</button>
-        </div>
-      </div>
-
-      <hr/>
-
-      <div id="toast" class="toast"></div>
-
-      <div class="row">
-        <div>
-          <label>Inmueble *</label>
-          <select id="inmuebleSelect">
-            <option value="">Cargando...</option>
-          </select>
-        </div>
-        <div class="hint">
-          <b>Qué hace esto</b>
-          <div style="margin-top:6px;color:#667085;font-size:13px;">
-            Genera un <b>Document</b> (tipo <code>lease</code>) y crea un checklist base.
-            Luego puedes descargar el PDF y revisar el JSON.
-          </div>
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <div>
-          <label>Nombre arrendatario</label>
-          <input id="arrNombre" type="text" placeholder="Juan Pérez" />
-        </div>
-        <div>
-          <label>DNI/NIE arrendatario</label>
-          <input id="arrDni" type="text" placeholder="12345678A" />
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <div>
-          <label>Fecha inicio</label>
-          <input id="fechaInicio" type="date" />
-        </div>
-        <div>
-          <label>Duración (meses)</label>
-          <input id="duracionMeses" type="number" min="1" placeholder="12" />
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:14px;">
-        <button class="btn primary" onclick="createLease()">Generar contrato</button>
-      </div>
-    </section>
-  </main>
+</main>
 
 <script>
   const api = location.origin;
+  const token = localStorage.getItem("token");
+  if(!token) location.href="/static/index.html";
 
-  function token(){ return localStorage.getItem("token"); }
-  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
-  function go(p){ location.href = p; }
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
     location.href="/static/index.html";
   }
 
-  const t = token();
-  if(!t) logout();
-
   function setToast(text, ok=true){
     const el = document.getElementById("toast");
     el.className = "toast " + (ok ? "ok" : "err");
     el.textContent = text || "";
     if(text){
-      setTimeout(()=>{ el.textContent=""; }, 2800);
+      setTimeout(()=>{ el.textContent=""; }, 2600);
     }
   }
 
-  async function safeJson(res){ try{return await res.json();}catch{return {};} }
-
   async function loadInmuebles(){
     try{
-      const r = await fetch(`${api}/inmuebles`, { headers: authHeaders() });
+      const r = await fetch(api + "/inmuebles", { headers:{ Authorization:`Bearer ${token}` }});
       if(r.status===401) return logout();
-      const data = await safeJson(r);
-
-      const sel = document.getElementById("inmuebleSelect");
+      const data = await r.json();
+      const sel = document.getElementById("inmuebleId");
       sel.innerHTML = "";
 
       if(!Array.isArray(data) || data.length===0){
-        sel.innerHTML = `<option value="">No tienes inmuebles. Crea uno primero.</option>`;
+        sel.innerHTML = `<option value="">(No tienes inmuebles, crea uno primero)</option>`;
+        setToast("Crea un inmueble antes de generar contrato.", false);
         return;
       }
 
-      sel.innerHTML = `<option value="">Selecciona…</option>` + data.map(i=>{
-        const label = `${i.id_inmueble} · ${i.direccion} (${i.municipio})`;
-        return `<option value="${i.id_inmueble}">${label}</option>`;
-      }).join("");
-
+      data.forEach(i=>{
+        const opt = document.createElement("option");
+        opt.value = i.id_inmueble;
+        opt.textContent = `#${i.id_inmueble} · ${i.direccion}`;
+        sel.appendChild(opt);
+      });
     }catch(e){
-      setToast("⚠️ No se pudo cargar inmuebles", false);
+      setToast("⚠️ No se pudo cargar inmuebles.", false);
     }
   }
 
   async function createLease(){
-    const inmueble_id = Number(document.getElementById("inmuebleSelect").value || 0);
+    const inmueble_id = Number(document.getElementById("inmuebleId").value || 0);
     if(!inmueble_id){
       setToast("Selecciona un inmueble.", false);
       return;
@@ -199,38 +135,38 @@
     const arrendatario_nombre = document.getElementById("arrNombre").value.trim() || null;
     const arrendatario_dni = document.getElementById("arrDni").value.trim() || null;
 
-    const fechaInicioRaw = document.getElementById("fechaInicio").value;
-    const fecha_inicio = fechaInicioRaw ? fechaInicioRaw : null;
+    const fechaInicio = document.getElementById("fechaInicio").value;
+    const fecha_inicio = fechaInicio ? fechaInicio : null;
 
-    const durRaw = document.getElementById("duracionMeses").value;
+    const durRaw = document.getElementById("duracion").value;
     const duracion_meses = durRaw ? Number(durRaw) : null;
 
-    const payload = { inmueble_id, arrendatario_nombre, arrendatario_dni, fecha_inicio, duracion_meses };
-
     try{
-      const r = await fetch(`${api}/documents/lease`, {
-        method: "POST",
-        headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify(payload)
+      const r = await fetch(api + "/documents/lease", {
+        method:"POST",
+        headers:{
+          "Authorization": `Bearer ${token}`,
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify({ inmueble_id, arrendatario_nombre, arrendatario_dni, fecha_inicio, duracion_meses })
       });
 
       if(r.status===401) return logout();
+      const data = await r.json().catch(()=>({}));
 
-      const data = await safeJson(r);
       if(!r.ok){
-        setToast(data.detail || "Error generando contrato", false);
+        setToast(data.detail || "Error creando documento.", false);
         return;
       }
 
-      setToast("✅ Contrato generado", true);
-      setTimeout(()=>location.href=`/static/documento.html?id=${data.id_document}`, 600);
+      setToast("✅ Contrato generado.", true);
+      setTimeout(()=>location.href = `/static/documento.html?id=${data.id_document}`, 600);
 
     }catch(e){
-      setToast("⚠️ Error de conexión", false);
+      setToast("⚠️ No se pudo conectar.", false);
     }
   }
 
-  // init
   loadInmuebles();
 </script>
 </body>
