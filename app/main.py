@@ -165,6 +165,17 @@ class ZonaTensionada(SQLModel, table=True):
 
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
+class Document(SQLModel, table=True):
+    id_document: int | None = Field(default=None, primary_key=True)
+    id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
+    id_inmueble: int | None = Field(default=None, index=True, foreign_key="inmueble.id_inmueble")
+
+    tipo: str = Field(index=True)  # "lease" (MVP)
+    titulo: str
+    payload_json: str  # datos del wizard
+    pdf_bytes: bytes | None = None  # BYTEA en Postgres
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+
 
 # ============================================================
 # SCHEMAS
@@ -333,6 +344,7 @@ def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: s
         .where(ZonaTensionada.activo == True)
         .order_by(ZonaTensionada.fecha_inicio.desc())
     ).first()
+
 
 
 # ============================================================
