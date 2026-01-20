@@ -11,6 +11,7 @@
       --bg:#0b1220; --muted:rgba(255,255,255,.72);
       --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
       --radius:16px;
+      --danger:#b42318; --warn:#b54708;
     }
     body{
       margin:0;
@@ -66,8 +67,8 @@
       display:none;max-width:560px;
     }
     .toast.show{display:block}
-    .danger{background:#b42318 !important;border-color:#b42318 !important}
-    .warn{background:#b54708 !important;border-color:#b54708 !important}
+    .danger{background:var(--danger) !important;border-color:var(--danger) !important}
+    .warn{background:var(--warn) !important;border-color:var(--warn) !important}
   </style>
 </head>
 <body>
@@ -90,7 +91,7 @@
 
   <section class="wrap hero">
     <h2 class="headline">Papelera</h2>
-    <p class="sub">Inmuebles eliminados (recuperables). Puedes restaurar o borrar definitivamente.</p>
+    <p class="sub">Elementos eliminados (recuperables). Puedes restaurar o borrar definitivamente.</p>
   </section>
 
   <section class="wrap">
@@ -98,7 +99,7 @@
       <div class="row" style="margin-bottom:10px;">
         <div>
           <b>Elementos en papelera</b>
-          <div class="muted2">Si no hay token válido te mandará al login (401).</div>
+          <div class="muted2">Si tu sesión caducó, te mandará al login.</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn" onclick="load()">Actualizar</button>
@@ -112,9 +113,8 @@
             <tr>
               <th>ID</th>
               <th>Dirección</th>
-              <th>Municipio</th>
-              <th>Eliminado</th>
-              <th style="width:340px;">Acciones</th>
+              <th>Estado</th>
+              <th style="width:320px;">Acciones</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -131,7 +131,6 @@
 
 <script>
   const apiUrl = location.origin;
-  let trash = [];
 
   function token(){ return localStorage.getItem("token"); }
   function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
@@ -162,42 +161,30 @@
       .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
 
-  function getId(i){
-    return i.id_inmueble ?? i.id ?? i.idInmueble ?? i.id_inmuebles;
-  }
+  function getId(i){ return i.id_inmueble ?? i.id ?? i.idInmueble; }
 
-  function fmtDate(iso){
-    if(!iso) return "—";
-    try{
-      const d = new Date(iso);
-      if(isNaN(d.getTime())) return iso;
-      return d.toLocaleString("es-ES");
-    }catch(e){
-      return iso;
-    }
-  }
-
-  function render(){
+  function render(list){
     const tbody = document.getElementById("rows");
     tbody.innerHTML = "";
-    document.getElementById("empty").style.display = (trash.length===0) ? "block" : "none";
+    document.getElementById("empty").style.display = (list.length===0) ? "block" : "none";
 
-    for(const i of trash){
+    for(const i of list){
       const id = getId(i);
-      const direccion = i.direccion || "—";
-      const municipio = i.municipio || "—";
-      const eliminado = fmtDate(i.eliminado_en || i.deleted_at || i.eliminadoEn);
+      const dir = i.direccion || "—";
+      const st = (i.activo === false) ? "En papelera" : "—";
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><b>${id ?? "—"}</b></td>
-        <td>${escapeHtml(direccion)}</td>
-        <td>${escapeHtml(municipio)}</td>
-        <td><span class="pill">${escapeHtml(eliminado)}</span></td>
+        <td>
+          <div style="font-weight:950;">${escapeHtml(dir)}</div>
+          <div class="muted2">${escapeHtml((i.municipio||"") + (i.comunidad_autonoma?(" · "+i.comunidad_autonoma):""))}</div>
+        </td>
+        <td><span class="pill">${escapeHtml(st)}</span></td>
         <td>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="warn" onclick="restore(${Number(id)})">↩︎ Restaurar</button>
-            <button class="danger" onclick="hardDelete(${Number(id)})">Eliminar definitivo</button>
+            <button class="danger" onclick="purge(${Number(id)})">Eliminar definitivo</button>
           </div>
         </td>
       `;
@@ -208,28 +195,21 @@
   async function load(){
     if(!guard()) return;
 
-    const endpoints = [
-      `${apiUrl}/inmuebles/trash`,
-      `${apiUrl}/inmuebles/_trash`
-    ];
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/trash`, { headers: authHeaders() });
+      if(res.status===401){ logout(); return; }
 
-    for(const url of endpoints){
-      try{
-        const res = await fetch(url, { headers: authHeaders() });
-        if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
-        const data = await safeJson(res);
+      const data = await safeJson(res);
+      if(!res.ok){
+        toast(data.detail || "No se pudo cargar la papelera.");
+        render([]);
+        return;
+      }
 
-        if(res.ok){
-          trash = Array.isArray(data) ? data : [];
-          render();
-          return;
-        }
-      }catch(e){}
+      render(Array.isArray(data) ? data : []);
+    }catch(e){
+      toast("⚠️ Error de conexión.");
     }
-
-    toast("❌ No se pudo cargar la papelera (endpoint no disponible o error).");
-    trash = [];
-    render();
   }
 
   async function restore(id){
@@ -241,45 +221,41 @@
         method:"POST",
         headers: authHeaders()
       });
-      if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
+      if(res.status===401){ logout(); return; }
       const data = await safeJson(res);
 
       if(!res.ok){
-        toast(data.detail || "❌ No se pudo restaurar.");
+        toast(data.detail || "No se pudo restaurar.");
         return;
       }
-
       toast("✅ Restaurado.");
       await load();
     }catch(e){
-      toast("⚠️ Error de conexión al restaurar.");
+      toast("⚠️ Error de conexión.");
     }
   }
 
-  async function hardDelete(id){
+  async function purge(id){
     if(!guard()) return;
-    if(!confirm("⚠️ Esto borra definitivamente (no se puede recuperar). ¿Continuar?")) return;
+    if(!confirm("⚠️ Esto borra definitivamente. ¿Continuar?")) return;
 
-    const endpoints = [
-      `${apiUrl}/inmuebles/${id}/purge`,
-      `${apiUrl}/inmuebles/${id}/hard`
-    ];
+    try{
+      const res = await fetch(`${apiUrl}/inmuebles/${id}/purge`, {
+        method:"DELETE",
+        headers: authHeaders()
+      });
+      if(res.status===401){ logout(); return; }
+      const data = await safeJson(res);
 
-    for(const url of endpoints){
-      try{
-        const res = await fetch(url, { method:"DELETE", headers: authHeaders() });
-        if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
-        const data = await safeJson(res);
-
-        if(res.ok){
-          toast("🧹 Eliminado definitivamente.");
-          await load();
-          return;
-        }
-      }catch(e){}
+      if(!res.ok){
+        toast(data.detail || "No se pudo borrar definitivo.");
+        return;
+      }
+      toast("🧹 Eliminado definitivamente.");
+      await load();
+    }catch(e){
+      toast("⚠️ Error de conexión.");
     }
-
-    toast("❌ No se pudo borrar definitivo.");
   }
 
   load();
