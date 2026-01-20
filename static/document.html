@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Documento</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <style>
+    :root{
+      --brand:#0b5fff; --brand2:#5b8cff;
+      --bg:#0b1220; --muted:rgba(255,255,255,.72);
+      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --radius:16px;
+      --danger:#b42318; --ok:#027a48;
+    }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 56%, #f6f7fb 56%, #f6f7fb 100%);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:rgba(11,18,32,.62);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
+    .badge{
+      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 14px 28px rgba(11,95,255,.22);
+    }
+    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:8px 12px;border-radius:999px;
+      text-decoration:none;font-weight:900;font-size:13px;
+    }
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:10px 14px;border-radius:12px;
+      font-weight:900;cursor:pointer;
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
+    .hero{padding:28px 0 10px;}
+    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
+    .sub{color:var(--muted);margin:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .muted2{color:#667085;font-size:13px}
+    .toast{margin-top:10px;font-weight:900;font-size:13px}
+    .toast.ok{color:var(--ok)}
+    .toast.err{color:var(--danger)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:900px){ .row{grid-template-columns:1fr;} }
+    pre{background:#0b1220;color:#e7efff;padding:12px;border-radius:14px;overflow:auto}
+    .item{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border);border-radius:14px;background:#fff;margin-bottom:10px}
+    .item b{display:block}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap toprow">
+      <a class="brand" href="/static/dashboard.html">
+        <div class="badge">⚖️</div>
+        <div>Lexia360</div>
+      </a>
+      <div class="navlinks">
+        <a class="chip" href="/static/dashboard.html">Dashboard</a>
+        <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
+        <a class="chip" href="/static/wizard.html">Wizard</a>
+        <a class="chip" href="/static/papelera.html">Papelera</a>
+        <button class="btn" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="wrap hero">
+    <h2 class="headline">Documento</h2>
+    <p class="sub">Checklist + descarga PDF.</p>
+  </section>
+
+  <section class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div>
+          <b id="title">—</b>
+          <div class="muted2">ID: <span id="docId">—</span> · Tipo: <span id="docType">—</span></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn primary" onclick="downloadPdf()">⬇️ Descargar PDF</button>
+          <button class="btn" onclick="toggleJson()">🧾 JSON</button>
+          <button class="btn" onclick="reloadAll()">Actualizar</button>
+        </div>
+      </div>
+
+      <div id="toast" class="toast"></div>
+
+      <hr/>
+
+      <div class="row">
+        <div>
+          <h4 style="margin:0 0 10px;">Checklist</h4>
+          <div class="muted2" style="margin-bottom:10px;">Marca lo completado. Se guarda al instante.</div>
+          <div id="list"></div>
+          <div class="muted2" id="empty" style="display:none;">No hay items.</div>
+        </div>
+
+        <div>
+          <h4 style="margin:0 0 10px;">Contenido (preview)</h4>
+          <pre id="preview" style="max-height:460px;">—</pre>
+        </div>
+      </div>
+
+      <div id="jsonBox" style="display:none;margin-top:12px;">
+        <hr/>
+        <pre id="jsonPre">—</pre>
+      </div>
+    </div>
+  </section>
+
+<script>
+  const apiUrl = location.origin;
+
+  function token(){ return localStorage.getItem("token"); }
+  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    location.href="/static/index.html";
+  }
+  async function guard(){
+    const t = token();
+    if(!t){ logout(); return false; }
+    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+    if(res.status===401){ logout(); return false; }
+    return res.ok;
+  }
+  function setToast(msg, ok=true){
+    const el = document.getElementById("toast");
+    el.className = "toast " + (ok ? "ok" : "err");
+    el.textContent = msg || "";
+    if(msg) setTimeout(()=>{ el.textContent=""; }, 2200);
+  }
+  async function safeJson(res){ try{return await res.json();}catch{return {};} }
+
+  const qs = new URLSearchParams(location.search);
+  const id = Number(qs.get("id") || 0);
+
+  let doc = null;
+  let checklist = [];
+
+  function renderChecklist(){
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+    document.getElementById("empty").style.display = (checklist.length===0) ? "block" : "none";
+
+    for(const item of checklist){
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <input type="checkbox" ${item.completado ? "checked" : ""} style="margin-top:3px;" />
+        <div style="flex:1;">
+          <b>${escapeHtml(item.etiqueta)}</b>
+          <div class="muted2">Item #${item.id_item}</div>
+        </div>
+      `;
+      const cb = div.querySelector("input");
+      cb.addEventListener("change", async () => {
+        await toggleItem(item.id_item, cb.checked);
+      });
+      list.appendChild(div);
+    }
+  }
+
+  function escapeHtml(s){
+    return (s??"").toString()
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  async function loadDoc(){
+    const res = await fetch(`${apiUrl}/documents/${id}`, { headers: authHeaders() });
+    if(res.status===401) return logout();
+    const data = await safeJson(res);
+    if(!res.ok) throw new Error(data.detail || "No se pudo cargar documento.");
+
+    doc = data;
+    document.getElementById("title").textContent = doc.titulo || "Documento";
+    document.getElementById("docId").textContent = String(doc.id_document);
+    document.getElementById("docType").textContent = doc.tipo || "—";
+    document.getElementById("preview").textContent = doc.contenido_texto || "—";
+
+    // JSON debug
+    document.getElementById("jsonPre").textContent = JSON.stringify(doc, null, 2);
+  }
+
+  async function loadChecklist(){
+    const res = await fetch(`${apiUrl}/documents/${id}/checklist`, { headers: authHeaders() });
+    if(res.status===401) return logout();
+    const data = await safeJson(res);
+    if(!res.ok) throw new Error(data.detail || "No se pudo cargar checklist.");
+
+    checklist = Array.isArray(data) ? data : [];
+    renderChecklist();
+  }
+
+  async function toggleItem(id_item, completado){
+    try{
+      const res = await fetch(`${apiUrl}/checklist/${id_item}`, {
+        method:"PATCH",
+        headers: authHeaders({ "Content-Type":"application/json" }),
+        body: JSON.stringify({ completado })
+      });
+      if(res.status===401) return logout();
+      const data = await safeJson(res);
+      if(!res.ok) return setToast(data.detail || "Error actualizando item.", false);
+
+      setToast("✅ Guardado", true);
+    }catch(e){
+      setToast("⚠️ Error de conexión.", false);
+    }
+  }
+
+  async function downloadPdf(){
+    try{
+      const res = await fetch(`${apiUrl}/documents/${id}/pdf`, { headers: authHeaders() });
+      if(res.status===401) return logout();
+      if(!res.ok){
+        const data = await safeJson(res);
+        return setToast(data.detail || "No se pudo descargar PDF.", false);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contrato_${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setToast("⬇️ PDF descargado.", true);
+    }catch(e){
+      setToast("⚠️ Error descargando PDF.", false);
+    }
+  }
+
+  function toggleJson(){
+    const box = document.getElementById("jsonBox");
+    box.style.display = (box.style.display === "none") ? "block" : "none";
+  }
+
+  async function reloadAll(){
+    setToast("");
+    try{
+      await loadDoc();
+      await loadChecklist();
+      setToast("✅ Actualizado", true);
+    }catch(e){
+      setToast(String(e.message || e), false);
+    }
+  }
+
+  (async function init(){
+    const ok = await guard();
+    if(!ok) return;
+
+    if(!id){
+      setToast("Falta ?id=ID_DOCUMENT en la URL", false);
+      return;
+    }
+    await reloadAll();
+  })();
+</script>
+</body>
+</html>
