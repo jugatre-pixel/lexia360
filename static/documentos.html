@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Documentos</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <style>
+    :root{
+      --brand:#0b5fff; --brand2:#5b8cff;
+      --bg:#0b1220; --muted:rgba(255,255,255,.72);
+      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --radius:16px;
+    }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 62%, #f6f7fb 62%, #f6f7fb 100%);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:rgba(11,18,32,.62);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
+    .badge{
+      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 14px 28px rgba(11,95,255,.22);
+    }
+    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:8px 12px;border-radius:999px;
+      text-decoration:none;font-weight:900;font-size:13px;
+    }
+    .chip.active{background:rgba(255,255,255,.12)}
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:10px 14px;border-radius:12px;
+      font-weight:900;cursor:pointer;
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
+    .hero{padding:28px 0 10px;}
+    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
+    .sub{color:var(--muted);margin:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .muted2{color:#667085;font-size:13px}
+    table{border-radius:16px;overflow:hidden}
+    .pill{
+      font-size:12px;color:#111827;border:1px solid var(--border);background:#fff;
+      padding:6px 10px;border-radius:999px;font-weight:900;
+    }
+    .pill.ok{border-color:#abefc6;background:#ecfdf3}
+    .pill.warn{border-color:#fedf89;background:#fffaeb}
+    .toast{
+      position:fixed;left:18px;bottom:18px;z-index:9999;
+      background:#111827;color:#fff;border:1px solid rgba(255,255,255,.12);
+      padding:12px 14px;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.25);
+      display:none;max-width:560px;
+    }
+    .toast.show{display:block}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap toprow">
+      <a class="brand" href="/static/dashboard.html">
+        <div class="badge">⚖️</div>
+        <div>Lexia360</div>
+      </a>
+
+      <div class="navlinks">
+        <a class="chip" href="/static/dashboard.html">Dashboard</a>
+        <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
+        <a class="chip" href="/static/wizard.html">Wizard</a>
+        <a class="chip" href="/static/papelera.html">Papelera</a>
+        <a class="chip active" href="/static/documentos.html">Documentos</a>
+        <button class="btn" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="wrap hero">
+    <h2 class="headline">Documentos</h2>
+    <p class="sub">Tus contratos generados (MVP) con checklist asociado.</p>
+  </section>
+
+  <section class="wrap">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <b>Listado</b>
+          <div class="muted2">Últimos 50 documentos del usuario.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="load()">Actualizar</button>
+          <a href="/static/wizard_lease.html" role="button" class="primary">+ Generar contrato</a>
+        </div>
+      </div>
+
+      <figure style="margin:0;">
+        <table role="grid">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Título</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Checklist</th>
+              <th>Creado</th>
+              <th style="width:260px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </figure>
+
+      <div class="muted2" id="empty" style="display:none;margin-top:12px;">
+        Aún no tienes documentos. Genera uno desde “+ Generar contrato”.
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+  const apiUrl = location.origin;
+
+  function token(){ return localStorage.getItem("token"); }
+  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+  function guard(){
+    const t = token();
+    if(!t){ window.location.href="/static/index.html"; return false; }
+    return true;
+  }
+  function logout(){
+    localStorage.removeItem("token"); localStorage.removeItem("email");
+    window.location.href="/static/index.html";
+  }
+  function toast(msg){
+    const el=document.getElementById("toast");
+    el.textContent=msg; el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"), 4200);
+  }
+  async function safeJson(res){ try{return await res.json();}catch{return {};} }
+  function escapeHtml(s){
+    return (s??"").toString()
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function pillEstado(estado){
+    const e = (estado||"").toLowerCase();
+    if(e==="generado") return `<span class="pill warn">generado</span>`;
+    return `<span class="pill ok">${escapeHtml(estado||"—")}</span>`;
+  }
+
+  function render(docs){
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = "";
+    document.getElementById("empty").style.display = (docs.length===0) ? "block" : "none";
+
+    docs.forEach(d=>{
+      const pct = d.checklist_total ? Math.round((d.checklist_done / d.checklist_total)*100) : 0;
+
+      tbody.innerHTML += `
+        <tr>
+          <td><b>${d.id_document}</b></td>
+          <td>${escapeHtml(d.titulo || "—")}</td>
+          <td><span class="pill">${escapeHtml(d.tipo || "—")}</span></td>
+          <td>${pillEstado(d.estado)}</td>
+          <td>${d.checklist_done}/${d.checklist_total} (${pct}%)</td>
+          <td class="muted2">${escapeHtml((d.creado_en||"").replace("T"," ").slice(0,19))}</td>
+          <td>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="secondary" href="/static/documento.html?id=${d.id_document}" role="button">Ver</a>
+              <button class="btn" onclick="downloadPdf(${d.id_document})">PDF</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  async function downloadPdf(id){
+    if(!guard()) return;
+    try{
+      const res = await fetch(`${apiUrl}/documents/${id}/pdf`, { headers: authHeaders() });
+      if(res.status===401){ logout(); return; }
+      if(!res.ok){ const j=await safeJson(res); toast(j.detail||"No se pudo generar el PDF"); return; }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lexia360_document_${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    }catch(e){
+      toast("⚠️ Error de conexión");
+    }
+  }
+
+  async function load(){
+    if(!guard()) return;
+    try{
+      const res = await fetch(`${apiUrl}/documents`, { headers: authHeaders() });
+      if(res.status===401){ logout(); return; }
+      const data = await safeJson(res);
+      if(!res.ok){ toast(data.detail||"No se pudo cargar"); return; }
+      render(Array.isArray(data) ? data : []);
+    }catch(e){
+      toast("⚠️ Error de conexión");
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>
