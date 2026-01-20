@@ -1,35 +1,58 @@
 import os
-import logging
-import secrets
+from functools import lru_cache
+
 
 class Settings:
-    app_name: str = "Lexia360"
-    app_version: str = os.getenv("APP_VERSION", "lexia360-sprint1-modular-alembic")
-    algorithm: str = os.getenv("ALGORITHM", "HS256")
-    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+    # =========================
+    # APP
+    # =========================
+    APP_NAME: str = "Lexia360"
+    APP_VERSION: str = os.getenv("APP_VERSION", "lexia360-v16-documents-checklist")
+    ENV: str = os.getenv("ENV", "production")
 
-    database_url: str
-    secret_key: str
+    # =========================
+    # DATABASE
+    # =========================
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
+    if not DATABASE_URL:
+        raise RuntimeError("❌ DATABASE_URL no definida")
 
-    def __init__(self):
-        # Allow a sensible default for local development/tests
-        db = os.getenv("DATABASE_URL", "").strip()
-        if not db:
-            logging.warning("DATABASE_URL not set, defaulting to sqlite:///:memory: (not for production)")
-            self.database_url = "sqlite:///:memory:"
-        else:
-            self.database_url = db
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgres://", "postgresql+psycopg2://", 1
+        )
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgresql://", "postgresql+psycopg2://", 1
+        )
 
-        if self.database_url.startswith("postgres://"):
-            self.database_url = self.database_url.replace("postgres://", "postgresql+psycopg2://", 1)
-        if self.database_url.startswith("postgresql://"):
-            self.database_url = self.database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    # =========================
+    # SECURITY
+    # =========================
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "").strip()
+    if not SECRET_KEY or len(SECRET_KEY) < 32:
+        raise RuntimeError("❌ SECRET_KEY inválida o demasiado corta")
 
-        sk = os.getenv("SECRET_KEY", "").strip()
-        if not sk:
-            # generate a temporary secret key for dev/test to avoid hard crashes
-            sk = secrets.token_urlsafe(32)
-            logging.warning("SECRET_KEY not set; generated temporary key (not for production)")
-        self.secret_key = sk
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    )
 
-settings = Settings()
+    # =========================
+    # CORS
+    # =========================
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")
+
+    @property
+    def allowed_origins(self):
+        if self.CORS_ORIGINS == "*":
+            return ["*"]
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
