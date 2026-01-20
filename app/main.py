@@ -1014,8 +1014,31 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
         session.commit()
     return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
+
+@app.get("/inmuebles/{id_inmueble}/pdf-token")
+def inmueble_pdf_token(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    # Verifica que el inmueble es del usuario y está activo
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == id_inmueble)
+            .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == True)
+        ).first()
+        if not inm:
+            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
+    t = create_pdf_token(user.id_usuario, id_inmueble)
+    return {"token": t, "expires_minutes": PDF_TOKEN_EXPIRE_MINUTES}
+
+
 @app.get("/inmuebles/{id_inmueble}/pdf")
-def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+def inmueble_pdf(id_inmueble: int, t: str | None = None, user: Usuario = Depends(get_current_user)):
+    # Si viene token por query, lo validamos y permitimos descarga
+    if t:
+        if not verify_pdf_token(t, user.id_usuario, id_inmueble):
+            raise HTTPException(status_code=401, detail="Token PDF inválido o caducado")
+
     with Session(engine, expire_on_commit=False) as session:
         inm = session.exec(
             select(Inmueble)
@@ -1032,6 +1055,7 @@ def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     filename = f"lexia360_informe_inmueble_{id_inmueble}.pdf"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
+
 
 
 # ============================================================
