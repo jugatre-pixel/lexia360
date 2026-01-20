@@ -3,7 +3,6 @@ import json
 import traceback
 import secrets
 import io
-import base64
 from datetime import datetime, timedelta, date
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
@@ -25,7 +24,7 @@ from reportlab.lib.units import mm
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = os.getenv("APP_VERSION", "lexia360-v16-trash-eliminado-en")
+APP_VERSION = os.getenv("APP_VERSION", "lexia360-v16-lease-docs")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if not DATABASE_URL:
@@ -51,7 +50,7 @@ ALLOW_ORIGINS = ["*"] if CORS_ORIGINS == "*" else [o.strip() for o in CORS_ORIGI
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# Hash robusto, sin límite 72 bytes (evita problemas de bcrypt)
+# Hash robusto (evita límites de bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -97,6 +96,7 @@ async def catch_exceptions(request: Request, call_next):
         traceback.print_exc()
         raise
 
+
 # Static mount
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static", html=True), name="static")
@@ -135,9 +135,6 @@ class Inmueble(SQLModel, table=True):
     # soft delete
     activo: bool = Field(default=True, index=True)
 
-    # ✅ NUEVO: fecha de eliminado (para mostrar en la papelera)
-    eliminado_en: datetime | None = Field(default=None, index=True)
-
 
 class RuleRun(SQLModel, table=True):
     id_run: int | None = Field(default=None, primary_key=True)
@@ -165,15 +162,16 @@ class ZonaTensionada(SQLModel, table=True):
 
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
+
 class Document(SQLModel, table=True):
     id_document: int | None = Field(default=None, primary_key=True)
     id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
     id_inmueble: int | None = Field(default=None, index=True, foreign_key="inmueble.id_inmueble")
 
-    tipo: str = Field(index=True)  # "lease" (MVP)
+    tipo: str = Field(index=True)  # "lease"
     titulo: str
-    payload_json: str  # datos del wizard
-    pdf_bytes: bytes | None = None  # BYTEA en Postgres
+    payload_json: str
+    pdf_bytes: bytes | None = None
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -217,12 +215,29 @@ class ChatResponse(BaseModel):
     requiere_pro: bool = False
 
 
+class LeaseDocumentCreate(BaseModel):
+    inmueble_id: int
+
+    arrendador_nombre: str
+    arrendador_dni: str
+    arrendatario_nombre: str
+    arrendatario_dni: str
+
+    fecha_inicio: date
+    duracion_meses: int = 12
+    renta_mensual: float
+    fianza: float
+
+    cuenta_pago: str | None = None
+    observaciones: str | None = None
+
+
 # ============================================================
 # STARTUP + AUTO FIX SCHEMA
 # ============================================================
 def _autofix_schema():
     """
-    No sustituye Alembic, pero te evita roturas al deploy en MVP.
+    No sustituye Alembic, pero evita roturas en MVP.
     """
     with engine.begin() as conn:
         # usuario.creado_en
@@ -264,14 +279,6 @@ def _autofix_schema():
             conn.execute(text("ALTER TABLE inmueble ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
-
-        # ✅ inmueble.eliminado_en
-        exists_eliminado = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='inmueble' AND column_name='eliminado_en'
-        """)).first()
-        if not exists_eliminado:
-            conn.execute(text("ALTER TABLE inmueble ADD COLUMN eliminado_en TIMESTAMP NULL"))
 
 
 @app.on_event("startup")
@@ -328,6 +335,19 @@ def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
     return user
 
 
+def scalar_count(val):
+    # SQLAlchemy puede devolver int o Row
+    if isinstance(val, int):
+        return val
+    try:
+        return int(val[0])
+    except Exception:
+        try:
+            return int(val)
+        except Exception:
+            return 0
+
+
 # ============================================================
 # ZONAS TENSIONADAS
 # ============================================================
@@ -344,7 +364,6 @@ def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: s
         .where(ZonaTensionada.activo == True)
         .order_by(ZonaTensionada.fecha_inicio.desc())
     ).first()
-
 
 
 # ============================================================
@@ -428,9 +447,7 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
         "tipo_arrendador": inm.tipo_arrendador,
         "renta_propuesta": inm.renta_propuesta,
         "renta_anterior": inm.renta_anterior,
-        "creado_en": inm.creado_en.isoformat() if inm.creado_en else None,
         "activo": inm.activo,
-        "eliminado_en": inm.eliminado_en.isoformat() if inm.eliminado_en else None,  # ✅ clave para papelera
         "semaforo": resultados.get("semaforo") if resultados else None,
         "fecha_analisis": str(last_run.fecha_analisis) if last_run else None,
         "zona_tensionada": resultados.get("zona_tensionada") if resultados else None,
@@ -441,7 +458,7 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
 
 
 # ============================================================
-# PDF GENERATOR
+# PDF GENERATOR (INFORME INMUEBLE)
 # ============================================================
 def generar_pdf_informe(inmueble: dict) -> bytes:
     def wrap(texto: str, max_chars: int = 105) -> list[str]:
@@ -578,9 +595,23 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
         alertas = ["—"]
 
     c.setFont("Helvetica", 10)
+    def wrap2(texto: str, max_chars: int = 110) -> list[str]:
+        words = (texto or "").split()
+        lines, cur = [], ""
+        for w in words:
+            if len(cur) + len(w) + 1 <= max_chars:
+                cur = (cur + " " + w).strip()
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
     for a in alertas:
         page = ensure_space(28 * mm, page)
-        for line in wrap(f"• {a}", max_chars=110):
+        for line in wrap2(f"• {a}", max_chars=110):
             c.drawString(left, y, line)
             y -= 5.2 * mm
 
@@ -594,7 +625,7 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
         "Para un análisis completo y/o redacción contractual final, consulta con un profesional o usa la versión Pro."
     )
     c.setFont("Helvetica", 9)
-    for line in wrap(aviso, max_chars=110):
+    for line in wrap2(aviso, max_chars=110):
         c.drawString(left, y, line)
         y -= 4.8 * mm
 
@@ -604,6 +635,135 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
     out = buf.getvalue()
     buf.close()
     return out
+
+
+# ============================================================
+# PDF GENERATOR (CONTRATO ALQUILER MVP)
+# ============================================================
+def generar_pdf_contrato_alquiler(data: dict) -> bytes:
+    def wrap(texto: str, max_chars: int = 105) -> list[str]:
+        words = (texto or "").split()
+        lines, cur = [], ""
+        for w in words:
+            if len(cur) + len(w) + 1 <= max_chars:
+                cur = (cur + " " + w).strip()
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+    left = 18 * mm
+    right = w - 18 * mm
+    top = h - 18 * mm
+    y = top
+
+    def header():
+        nonlocal y
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(left, top, "Lexia360")
+        c.setFont("Helvetica", 10)
+        c.drawRightString(right, top, "Contrato de Arrendamiento (MVP)")
+        c.setLineWidth(1)
+        c.line(left, top - 6 * mm, right, top - 6 * mm)
+        y = top - 14 * mm
+
+    def ensure(min_y: float):
+        nonlocal y
+        if y < min_y:
+            c.showPage()
+            header()
+
+    def h2(t: str):
+        nonlocal y
+        ensure(40 * mm)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(left, y, t)
+        y -= 7 * mm
+        c.setStrokeGray(0.85)
+        c.setLineWidth(0.6)
+        c.line(left, y, right, y)
+        c.setStrokeGray(0)
+        y -= 8 * mm
+
+    def p(texto: str):
+        nonlocal y
+        c.setFont("Helvetica", 10)
+        for line in wrap(texto, 110):
+            ensure(22 * mm)
+            c.drawString(left, y, line)
+            y -= 5.2 * mm
+        y -= 2.5 * mm
+
+    header()
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(left, y, "CONTRATO DE ARRENDAMIENTO (MVP)")
+    y -= 10 * mm
+
+    h2("1) Partes")
+    p(f"Arrendador: {data['arrendador_nombre']} (DNI/NIE: {data['arrendador_dni']}).")
+    p(f"Arrendatario: {data['arrendatario_nombre']} (DNI/NIE: {data['arrendatario_dni']}).")
+
+    h2("2) Objeto e inmueble")
+    p(f"Inmueble sito en: {data.get('direccion','—')}, {data.get('municipio','—')}, {data.get('comunidad_autonoma','—')}.")
+    if data.get("codigo_postal"):
+        p(f"Código Postal: {data.get('codigo_postal')}.")
+    if data.get("superficie_m2"):
+        p(f"Superficie aproximada: {data.get('superficie_m2')} m².")
+
+    h2("3) Duración")
+    p(f"El contrato comienza el {data['fecha_inicio']} y tendrá una duración inicial de {data['duracion_meses']} meses, salvo prórrogas y normativa aplicable.")
+
+    h2("4) Renta y fianza")
+    p(f"Renta mensual: {data['renta_mensual']} €.")
+    p(f"Fianza: {data['fianza']} €.")
+    if data.get("cuenta_pago"):
+        p(f"Forma de pago: transferencia a la cuenta {data['cuenta_pago']}.")
+
+    h2("5) Cláusulas esenciales (MVP)")
+    p("a) Conservación: el arrendatario cuidará el inmueble y comunicará incidencias.")
+    p("b) Gastos y suministros: se asignarán conforme a pacto entre las partes y la normativa aplicable.")
+    p("c) Subarriendo/cesión: prohibido salvo autorización expresa por escrito del arrendador.")
+    p("d) Protección de datos: las partes se comprometen a tratar los datos conforme a la normativa aplicable.")
+
+    if data.get("observaciones"):
+        h2("6) Observaciones")
+        p(data["observaciones"])
+
+    h2("7) Firma")
+    p("En prueba de conformidad, las partes firman el presente documento en la fecha indicada.")
+    p("Arrendador: ______________________    Arrendatario: ______________________")
+
+    c.showPage()
+    c.save()
+    out = buf.getvalue()
+    buf.close()
+    return out
+
+
+# ============================================================
+# DOWNLOAD TOKEN (DOCUMENTS)
+# ============================================================
+def create_download_token(doc_id: int, minutes: int = 30) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=minutes)
+    payload = {"doc": doc_id, "exp": expire}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_download_token(token: str) -> int:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        doc_id = payload.get("doc")
+        if not doc_id:
+            raise HTTPException(status_code=401, detail="Token de descarga inválido")
+        return int(doc_id)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token de descarga inválido")
 
 
 # ============================================================
@@ -622,55 +782,36 @@ def head_root():
     return Response(status_code=200)
 
 
-def _scalar_first(session: Session, sql: str) -> int:
-    row = session.exec(text(sql)).first()
-    if row is None:
-        return 0
-    if isinstance(row, int):
-        return int(row)
-    # Row/tuple
-    try:
-        return int(row[0])
-    except Exception:
-        return 0
-
-
+# ============================================================
+# ROUTES (STATUS) - NO FALLA + CAMPOS PARA DASHBOARD
+# ============================================================
 @app.get("/status")
-def status():
-    def scalar_count(x) -> int:
-        # SQLAlchemy/SQLModel puede devolver Row, tuple o int según versión
-        if x is None:
-            return 0
-        if isinstance(x, (int, float)):
-            return int(x)
-        try:
-            return int(x[0])
-        except Exception:
-            try:
-                return int(list(x)[0])
-            except Exception:
-                return 0
-
+def status(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
         users_count = scalar_count(session.exec(text("SELECT COUNT(*) FROM usuario")).one())
         zonas_count = scalar_count(session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one())
-        inm_activos = scalar_count(session.exec(text("SELECT COUNT(*) FROM inmueble WHERE activo = TRUE")).one())
-        inm_eliminados = scalar_count(session.exec(text("SELECT COUNT(*) FROM inmueble WHERE activo = FALSE")).one())
 
-        # “documentos”: todavía no tienes tabla Document.
-        # De momento lo más honesto es contar “rulerun” (análisis/generaciones).
-        docs = scalar_count(session.exec(text("SELECT COUNT(*) FROM rulerun")).one())
+        inm_activos = scalar_count(session.exec(text(
+            "SELECT COUNT(*) FROM inmueble WHERE id_usuario = :uid AND activo = TRUE"
+        ), {"uid": user.id_usuario}).one())
+
+        inm_trash = scalar_count(session.exec(text(
+            "SELECT COUNT(*) FROM inmueble WHERE id_usuario = :uid AND activo = FALSE"
+        ), {"uid": user.id_usuario}).one())
+
+        docs = scalar_count(session.exec(text(
+            "SELECT COUNT(*) FROM document WHERE id_usuario = :uid"
+        ), {"uid": user.id_usuario}).one())
 
         return {
             "status": "✅ OK",
-            "usuarios_registrados": users_count,
-            "inmuebles_activos": inm_activos,
-            "inmuebles_eliminados": inm_eliminados,
-            "documentos": docs,
-            "zonas_tensionadas": zonas_count,
+            "usuarios_registrados": int(users_count or 0),
+            "zonas_tensionadas": int(zonas_count or 0),
+            "inmuebles_activos": int(inm_activos or 0),
+            "inmuebles_eliminados": int(inm_trash or 0),
+            "documentos": int(docs or 0),
             "version": APP_VERSION,
         }
-
 
 
 # ============================================================
@@ -693,7 +834,6 @@ def register(payload: RegisterPayload):
         session.commit()
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
-
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
     with Session(engine, expire_on_commit=False) as session:
@@ -702,7 +842,6 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
-
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
@@ -715,7 +854,7 @@ def me(user: Usuario = Depends(get_current_user)):
 @app.post("/admin/bootstrap")
 def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
     if not ADMIN_BOOTSTRAP_SECRET:
-        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío (Secret File no montado).")
+        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío.")
     if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
         raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
@@ -780,11 +919,6 @@ def listar_zonas(admin: Usuario = Depends(require_admin)):
 # ============================================================
 # ROUTES (INMUEBLES)
 # ============================================================
-
-# 🔴 MUY IMPORTANTE:
-# Para evitar que /inmuebles/{id} capture "trash" y cause 422,
-# define rutas fijas como /inmuebles/trash ANTES de /inmuebles/{id_inmueble}.
-
 @app.get("/inmuebles/trash")
 def listar_papelera(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -792,14 +926,9 @@ def listar_papelera(user: Usuario = Depends(get_current_user)):
             select(Inmueble)
             .where(Inmueble.id_usuario == user.id_usuario)
             .where(Inmueble.activo == False)
-            .order_by(Inmueble.eliminado_en.desc(), Inmueble.id_inmueble.desc())
+            .order_by(Inmueble.id_inmueble.desc())
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
-
-# ✅ Alias por si tu frontend llama /_trash
-@app.get("/inmuebles/_trash")
-def listar_papelera_alias(user: Usuario = Depends(get_current_user)):
-    return listar_papelera(user)
 
 @app.post("/inmuebles/{id_inmueble}/restore")
 def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -814,7 +943,6 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
             raise HTTPException(status_code=404, detail="Inmueble no encontrado en papelera")
 
         inm.activo = True
-        inm.eliminado_en = None
         session.add(inm)
         session.commit()
 
@@ -839,11 +967,6 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
 
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
 
-# ✅ Alias por si tu frontend llama /hard
-@app.delete("/inmuebles/{id_inmueble}/hard")
-def borrar_definitivo_alias(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    return borrar_definitivo(id_inmueble, user)
-
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
     try:
@@ -861,7 +984,6 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
                 renta_propuesta=payload.renta_propuesta,
                 renta_anterior=payload.renta_anterior,
                 activo=True,
-                eliminado_en=None,
             )
             session.add(inm)
             session.commit()
@@ -901,7 +1023,6 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
             select(Inmueble)
             .where(Inmueble.id_inmueble == id_inmueble)
             .where(Inmueble.id_usuario == user.id_usuario)
-            .where(Inmueble.activo == True)
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
@@ -918,12 +1039,9 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
-
         inm.activo = False
-        inm.eliminado_en = datetime.utcnow()  # ✅ para mostrar en papelera
         session.add(inm)
         session.commit()
-
     return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
 @app.get("/inmuebles/{id_inmueble}/pdf")
@@ -937,13 +1055,122 @@ def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
-
         payload = inmueble_to_out(session, inm)
 
     pdf_bytes = generar_pdf_informe(payload)
     filename = f"lexia360_informe_inmueble_{id_inmueble}.pdf"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
+
+
+# ============================================================
+# ROUTES (DOCUMENTS)
+# ============================================================
+@app.post("/documents/lease")
+def create_lease_document(payload: LeaseDocumentCreate, user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        inm = session.exec(
+            select(Inmueble)
+            .where(Inmueble.id_inmueble == payload.inmueble_id)
+            .where(Inmueble.id_usuario == user.id_usuario)
+        ).first()
+        if not inm:
+            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
+        doc_payload = {
+            "tipo": "lease",
+            "titulo": "Contrato de Arrendamiento (MVP)",
+            "arrendador_nombre": payload.arrendador_nombre.strip(),
+            "arrendador_dni": payload.arrendador_dni.strip(),
+            "arrendatario_nombre": payload.arrendatario_nombre.strip(),
+            "arrendatario_dni": payload.arrendatario_dni.strip(),
+            "fecha_inicio": str(payload.fecha_inicio),
+            "duracion_meses": int(payload.duracion_meses),
+            "renta_mensual": float(payload.renta_mensual),
+            "fianza": float(payload.fianza),
+            "cuenta_pago": (payload.cuenta_pago.strip() if payload.cuenta_pago else None),
+            "observaciones": (payload.observaciones.strip() if payload.observaciones else None),
+
+            "direccion": inm.direccion,
+            "municipio": inm.municipio,
+            "comunidad_autonoma": inm.comunidad_autonoma,
+            "codigo_postal": inm.codigo_postal,
+            "superficie_m2": inm.superficie_m2,
+        }
+
+        pdf = generar_pdf_contrato_alquiler(doc_payload)
+
+        doc = Document(
+            id_usuario=user.id_usuario,
+            id_inmueble=inm.id_inmueble,
+            tipo="lease",
+            titulo="Contrato de Arrendamiento (MVP)",
+            payload_json=json.dumps(doc_payload, ensure_ascii=False),
+            pdf_bytes=pdf,
+        )
+        session.add(doc)
+        session.commit()
+        session.refresh(doc)
+
+        dl_token = create_download_token(doc.id_document, minutes=60)
+
+        return {"ok": True, "id_document": doc.id_document, "download_token": dl_token}
+
+
+@app.get("/documents")
+def list_documents(user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        docs = session.exec(
+            select(Document)
+            .where(Document.id_usuario == user.id_usuario)
+            .order_by(Document.id_document.desc())
+        ).all()
+        return [{
+            "id_document": d.id_document,
+            "tipo": d.tipo,
+            "titulo": d.titulo,
+            "id_inmueble": d.id_inmueble,
+            "creado_en": d.creado_en.isoformat(),
+        } for d in docs]
+
+
+@app.get("/documents/{id_document}/pdf")
+def download_document_pdf(id_document: int, request: Request, token: str | None = None):
+    """
+    Descarga:
+    - con token de descarga: /documents/{id}/pdf?token=...
+    - o con auth normal: Authorization: Bearer ...
+    """
+    with Session(engine, expire_on_commit=False) as session:
+        doc = session.exec(select(Document).where(Document.id_document == id_document)).first()
+        if not doc or not doc.pdf_bytes:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+        if token:
+            doc_id = verify_download_token(token)
+            if doc_id != id_document:
+                raise HTTPException(status_code=401, detail="Token no corresponde al documento")
+        else:
+            # auth normal
+            auth = request.headers.get("authorization") or ""
+            if not auth.lower().startswith("bearer "):
+                raise HTTPException(status_code=401, detail="Not authenticated")
+            tok = auth.split(" ", 1)[1].strip()
+            try:
+                payload = jwt.decode(tok, SECRET_KEY, algorithms=[ALGORITHM])
+                email = payload.get("sub")
+                if not email:
+                    raise HTTPException(status_code=401, detail="Token inválido")
+            except JWTError:
+                raise HTTPException(status_code=401, detail="Token inválido")
+
+            user = session.exec(select(Usuario).where(Usuario.email == email)).first()
+            if not user or user.id_usuario != doc.id_usuario:
+                raise HTTPException(status_code=403, detail="No autorizado")
+
+        filename = f"lexia360_document_{id_document}.pdf"
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+        return StreamingResponse(io.BytesIO(doc.pdf_bytes), media_type="application/pdf", headers=headers)
 
 
 # ============================================================
