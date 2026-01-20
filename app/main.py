@@ -45,6 +45,8 @@ if len(SECRET_KEY) < 32:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+
+# ✅ CRÍTICO: esto va en CONFIG, global
 PDF_TOKEN_EXPIRE_MINUTES = int(os.getenv("PDF_TOKEN_EXPIRE_MINUTES", "10"))
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").strip()
@@ -55,7 +57,7 @@ engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 # Hash robusto (evita líos con bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-# 👇 IMPORTANTE: auto_error=False para permitir endpoints con token en query (PDF) sin Authorization header
+# ✅ auto_error=False para permitir endpoints PDF con token ?t=... sin Authorization
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
@@ -166,7 +168,6 @@ class ZonaTensionada(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
-# ✅ NUEVO: Documento generado (contrato, burofax, etc.)
 class Document(SQLModel, table=True):
     id_document: int | None = Field(default=None, primary_key=True)
     id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
@@ -176,11 +177,10 @@ class Document(SQLModel, table=True):
     titulo: str
     estado: str = Field(default="generado")  # generado | firmado | archivado
 
-    payload_json: str = Field(default="{}")  # datos del wizard (debug / auditoría)
+    payload_json: str = Field(default="{}")
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
-# ✅ NUEVO: Checklist asociado a documento
 class ChecklistItem(SQLModel, table=True):
     id_item: int | None = Field(default=None, primary_key=True)
     id_document: int = Field(index=True, foreign_key="document.id_document")
@@ -233,7 +233,6 @@ class ChatResponse(BaseModel):
     requiere_pro: bool = False
 
 
-# ✅ NUEVO: payload mínimo para contrato (Wizard)
 class LeaseCreate(BaseModel):
     inmueble_id: int
     arrendatario_nombre: str | None = None
@@ -290,15 +289,12 @@ def _autofix_schema():
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
-        # document.payload_json (por si la tabla existía sin esa columna)
+        # document.payload_json (si document existía sin esa columna)
         exists_doc_payload = conn.execute(text("""
             SELECT 1 FROM information_schema.columns
             WHERE table_name='document' AND column_name='payload_json'
         """)).first()
-        if exists_doc_payload is None:
-            # si la tabla no existe aún, create_all la creará
-            pass
-        elif not exists_doc_payload:
+        if exists_doc_payload and not exists_doc_payload:
             conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
 
 
@@ -328,6 +324,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
+# ✅ CRÍTICO: create_access_token bien (sin funciones anidadas)
 def create_access_token(email: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
@@ -785,7 +782,7 @@ def status():
         zonas_count = scalar("SELECT COUNT(*) FROM zonatensionada")
         inm_activos = scalar("SELECT COUNT(*) FROM inmueble WHERE activo = TRUE")
         inm_trash = scalar("SELECT COUNT(*) FROM inmueble WHERE activo = FALSE")
-        # por si la tabla document aún no existe en una BD vieja (primer arranque)
+
         try:
             docs_count = scalar("SELECT COUNT(*) FROM document")
         except Exception:
@@ -911,7 +908,6 @@ def listar_zonas(admin: Usuario = Depends(require_admin)):
 # ============================================================
 # ROUTES (INMUEBLES)
 # ============================================================
-# IMPORTANTE: rutas fijas antes que /inmuebles/{id}
 @app.get("/inmuebles/trash")
 def listar_papelera(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -963,7 +959,7 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
 
 
-# Alias por compatibilidad con tu HTML viejo
+# ✅ alias por compatibilidad con tu HTML
 @app.delete("/inmuebles/{id_inmueble}/hard")
 def borrar_definitivo_alias(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     return borrar_definitivo(id_inmueble, user)
@@ -1053,7 +1049,6 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
 
 @app.get("/inmuebles/{id_inmueble}/pdf-token")
 def inmueble_pdf_token(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    # Verifica que el inmueble es del usuario y está activo
     with Session(engine, expire_on_commit=False) as session:
         inm = session.exec(
             select(Inmueble)
@@ -1075,11 +1070,10 @@ def inmueble_pdf(
     bearer: str | None = Depends(oauth2_scheme),
 ):
     """
-    ✅ Descarga PDF:
-    - Si viene Authorization Bearer normal -> OK
-    - Si viene token en query ?t=... -> OK (sin Authorization header)
+    Descarga PDF:
+    - Con Authorization Bearer normal -> OK
+    - Sin Authorization, usando token en query ?t=... -> OK
     """
-    # 1) Autenticación por Bearer normal
     if bearer:
         user = get_current_user(bearer)
         with Session(engine, expire_on_commit=False) as session:
@@ -1092,8 +1086,6 @@ def inmueble_pdf(
             if not inm:
                 raise HTTPException(status_code=404, detail="Inmueble no encontrado")
             payload = inmueble_to_out(session, inm)
-
-    # 2) Autenticación por token PDF (query param)
     else:
         if not t:
             raise HTTPException(status_code=401, detail="Not authenticated")
@@ -1122,17 +1114,10 @@ def inmueble_pdf(
 
 
 # ============================================================
-# ROUTES (DOCUMENTS + CHECKLIST)  ✅ NUEVO
+# ROUTES (DOCUMENTS + CHECKLIST)
 # ============================================================
 @app.post("/documents/lease")
 def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_current_user)):
-    """
-    MVP:
-    - valida inmueble
-    - crea Document(tipo=lease)
-    - crea checklist base
-    - devuelve id_document
-    """
     with Session(engine, expire_on_commit=False) as session:
         inm = session.exec(
             select(Inmueble)
