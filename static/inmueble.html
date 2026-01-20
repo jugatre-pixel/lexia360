@@ -1,32 +1,109 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/>
-<title>Lexia360 · Inmueble</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Inmueble</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
 </head>
 <body>
 <main class="container">
-  <h2 id="title"></h2>
-  <pre id="data"></pre>
-  <a id="pdf" role="button">Descargar PDF</a>
+  <nav>
+    <ul>
+      <li><strong>Lexia360</strong></li>
+    </ul>
+    <ul>
+      <li><a href="/static/dashboard.html">Dashboard</a></li>
+      <li><a href="/static/inmuebles.html">Inmuebles</a></li>
+      <li><a href="/static/papelera.html">Papelera</a></li>
+      <li><a href="#" onclick="logout(); return false;">Salir</a></li>
+    </ul>
+  </nav>
+
+  <h2 id="title" style="margin-top:12px;"></h2>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0;">
+    <button id="btnPdf" class="primary" onclick="downloadPDF()">📄 Descargar PDF</button>
+    <a id="back" role="button" class="secondary" href="/static/inmuebles.html">Volver</a>
+  </div>
+
+  <details open>
+    <summary>Ver JSON (debug)</summary>
+    <pre id="data" style="white-space:pre-wrap;"></pre>
+  </details>
+
+  <p id="msg" style="margin-top:10px;"></p>
 </main>
 
 <script>
-const api=location.origin;
-const token=localStorage.getItem("token");
-if(!token) location.href="/static/index.html";
-const id=new URLSearchParams(location.search).get("id");
+  const api = location.origin;
+  const token = localStorage.getItem("token");
+  const id = new URLSearchParams(location.search).get("id");
 
-async function load(){
-  const r=await fetch(api+"/inmuebles/"+id,{headers:{Authorization:`Bearer ${token}`}});
-  if(r.status===401) location.href="/static/index.html";
-  const d=await r.json();
-  document.getElementById("title").textContent=d.direccion;
-  document.getElementById("data").textContent=JSON.stringify(d,null,2);
-  document.getElementById("pdf").href=api+"/inmuebles/"+id+"/pdf";
-}
-load();
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    location.href="/static/index.html";
+  }
+
+  function setMsg(text, ok=true){
+    const el = document.getElementById("msg");
+    el.textContent = text || "";
+    el.style.color = ok ? "#027a48" : "#b42318";
+  }
+
+  async function load(){
+    if(!token){ location.href="/static/index.html"; return; }
+    if(!id){ setMsg("Falta ?id= en la URL", false); return; }
+
+    try{
+      const r = await fetch(`${api}/inmuebles/${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if(r.status === 401){ logout(); return; }
+
+      const d = await r.json().catch(()=>null);
+      if(!r.ok){
+        setMsg(d?.detail || "No se pudo cargar el inmueble.", false);
+        return;
+      }
+
+      document.getElementById("title").textContent = d?.direccion || `Inmueble ${id}`;
+      document.getElementById("data").textContent = JSON.stringify(d, null, 2);
+      setMsg("");
+    }catch(e){
+      setMsg("⚠️ Error de conexión con el servidor.", false);
+    }
+  }
+
+  async function downloadPDF(){
+    if(!token){ logout(); return; }
+    setMsg("");
+
+    try{
+      // 1) Pedir token de descarga
+      const r = await fetch(`${api}/inmuebles/${id}/pdf-token`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if(r.status === 401){ logout(); return; }
+
+      const data = await r.json().catch(()=>({}));
+      if(!r.ok || !data.token){
+        setMsg(data.detail || "No se pudo generar el token de descarga.", false);
+        return;
+      }
+
+      // 2) Descargar por URL con token en querystring
+      window.location.href = `${api}/inmuebles/${id}/pdf?t=${encodeURIComponent(data.token)}`;
+
+    }catch(e){
+      setMsg("⚠️ Error de conexión al generar token PDF.", false);
+    }
+  }
+
+  load();
 </script>
 </body>
 </html>
