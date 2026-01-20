@@ -1116,6 +1116,52 @@ def inmueble_pdf(
 # ============================================================
 # ROUTES (DOCUMENTS + CHECKLIST)
 # ============================================================
+class ChecklistUpdate(BaseModel):
+    completado: bool
+
+
+@app.patch("/documents/{id_document}/checklist/{id_item}")
+def update_checklist_item(
+    id_document: int,
+    id_item: int,
+    payload: ChecklistUpdate,
+    user: Usuario = Depends(get_current_user)
+):
+    with Session(engine, expire_on_commit=False) as session:
+        # Verifica doc del usuario
+        doc = session.exec(
+            select(Document)
+            .where(Document.id_document == id_document)
+            .where(Document.id_usuario == user.id_usuario)
+        ).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+        # Item del doc
+        item = session.exec(
+            select(ChecklistItem)
+            .where(ChecklistItem.id_item == id_item)
+            .where(ChecklistItem.id_document == id_document)
+        ).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Item de checklist no encontrado")
+
+        item.completado = bool(payload.completado)
+        item.completado_en = datetime.utcnow() if item.completado else None
+
+        session.add(item)
+        session.commit()
+        session.refresh(item)
+
+        return {
+            "ok": True,
+            "id_item": item.id_item,
+            "id_document": item.id_document,
+            "completado": item.completado,
+            "completado_en": item.completado_en.isoformat() if item.completado_en else None
+        }
+
+
 @app.post("/documents/lease")
 def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
