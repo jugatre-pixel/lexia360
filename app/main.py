@@ -1257,6 +1257,54 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
 
+# ============================================================
+# ROUTES (DOCUMENTS LIST) ✅ NUEVO
+# ============================================================
+@app.get("/documents")
+def list_documents(
+    inmueble_id: int | None = None,
+    user: Usuario = Depends(get_current_user)
+):
+    """
+    Lista documentos del usuario.
+    Opcional: filtrar por inmueble_id.
+    """
+    with Session(engine, expire_on_commit=False) as session:
+        q = select(Document).where(Document.id_usuario == user.id_usuario)
+        if inmueble_id is not None:
+            q = q.where(Document.id_inmueble == inmueble_id)
+        docs = session.exec(q.order_by(Document.id_document.desc()).limit(50)).all()
+
+        out = []
+        for d in docs:
+            # checklist count rápido
+            total = session.exec(
+                text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id"),
+                {"id": d.id_document}
+            ).one()
+            if not isinstance(total, int):
+                total = total[0]
+
+            done = session.exec(
+                text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id AND completado = TRUE"),
+                {"id": d.id_document}
+            ).one()
+            if not isinstance(done, int):
+                done = done[0]
+
+            out.append({
+                "id_document": d.id_document,
+                "id_inmueble": d.id_inmueble,
+                "tipo": d.tipo,
+                "titulo": d.titulo,
+                "estado": d.estado,
+                "creado_en": d.creado_en.isoformat(),
+                "checklist_total": int(total),
+                "checklist_done": int(done),
+            })
+
+        return out
+
 
 # ============================================================
 # CHAT (MOCK)
