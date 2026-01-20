@@ -338,15 +338,7 @@
     };
   }
 
-  let lastDocId = 
-const open = document.createElement("a");
-open.href = `/static/document.html?id=${lastDocId}`;
-open.textContent = "Abrir documento";
-open.style.fontWeight = "900";
-open.style.display = "inline-block";
-open.style.marginTop = "8px";
-document.getElementById("result").appendChild(open);
-
+  let lastDocId = null;
 
   async function createDoc(){
     setToast("");
