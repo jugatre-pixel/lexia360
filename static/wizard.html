@@ -3,324 +3,422 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Lexia360 · Nuevo expediente</title>
+  <title>Lexia360 · Wizard · Contrato de alquiler</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; --danger:#b42318; --ok:#027a48; }
-    body{ margin:0; background:var(--bg); }
-    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
-    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
-    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
-    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 14px 28px rgba(11,95,255,.18); }
-    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
-    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
-    .btn.danger{ border-color:#f0c9c8; color:var(--danger); }
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
-    .muted{ color:var(--muted); }
-    .small{ font-size:13px; }
-    .steps{ display:flex; gap:8px; flex-wrap:wrap; }
-    .step{ padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; font-weight:1000; font-size:12px; color:var(--muted); }
-    .step.active{ border-color:rgba(11,95,255,.35); color:#101828; box-shadow:0 10px 26px rgba(11,95,255,.12); }
-    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    @media(max-width:900px){ .row{ grid-template-columns:1fr; } }
-    input, select{ border-radius:12px !important; }
-    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
-    .toast.ok{ color:var(--ok); }
-    .toast.err{ color:var(--danger); }
-    .hint{ border:1px dashed var(--border); background:#fff; border-radius:16px; padding:12px; }
-    .pill{
-      display:inline-block; padding:6px 10px; border-radius:999px;
-      border:1px solid var(--border); background:#fff; font-weight:900; font-size:12px; color:#101828;
+    :root{
+      --brand:#0b5fff; --brand2:#5b8cff;
+      --bg:#0b1220; --muted:rgba(255,255,255,.72);
+      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --radius:16px;
+      --danger:#b42318; --ok:#027a48;
     }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 56%, #f6f7fb 56%, #f6f7fb 100%);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:rgba(11,18,32,.62);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
+    .badge{
+      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 14px 28px rgba(11,95,255,.22);
+    }
+    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:8px 12px;border-radius:999px;
+      text-decoration:none;font-weight:900;font-size:13px;
+    }
+    .chip.active{background:rgba(255,255,255,.12)}
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff;padding:10px 14px;border-radius:12px;
+      font-weight:900;cursor:pointer;
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
+    .hero{padding:28px 0 10px;}
+    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
+    .sub{color:var(--muted);margin:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:900px){ .row{ grid-template-columns:1fr; } }
+    .muted2{color:#667085;font-size:13px}
+    input,select,textarea{border-radius:12px !important;}
+    .steps{display:flex;gap:8px;flex-wrap:wrap}
+    .step{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:#fff;font-weight:1000;font-size:12px;color:#667085}
+    .step.active{border-color:rgba(11,95,255,.35);color:#101828;box-shadow:0 10px 26px rgba(11,95,255,.12)}
+    .toast{margin-top:10px;font-weight:900;font-size:13px}
+    .toast.ok{color:var(--ok)}
+    .toast.err{color:var(--danger)}
+    pre{background:#0b1220;color:#e7efff;padding:12px;border-radius:14px;overflow:auto}
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap top">
-    <a class="brand" href="/static/dashboard.html">
-      <div class="badge">⚖️</div>
-      <div>Lexia360</div>
-    </a>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <span id="who" class="pill" style="display:none;"></span>
-      <a class="btn" href="/static/inmuebles.html">📁 Expedientes</a>
-      <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
-      <button class="btn" onclick="logout()">Cerrar sesión</button>
+  <div class="topbar">
+    <div class="wrap toprow">
+      <a class="brand" href="/static/dashboard.html">
+        <div class="badge">⚖️</div>
+        <div>Lexia360</div>
+      </a>
+      <div class="navlinks">
+        <a class="chip" href="/static/dashboard.html">Dashboard</a>
+        <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
+        <a class="chip active" href="/static/wizard.html">Wizard</a>
+        <a class="chip" href="/static/papelera.html">Papelera</a>
+        <button class="btn" onclick="logout()">Salir</button>
+      </div>
     </div>
   </div>
-</header>
 
-<main class="wrap">
-  <section class="card">
-    <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
-      <div>
-        <h3 style="margin:0;">Nuevo expediente</h3>
-        <div class="muted small">MVP: crea inmueble + análisis + checklist. Sprint 2: wizard por producto.</div>
-      </div>
-      <div class="steps">
-        <span class="step active" id="s1">1) Datos</span>
-        <span class="step" id="s2">2) Condiciones</span>
-        <span class="step" id="s3">3) Confirmación</span>
-      </div>
-    </div>
+  <section class="wrap hero">
+    <h2 class="headline">Wizard · Contrato de alquiler</h2>
+    <p class="sub">Genera contrato (MVP), guarda en BD y descarga PDF.</p>
+  </section>
 
-    <hr/>
-
-    <div id="toast" class="toast"></div>
-
-    <!-- Step 1 -->
-    <div id="step1">
-      <div class="row">
+  <section class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
         <div>
-          <label>Dirección *</label>
-          <input id="direccion" type="text" placeholder="Calle, número, piso..." />
+          <b>Contrato de alquiler · lease_v1</b>
+          <div class="muted2">Requiere sesión activa (token). Si hay 401, te devuelve al login.</div>
         </div>
-        <div>
-          <label>Código postal</label>
-          <input id="cp" type="text" placeholder="28001" />
+        <div class="steps">
+          <span class="step active" id="s1">1) Inmueble</span>
+          <span class="step" id="s2">2) Partes</span>
+          <span class="step" id="s3">3) Condiciones</span>
+          <span class="step" id="s4">4) Generar</span>
         </div>
       </div>
 
-      <div class="row">
-        <div>
-          <label>Municipio *</label>
-          <input id="municipio" type="text" placeholder="Madrid" />
-        </div>
-        <div>
-          <label>Comunidad Autónoma *</label>
-          <input id="ca" type="text" placeholder="Comunidad de Madrid" />
+      <div id="toast" class="toast"></div>
+      <hr/>
+
+      <!-- STEP 1 -->
+      <div id="step1">
+        <label>Selecciona inmueble</label>
+        <select id="inmuebleSelect"></select>
+        <div class="muted2" style="margin-top:6px;">Si está vacío, primero crea un inmueble en “Inmuebles”.</div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn primary" onclick="next(2)">Continuar</button>
         </div>
       </div>
 
-      <div class="row">
-        <div>
-          <label>Superficie (m²)</label>
-          <input id="m2" type="number" min="0" placeholder="80" />
+      <!-- STEP 2 -->
+      <div id="step2" style="display:none;">
+        <div class="row">
+          <div>
+            <label>Arrendador · Nombre *</label>
+            <input id="arrNombre" type="text" placeholder="Nombre y apellidos"/>
+          </div>
+          <div>
+            <label>Arrendador · DNI/NIE *</label>
+            <input id="arrDni" type="text" placeholder="12345678A"/>
+          </div>
         </div>
-        <div class="hint">
-          <b>Tip</b>
-          <div class="muted small" style="margin-top:6px;">
-            Este expediente alimentará el “Contrato de alquiler + anexos + checklist”.
-            Próximamente añadiremos “Burofax/Requerimiento” como producto.
+
+        <div class="row">
+          <div>
+            <label>Arrendatario · Nombre *</label>
+            <input id="atNombre" type="text" placeholder="Nombre y apellidos"/>
+          </div>
+          <div>
+            <label>Arrendatario · DNI/NIE *</label>
+            <input id="atDni" type="text" placeholder="12345678A"/>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn" onclick="next(1)">Atrás</button>
+          <button class="btn primary" onclick="next(3)">Continuar</button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div id="step3" style="display:none;">
+        <div class="row">
+          <div>
+            <label>Fecha de inicio *</label>
+            <input id="fechaInicio" type="date"/>
+          </div>
+          <div>
+            <label>Duración (meses)</label>
+            <input id="durMeses" type="number" min="1" value="12"/>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Renta mensual (€) *</label>
+            <input id="renta" type="number" min="0" step="0.01" placeholder="1200"/>
+          </div>
+          <div>
+            <label>Fianza (€) (opcional)</label>
+            <input id="fianza" type="number" min="0" step="0.01" placeholder="(si vacío, = renta)"/>
+          </div>
+        </div>
+
+        <label>Dirección para notificaciones (opcional)</label>
+        <textarea id="notif" rows="3" placeholder="Dirección completa..."></textarea>
+
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn" onclick="next(2)">Atrás</button>
+          <button class="btn primary" onclick="next(4)">Continuar</button>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div id="step4" style="display:none;">
+        <h4 style="margin:0 0 6px;">Generar y guardar</h4>
+        <div class="muted2">Se crea el documento en BD y se genera PDF descargable.</div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn primary" onclick="createDoc()">✅ Generar contrato</button>
+          <button class="btn" onclick="next(3)">Atrás</button>
+        </div>
+
+        <div id="result" style="margin-top:14px; display:none;">
+          <hr/>
+          <b>Resultado</b>
+          <div class="muted2">Documento creado: <span id="docId"></span></div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+            <button class="btn primary" onclick="downloadPdf()">⬇️ Descargar PDF</button>
+            <button class="btn" onclick="loadJson()">🧾 Ver JSON (debug)</button>
+          </div>
+
+          <div id="jsonBox" style="margin-top:10px; display:none;">
+            <pre id="jsonPre"></pre>
           </div>
         </div>
       </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button class="btn primary" onclick="next(2)">Continuar</button>
-      </div>
     </div>
-
-    <!-- Step 2 -->
-    <div id="step2" style="display:none;">
-      <div class="row">
-        <div>
-          <label>Tipo de arrendamiento</label>
-          <select id="tipoArr">
-            <option value="vivienda_habitual">Vivienda habitual</option>
-            <option value="temporada">Temporada</option>
-            <option value="habitacion">Habitación</option>
-          </select>
-        </div>
-        <div>
-          <label>Tipo de arrendador</label>
-          <select id="tipoArrendador">
-            <option value="persona_fisica">Persona física</option>
-            <option value="persona_juridica">Persona jurídica</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Renta propuesta (€) *</label>
-          <input id="renta" type="number" min="0" step="0.01" placeholder="1200" />
-        </div>
-        <div>
-          <label>Renta anterior (€)</label>
-          <input id="rentaAnterior" type="number" min="0" step="0.01" placeholder="1100" />
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button class="btn" onclick="next(1)">Atrás</button>
-        <button class="btn primary" onclick="next(3)">Continuar</button>
-      </div>
-    </div>
-
-    <!-- Step 3 -->
-    <div id="step3" style="display:none;">
-      <h4 style="margin:0 0 6px;">Revisión</h4>
-      <div class="muted small">Comprueba los datos antes de crear el expediente.</div>
-
-      <div id="review" style="margin-top:12px;"></div>
-
-      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px;">
-        <button class="btn" onclick="next(2)">Atrás</button>
-        <button class="btn primary" id="btnCreate" onclick="create()">Crear expediente</button>
-      </div>
-    </div>
-
   </section>
-</main>
 
 <script>
   const apiUrl = location.origin;
 
   function token(){ return localStorage.getItem("token"); }
+  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
     location.href="/static/index.html";
   }
-  function authHeaders(extra={}){
-    return { ...extra, "Authorization": `Bearer ${token()}` };
+
+  async function guard(){
+    const t = token();
+    if(!t){ logout(); return false; }
+    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+    if(res.status===401){ logout(); return false; }
+    return res.ok;
   }
 
-  async function safeJson(res){ try{ return await res.json(); } catch { return {}; } }
-
-  function esc(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-  }
-
-  function setToast(text, ok=true){
+  function setToast(msg, ok=true){
     const el = document.getElementById("toast");
     el.className = "toast " + (ok ? "ok" : "err");
-    el.textContent = text || "";
-    if(text){
+    el.textContent = msg || "";
+    if(msg){
       setTimeout(()=>{ el.textContent=""; }, 2600);
     }
   }
 
   function setStep(n){
-    document.getElementById("step1").style.display = (n===1) ? "block" : "none";
-    document.getElementById("step2").style.display = (n===2) ? "block" : "none";
-    document.getElementById("step3").style.display = (n===3) ? "block" : "none";
-    document.getElementById("s1").classList.toggle("active", n===1);
-    document.getElementById("s2").classList.toggle("active", n===2);
-    document.getElementById("s3").classList.toggle("active", n===3);
+    for(let i=1;i<=4;i++){
+      document.getElementById("step"+i).style.display = (n===i) ? "block" : "none";
+      document.getElementById("s"+i).classList.toggle("active", n===i);
+    }
   }
 
   function next(n){
     if(n===2){
-      const direccion = document.getElementById("direccion").value.trim();
-      const municipio = document.getElementById("municipio").value.trim();
-      const ca = document.getElementById("ca").value.trim();
-      if(!direccion || !municipio || !ca){
-        setToast("Completa Dirección, Municipio y Comunidad Autónoma.", false);
-        return;
-      }
+      const sel = document.getElementById("inmuebleSelect");
+      if(!sel.value) return setToast("Selecciona un inmueble.", false);
     }
     if(n===3){
-      const renta = document.getElementById("renta").value;
-      if(!renta || Number(renta)<=0){
-        setToast("Indica una renta propuesta válida.", false);
-        return;
-      }
-      buildReview();
+      if(!document.getElementById("arrNombre").value.trim()) return setToast("Falta nombre arrendador.", false);
+      if(!document.getElementById("arrDni").value.trim()) return setToast("Falta DNI arrendador.", false);
+      if(!document.getElementById("atNombre").value.trim()) return setToast("Falta nombre arrendatario.", false);
+      if(!document.getElementById("atDni").value.trim()) return setToast("Falta DNI arrendatario.", false);
+    }
+    if(n===4){
+      if(!document.getElementById("fechaInicio").value) return setToast("Falta fecha inicio.", false);
+      const renta = Number(document.getElementById("renta").value || 0);
+      if(!(renta > 0)) return setToast("Renta mensual inválida.", false);
     }
     setToast("");
     setStep(n);
   }
 
-  function buildReview(){
-    const payload = collect();
-    const div = document.getElementById("review");
-    div.innerHTML = `
-      <div class="hint">
-        <b>${esc(payload.direccion)}</b><br/>
-        <span class="muted small">${esc(payload.municipio)} · ${esc(payload.comunidad_autonoma)} · CP: ${esc(payload.codigo_postal||"—")} · ${esc(payload.superficie_m2 ?? "—")} m²</span>
-        <hr/>
-        <span class="muted small">Arrendamiento: <b>${esc(payload.tipo_arrendamiento)}</b> · Arrendador: <b>${esc(payload.tipo_arrendador)}</b></span><br/>
-        <span class="muted small">Renta propuesta: <b>${esc(payload.renta_propuesta)}€</b> · Renta anterior: <b>${payload.renta_anterior==null ? "—" : esc(payload.renta_anterior+"€")}</b></span>
-      </div>
-    `;
+  async function safeJson(res){ try{return await res.json();}catch{return {};} }
+
+  function inmLabel(i){
+    const dir = i.direccion || "—";
+    const mun = i.municipio || "";
+    const ca = i.comunidad_autonoma || "";
+    const id = i.id_inmueble || i.id || "";
+    return `#${id} · ${dir} · ${mun} · ${ca}`.trim();
   }
 
-  function collect(){
-    const direccion = document.getElementById("direccion").value.trim();
-    const municipio = document.getElementById("municipio").value.trim();
-    const comunidad_autonoma = document.getElementById("ca").value.trim();
-    const codigo_postal = document.getElementById("cp").value.trim() || null;
-    const superficie_m2_raw = document.getElementById("m2").value;
-    const superficie_m2 = superficie_m2_raw ? Number(superficie_m2_raw) : null;
-
-    const tipo_arrendamiento = document.getElementById("tipoArr").value;
-    const tipo_arrendador = document.getElementById("tipoArrendador").value;
-
-    const renta_propuesta = Number(document.getElementById("renta").value);
-    const rentaAnteriorRaw = document.getElementById("rentaAnterior").value;
-    const renta_anterior = rentaAnteriorRaw ? Number(rentaAnteriorRaw) : null;
-
-    return {
-      direccion, municipio, comunidad_autonoma, codigo_postal, superficie_m2,
-      tipo_arrendamiento, tipo_arrendador,
-      renta_propuesta, renta_anterior
-    };
-  }
-
-  async function guard(){
-    const t = token();
-    if(!t){ logout(); return false; }
+  async function loadInmuebles(){
     try{
-      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-      if(res.status===401){ logout(); return false; }
-      if(!res.ok){ setToast("⚠️ No se pudo validar sesión.", false); return false; }
-      const me = await safeJson(res);
-      const who = document.getElementById("who");
-      const email = me?.email || localStorage.getItem("email") || "";
-      if(email){
-        who.style.display="inline-block";
-        who.textContent=email;
+      const res = await fetch(`${apiUrl}/inmuebles`, { headers: authHeaders() });
+      if(res.status===401) return logout();
+      const data = await safeJson(res);
+      if(!res.ok) return setToast(data.detail || "No se pudieron cargar inmuebles.", false);
+
+      const sel = document.getElementById("inmuebleSelect");
+      sel.innerHTML = "";
+      const arr = Array.isArray(data) ? data : [];
+      if(arr.length===0){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "(No hay inmuebles. Crea uno primero.)";
+        sel.appendChild(opt);
+        return;
       }
-      return true;
+
+      const opt0 = document.createElement("option");
+      opt0.value = "";
+      opt0.textContent = "— Selecciona —";
+      sel.appendChild(opt0);
+
+      for(const i of arr){
+        const opt = document.createElement("option");
+        opt.value = i.id_inmueble;
+        opt.textContent = inmLabel(i);
+        sel.appendChild(opt);
+      }
     }catch(e){
-      // fallo red: no expulsamos
-      setToast("⚠️ No hay conexión. Intenta recargar.", false);
-      return false;
+      setToast("⚠️ Error de conexión cargando inmuebles.", false);
     }
   }
 
-  async function create(){
-    const ok = await guard();
-    if(!ok) return;
+  function collect(){
+    const inmueble_id = Number(document.getElementById("inmuebleSelect").value);
 
+    const arrendador_nombre = document.getElementById("arrNombre").value.trim();
+    const arrendador_dni = document.getElementById("arrDni").value.trim();
+    const arrendatario_nombre = document.getElementById("atNombre").value.trim();
+    const arrendatario_dni = document.getElementById("atDni").value.trim();
+
+    const fecha_inicio = document.getElementById("fechaInicio").value; // YYYY-MM-DD
+    const duracion_meses = Number(document.getElementById("durMeses").value || 12);
+
+    const renta_mensual = Number(document.getElementById("renta").value);
+    const fianzaRaw = document.getElementById("fianza").value;
+    const fianza = fianzaRaw ? Number(fianzaRaw) : null;
+
+    const direccion_notificaciones = document.getElementById("notif").value.trim() || null;
+
+    return {
+      inmueble_id,
+      arrendador_nombre, arrendador_dni,
+      arrendatario_nombre, arrendatario_dni,
+      fecha_inicio,
+      duracion_meses,
+      renta_mensual,
+      fianza,
+      direccion_notificaciones
+    };
+  }
+
+  let lastDocId = null;
+
+  async function createDoc(){
+    setToast("");
     const payload = collect();
-    const btn = document.getElementById("btnCreate");
-    btn.disabled = true;
 
     try{
-      const res = await fetch(`${apiUrl}/inmuebles`, {
+      const res = await fetch(`${apiUrl}/documents/lease`, {
         method:"POST",
         headers: authHeaders({ "Content-Type":"application/json" }),
         body: JSON.stringify(payload)
       });
-
-      if(res.status===401){ logout(); return; }
-
+      if(res.status===401) return logout();
       const data = await safeJson(res);
+
       if(!res.ok){
-        setToast(data.detail || "Error creando expediente", false);
-        return;
+        return setToast(data.detail || "Error generando contrato.", false);
       }
 
-      setToast("✅ Expediente creado", true);
-      setTimeout(()=>location.href=`/static/inmueble.html?id=${data.id_inmueble}`, 650);
-
+      lastDocId = data.id_document;
+      document.getElementById("docId").textContent = String(lastDocId);
+      document.getElementById("result").style.display = "block";
+      document.getElementById("jsonBox").style.display = "none";
+      setToast("✅ Contrato generado.", true);
     }catch(e){
-      setToast("⚠️ No se pudo conectar con el servidor", false);
-    } finally {
-      btn.disabled = false;
+      setToast("⚠️ No se pudo conectar con el servidor.", false);
+    }
+  }
+
+  async function loadJson(){
+    if(!lastDocId) return;
+    try{
+      const res = await fetch(`${apiUrl}/documents/${lastDocId}`, { headers: authHeaders() });
+      if(res.status===401) return logout();
+      const data = await safeJson(res);
+      if(!res.ok) return setToast(data.detail || "No se pudo cargar JSON.", false);
+
+      document.getElementById("jsonPre").textContent = JSON.stringify(data, null, 2);
+      document.getElementById("jsonBox").style.display = "block";
+    }catch(e){
+      setToast("⚠️ Error de conexión.", false);
+    }
+  }
+
+  async function downloadPdf(){
+    if(!lastDocId) return;
+    try{
+      const res = await fetch(`${apiUrl}/documents/${lastDocId}/pdf`, { headers: authHeaders() });
+      if(res.status===401) return logout();
+      if(!res.ok){
+        const data = await safeJson(res);
+        return setToast(data.detail || "No se pudo descargar PDF.", false);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contrato_${lastDocId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(url);
+      setToast("⬇️ PDF descargado.", true);
+    }catch(e){
+      setToast("⚠️ Error descargando PDF.", false);
     }
   }
 
   (async function init(){
-    // validamos sesión al entrar
-    await guard();
+    const ok = await guard();
+    if(!ok) return;
+    await loadInmuebles();
+
+    // set default date today
+    const d = new Date();
+    const iso = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    document.getElementById("fechaInicio").value = iso;
+
     setStep(1);
   })();
 </script>
