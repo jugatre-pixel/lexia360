@@ -80,6 +80,7 @@
       border:1px solid #e6e8ef; background:#fff; border-radius:12px; padding:8px 10px;
       font-weight:900; cursor:pointer;
     }
+    .smallbtn[disabled]{ opacity:.6; cursor:not-allowed; }
   </style>
 </head>
 <body>
@@ -98,7 +99,7 @@
 
   <section class="wrap hero">
     <h1 class="headline" id="title">Documento</h1>
-    <p class="sub">Contrato + checklist (Sprint 1). PDF se descarga sin 401.</p>
+    <p class="sub">Contrato + checklist persistente (sin perder marcas).</p>
   </section>
 
   <section class="wrap">
@@ -120,7 +121,7 @@
       <hr/>
 
       <h3 style="margin:0 0 6px;">Checklist</h3>
-      <div class="muted2">MVP: checklist generado. (En el siguiente sprint lo hacemos editable y persistente).</div>
+      <div class="muted2">Ahora se guarda en backend (PATCH).</div>
 
       <div id="list" class="list"></div>
 
@@ -144,6 +145,7 @@ const id = new URLSearchParams(location.search).get("id");
 if(!id) location.href="/static/inmuebles.html";
 
 let doc = null;
+let busyItems = new Set();
 
 function logout(){
   localStorage.removeItem("token");
@@ -188,6 +190,8 @@ function render(){
 
   for(const it of items){
     const done = it.completado === true;
+    const isBusy = busyItems.has(it.id_item);
+
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
@@ -196,25 +200,57 @@ function render(){
         <div>
           <div class="t">${esc(it.titulo)}</div>
           <div class="d">${esc(it.descripcion || "")}</div>
+          <div class="d">${it.completado_en ? "Completado: " + esc(it.completado_en) : ""}</div>
         </div>
       </div>
       <div>
-        <button class="smallbtn" onclick="toggleLocal(${it.id_item})">${done ? "Marcar pendiente" : "Marcar hecho"}</button>
+        <button class="smallbtn" ${isBusy ? "disabled" : ""} onclick="toggle(${it.id_item}, ${done ? "true" : "false"})">
+          ${isBusy ? "Guardando..." : (done ? "Marcar pendiente" : "Marcar hecho")}
+        </button>
       </div>
     `;
     list.appendChild(div);
   }
 }
 
-function toggleLocal(id_item){
-  // MVP: solo visual (no persistimos aún)
-  const items = doc?.checklist || [];
-  const it = items.find(x => x.id_item === id_item);
-  if(!it) return;
-  it.completado = !it.completado;
+async function toggle(id_item, currentlyDone){
+  if(!doc) return;
+  busyItems.add(id_item);
   render();
-  setMsg("✅ Marcado (solo visual por ahora).", true);
-  setTimeout(()=>setMsg(""), 900);
+
+  const next = !currentlyDone;
+
+  try{
+    const r = await fetch(`${api}/documents/${doc.id_document}/checklist/${id_item}`, {
+      method:"PATCH",
+      headers: authHeaders({ "Content-Type":"application/json" }),
+      body: JSON.stringify({ completado: next })
+    });
+
+    if(r.status===401) return logout();
+    const d = await safeJson(r);
+
+    if(!r.ok){
+      setMsg(d.detail || "No se pudo actualizar el checklist.", false);
+      return;
+    }
+
+    // actualiza localmente el item (y completado_en)
+    const it = doc.checklist.find(x => x.id_item === id_item);
+    if(it){
+      it.completado = d.completado;
+      it.completado_en = d.completado_en;
+    }
+
+    setMsg("✅ Checklist actualizado.", true);
+    setTimeout(()=>setMsg(""), 900);
+
+  }catch(e){
+    setMsg("⚠️ Error de conexión actualizando checklist.", false);
+  }finally{
+    busyItems.delete(id_item);
+    render();
+  }
 }
 
 async function reload(){
