@@ -1,274 +1,32 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Lexia360 · Ficha de inmueble</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
-  <style>
-    :root{
-      --brand:#0b5fff; --brand2:#5b8cff;
-      --bg:#0b1220; --muted:rgba(255,255,255,.72);
-      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
-      --radius:16px;
-    }
-    body{
-      margin:0;
-      background:
-        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
-        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 62%, #f6f7fb 62%, #f6f7fb 100%);
-    }
-    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
-    .topbar{
-      position:sticky;top:0;z-index:50;
-      background:rgba(11,18,32,.62);
-      backdrop-filter: blur(12px);
-      border-bottom:1px solid rgba(255,255,255,.10);
-    }
-    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
-    .badge{
-      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:0 14px 28px rgba(11,95,255,.22);
-    }
-    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .chip{
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.06);
-      color:#fff;padding:8px 12px;border-radius:999px;
-      text-decoration:none;font-weight:900;font-size:13px;
-    }
-    .chip.active{background:rgba(255,255,255,.12)}
-    .btn{
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.06);
-      color:#fff;padding:10px 14px;border-radius:12px;
-      font-weight:900;cursor:pointer;
-    }
-    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
-    .hero{padding:28px 0 10px;}
-    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
-    .sub{color:var(--muted);margin:0}
-    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;align-items:start}
-    @media(max-width:950px){.grid{grid-template-columns:1fr}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-    .muted2{color:#667085;font-size:13px}
-    input, textarea{border-radius:12px !important}
-    .toast{
-      position:fixed;left:18px;bottom:18px;z-index:9999;
-      background:#111827;color:#fff;border:1px solid rgba(255,255,255,.12);
-      padding:12px 14px;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.25);
-      display:none;max-width:520px;
-    }
-    .toast.show{display:block}
-    .danger{background:#b42318 !important;border-color:#b42318 !important}
-    .pill{
-      font-size:12px;color:#111827;border:1px solid var(--border);background:#fff;
-      padding:6px 10px;border-radius:999px;font-weight:900;
-    }
-  </style>
+<meta charset="utf-8"/>
+<title>Lexia360 · Inmueble</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
 </head>
 <body>
-  <div class="topbar">
-    <div class="wrap toprow">
-      <a class="brand" href="/static/dashboard.html">
-        <div class="badge">⚖️</div>
-        <div>Lexia360</div>
-      </a>
-
-      <div class="navlinks">
-        <a class="chip" href="/static/dashboard.html">Dashboard</a>
-        <a class="chip active" href="/static/inmuebles.html">Inmuebles</a>
-        <a class="chip" href="/static/wizard.html">Wizard</a>
-        <a class="chip" href="/static/papelera.html">Papelera</a>
-        <button class="btn" onclick="logout()">Salir</button>
-      </div>
-    </div>
-  </div>
-
-  <section class="wrap hero">
-    <h2 class="headline">Ficha de inmueble</h2>
-    <p class="sub">Datos del expediente, acciones y descarga del PDF.</p>
-  </section>
-
-  <section class="wrap">
-    <div class="grid">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
-          <div>
-            <h3 style="margin:0;">Expediente <span class="pill" id="expId">—</span></h3>
-            <div class="muted2" id="expMeta">Cargando…</div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="/static/inmuebles.html" role="button" class="secondary">← Volver</a>
-            <button class="btn primary" onclick="downloadPdf()">📄 Descargar PDF</button>
-            <button class="danger" onclick="softDelete()">🗑️ Enviar a papelera</button>
-          </div>
-        </div>
-
-        <hr/>
-
-        <label>Referencia</label>
-        <input id="ref" type="text" placeholder="Ej: ALQ-2026-0001"/>
-
-        <label>Dirección</label>
-        <input id="dir" type="text" placeholder="Calle, número, ciudad"/>
-
-        <label>Propietario / Cliente</label>
-        <input id="prop" type="text" placeholder="Nombre completo"/>
-
-        <label>Notas internas</label>
-        <textarea id="notas" rows="4" placeholder="Observaciones, incidencias, checklist…"></textarea>
-
-        <div class="muted2" style="margin-top:10px;">
-          Nota: si tu backend aún no tiene endpoint de actualización, estos campos quedan como vista (Sprint 1/2).
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin:0 0 6px;">Siguiente paso</h3>
-        <div class="muted2" style="margin-bottom:12px;">
-          Para acercarnos a “LegalZoom España”: wizard guiado + generación contrato + anexos + checklist + auditoría.
-        </div>
-
-        <div style="display:grid;gap:10px;">
-          <div style="border:1px solid var(--border);border-radius:16px;padding:14px;background:#fff;">
-            <b>🧙 Wizard: Contrato de alquiler</b>
-            <div class="muted2">Recoge datos paso a paso y genera entregables.</div>
-            <div style="margin-top:10px;">
-              <a href="/static/wizard.html" role="button" class="contrast">Abrir wizard</a>
-            </div>
-          </div>
-
-          <div style="border:1px solid var(--border);border-radius:16px;padding:14px;background:#fff;">
-            <b>🗑️ Papelera y recuperación</b>
-            <div class="muted2">Si borras por error, restáuralo desde papelera.</div>
-            <div style="margin-top:10px;">
-              <a href="/static/papelera.html" role="button" class="secondary">Ir a papelera</a>
-            </div>
-          </div>
-
-          <div style="border:1px solid var(--border);border-radius:16px;padding:14px;background:#fff;">
-            <b>📄 PDF (token)</b>
-            <div class="muted2">Se descarga con un token (sesión) para controlar acceso.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div id="toast" class="toast"></div>
+<main class="container">
+  <h2 id="title"></h2>
+  <pre id="data"></pre>
+  <a id="pdf" role="button">Descargar PDF</a>
+</main>
 
 <script>
-  const apiUrl = location.origin;
+const api=location.origin;
+const token=localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
+const id=new URLSearchParams(location.search).get("id");
 
-  function token(){ return localStorage.getItem("token"); }
-  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
-  function guard(){
-    const t = token();
-    if(!t){ window.location.href="/static/index.html"; return false; }
-    return true;
-  }
-  function logout(){
-    localStorage.removeItem("token"); localStorage.removeItem("email");
-    window.location.href="/static/index.html";
-  }
-  function toast(msg){
-    const el=document.getElementById("toast");
-    el.textContent=msg; el.classList.add("show");
-    setTimeout(()=>el.classList.remove("show"), 3400);
-  }
-  async function safeJson(res){ try{return await res.json();}catch{return {};} }
-
-  function qs(name){
-    const url = new URL(location.href);
-    return url.searchParams.get(name);
-  }
-
-  function getIdFromResponse(obj){
-    return obj?.id ?? obj?.id_inmueble ?? obj?.idInmueble ?? obj?.id_inmuebles;
-  }
-
-  let currentId = null;
-  let inmueble = null;
-
-  async function load(){
-    if(!guard()) return;
-
-    currentId = qs("id");
-    if(!currentId){
-      toast("Falta el parámetro ?id= en la URL.");
-      return;
-    }
-
-    document.getElementById("expId").textContent = currentId;
-
-    const res = await fetch(`${apiUrl}/inmuebles/${encodeURIComponent(currentId)}`, { headers: authHeaders() });
-    if(res.status===401){ logout(); return; }
-
-    const data = await safeJson(res);
-    if(!res.ok){
-      toast(data.detail || "No se pudo cargar el inmueble.");
-      document.getElementById("expMeta").textContent = "No disponible";
-      return;
-    }
-
-    inmueble = data;
-
-    // Campos compatibles
-    const ref = data.referencia || data.ref || data.codigo || data.nombre || "";
-    const dir = data.direccion || data.dirección || data.address || data.ubicacion || "";
-    const prop = data.propietario || data.arrendador || data.cliente || "";
-    const notas = data.notas || data.observaciones || "";
-
-    document.getElementById("ref").value = ref;
-    document.getElementById("dir").value = dir;
-    document.getElementById("prop").value = prop;
-    document.getElementById("notas").value = notas;
-
-    const estado = data.estado || data.status || "Activo";
-    document.getElementById("expMeta").textContent = `Estado: ${estado}`;
-  }
-
-  function downloadPdf(){
-    if(!guard()) return;
-    if(!currentId){ toast("Sin ID"); return; }
-
-    // Descarga PDF con token como query param (tu backend ya lo hace así)
-    const t = token();
-    const url = `${apiUrl}/inmuebles/${encodeURIComponent(currentId)}/pdf?token=${encodeURIComponent(t)}`;
-    window.open(url, "_blank");
-  }
-
-  async function softDelete(){
-    if(!guard()) return;
-    if(!currentId){ toast("Sin ID"); return; }
-
-    if(!confirm("¿Enviar este inmueble a la papelera?")) return;
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${encodeURIComponent(currentId)}`, {
-        method:"DELETE",
-        headers: authHeaders()
-      });
-      if(res.status===401){ logout(); return; }
-      const data = await safeJson(res);
-
-      if(!res.ok){
-        toast(data.detail || "No se pudo eliminar.");
-        return;
-      }
-
-      toast("🗑️ Enviado a papelera.");
-      setTimeout(()=>window.location.href="/static/inmuebles.html", 600);
-    }catch(e){
-      toast("⚠️ Error de conexión.");
-    }
-  }
-
-  load();
+async function load(){
+  const r=await fetch(api+"/inmuebles/"+id,{headers:{Authorization:`Bearer ${token}`}});
+  if(r.status===401) location.href="/static/index.html";
+  const d=await r.json();
+  document.getElementById("title").textContent=d.direccion;
+  document.getElementById("data").textContent=JSON.stringify(d,null,2);
+  document.getElementById("pdf").href=api+"/inmuebles/"+id+"/pdf";
+}
+load();
 </script>
 </body>
 </html>
