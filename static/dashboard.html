@@ -60,6 +60,13 @@
     .msg{ margin-top:10px; font-size:13px; font-weight:900; }
     .msg.error{ color:#b42318; }
     .msg.ok{ color:#027a48; }
+    .linkbtn{
+      display:flex; justify-content:space-between; align-items:center;
+      border:1px solid var(--border); background:#fff; color:#101828;
+      padding:12px 14px; border-radius:14px; font-weight:950; cursor:pointer; width:100%;
+      margin-bottom:10px;
+    }
+    .linkbtn small{ color:#667085; font-weight:800; }
   </style>
 </head>
 <body>
@@ -71,10 +78,9 @@
       </a>
       <div class="nav-actions">
         <span id="who" style="color:rgba(255,255,255,.85); font-weight:900;"></span>
-        <button class="btn" onclick="go('/static/wizard.html')">Wizard</button>
-        <button class="btn" onclick="go('/static/wizard_lease.html')">Contrato</button>
+        <button class="btn" onclick="go('/static/wizard.html')">Nuevo expediente</button>
+        <button class="btn" onclick="go('/static/wizard_lease.html')">Contrato (Lease)</button>
         <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
-        <button class="btn" onclick="go('/static/documentos.html')">Documentos</button>
         <button class="btn" onclick="go('/static/papelera.html')">Papelera</button>
         <button class="btn primary" onclick="logout()">Salir</button>
       </div>
@@ -98,6 +104,10 @@
           <div class="kpi"><div class="label">Docs</div><div class="value" id="k_docs">—</div></div>
         </div>
 
+        <div class="muted2" style="margin-top:12px;">
+          Nota: “Docs” incluye contratos (lease) y lo que añadamos después (burofax, etc.).
+        </div>
+
         <div id="sysMsg" class="msg"></div>
       </div>
 
@@ -105,10 +115,25 @@
         <h3 style="margin:0 0 10px;">Atajos</h3>
         <div class="muted2" style="margin-bottom:10px;">Acciones rápidas.</div>
 
-        <button class="btn primary" style="width:100%;margin-bottom:10px;" onclick="go('/static/wizard_lease.html')">Generar contrato (Lease)</button>
-        <button class="btn" style="width:100%;margin-bottom:10px;" onclick="go('/static/inmuebles.html')">Gestionar inmuebles</button>
-        <button class="btn" style="width:100%;margin-bottom:10px;" onclick="go('/static/documentos.html')">Ver documentos</button>
-        <button class="btn" style="width:100%;" onclick="go('/static/papelera.html')">Ver papelera</button>
+        <button class="linkbtn" onclick="go('/static/wizard.html')">
+          <span>📁 Crear expediente <small>(inmueble + análisis)</small></span>
+          <span>→</span>
+        </button>
+
+        <button class="linkbtn" onclick="go('/static/wizard_lease.html')">
+          <span>📄 Generar contrato <small>(Lease MVP)</small></span>
+          <span>→</span>
+        </button>
+
+        <button class="linkbtn" onclick="go('/static/inmuebles.html')">
+          <span>🏠 Gestionar inmuebles</span>
+          <span>→</span>
+        </button>
+
+        <button class="linkbtn" onclick="go('/static/papelera.html')">
+          <span>🗑️ Ver papelera</span>
+          <span>→</span>
+        </button>
       </div>
     </div>
   </section>
