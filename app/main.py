@@ -24,7 +24,7 @@ from reportlab.lib.units import mm
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = os.getenv("APP_VERSION", "lexia360-v16-lease-docs")
+APP_VERSION = os.getenv("APP_VERSION", "lexia360-v16-documents-lease-wizard")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if not DATABASE_URL:
@@ -50,9 +50,8 @@ ALLOW_ORIGINS = ["*"] if CORS_ORIGINS == "*" else [o.strip() for o in CORS_ORIGI
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
-# Hash robusto (evita límites de bcrypt)
+# Hash robusto (evita límite 72 bytes de bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -95,7 +94,6 @@ async def catch_exceptions(request: Request, call_next):
     except Exception:
         traceback.print_exc()
         raise
-
 
 # Static mount
 if os.path.exists("static"):
@@ -163,15 +161,25 @@ class ZonaTensionada(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
+# ✅ NUEVOS MODELOS (Sprint: Documents + Checklist)
 class Document(SQLModel, table=True):
     id_document: int | None = Field(default=None, primary_key=True)
     id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
-    id_inmueble: int | None = Field(default=None, index=True, foreign_key="inmueble.id_inmueble")
+    id_inmueble: int = Field(index=True, foreign_key="inmueble.id_inmueble")
 
-    tipo: str = Field(index=True)  # "lease"
+    tipo: str = Field(index=True)  # lease_v1
     titulo: str
-    payload_json: str
-    pdf_bytes: bytes | None = None
+    contenido_json: str
+    contenido_texto: str
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ChecklistItem(SQLModel, table=True):
+    id_item: int | None = Field(default=None, primary_key=True)
+    id_document: int = Field(index=True, foreign_key="document.id_document")
+
+    etiqueta: str
+    completado: bool = Field(default=False)
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -215,7 +223,8 @@ class ChatResponse(BaseModel):
     requiere_pro: bool = False
 
 
-class LeaseDocumentCreate(BaseModel):
+# ✅ Payload para crear contrato (mínimo)
+class LeaseDocPayload(BaseModel):
     inmueble_id: int
 
     arrendador_nombre: str
@@ -225,11 +234,11 @@ class LeaseDocumentCreate(BaseModel):
 
     fecha_inicio: date
     duracion_meses: int = 12
-    renta_mensual: float
-    fianza: float
 
-    cuenta_pago: str | None = None
-    observaciones: str | None = None
+    renta_mensual: float
+    fianza: float | None = None
+
+    direccion_notificaciones: str | None = None
 
 
 # ============================================================
@@ -237,7 +246,7 @@ class LeaseDocumentCreate(BaseModel):
 # ============================================================
 def _autofix_schema():
     """
-    No sustituye Alembic, pero evita roturas en MVP.
+    No sustituye Alembic, pero te evita roturas al deploy en MVP.
     """
     with engine.begin() as conn:
         # usuario.creado_en
@@ -333,19 +342,6 @@ def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
     if user.rol != "admin":
         raise HTTPException(status_code=403, detail="No autorizado (admin)")
     return user
-
-
-def scalar_count(val):
-    # SQLAlchemy puede devolver int o Row
-    if isinstance(val, int):
-        return val
-    try:
-        return int(val[0])
-    except Exception:
-        try:
-            return int(val)
-        except Exception:
-            return 0
 
 
 # ============================================================
@@ -458,23 +454,85 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
 
 
 # ============================================================
-# PDF GENERATOR (INFORME INMUEBLE)
+# PDF HELPERS
 # ============================================================
-def generar_pdf_informe(inmueble: dict) -> bytes:
-    def wrap(texto: str, max_chars: int = 105) -> list[str]:
-        words = (texto or "").split()
-        lines, cur = [], ""
-        for w in words:
-            if len(cur) + len(w) + 1 <= max_chars:
-                cur = (cur + " " + w).strip()
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
-        return lines
+def _wrap_words(texto: str, max_chars: int = 105) -> list[str]:
+    words = (texto or "").split()
+    lines, cur = [], ""
+    for w in words:
+        if len(cur) + len(w) + 1 <= max_chars:
+            cur = (cur + " " + w).strip()
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    return lines
 
+
+def pdf_from_text(title: str, body: str) -> bytes:
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+
+    left = 18 * mm
+    right = w - 18 * mm
+    top = h - 18 * mm
+    y = top
+    page = 1
+
+    def header():
+        nonlocal y
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(left, top, "Lexia360")
+        c.setFont("Helvetica", 9)
+        c.drawRightString(right, top, f"Documento · {title[:60]}")
+        c.setLineWidth(0.8)
+        c.line(left, top - 6 * mm, right, top - 6 * mm)
+        y = top - 12 * mm
+
+        c.setFont("Helvetica", 8)
+        c.setFillGray(0.35)
+        c.drawString(left, 12 * mm, "Confidencial · Generado por Lexia360")
+        c.drawRightString(right, 12 * mm, f"Página {page}")
+        c.setFillGray(0)
+
+    def new_page():
+        nonlocal page, y
+        c.showPage()
+        page += 1
+        y = top
+        header()
+
+    header()
+
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(left, y, title)
+    y -= 8 * mm
+
+    c.setFont("Helvetica", 10)
+    for line in (body or "").splitlines():
+        if not line.strip():
+            y -= 4.5 * mm
+            if y < 25 * mm:
+                new_page()
+            continue
+        for wline in _wrap_words(line, max_chars=110):
+            if y < 25 * mm:
+                new_page()
+            c.drawString(left, y, wline)
+            y -= 5.2 * mm
+
+    c.showPage()
+    c.save()
+
+    out = buf.getvalue()
+    buf.close()
+    return out
+
+
+def generar_pdf_informe(inmueble: dict) -> bytes:
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     w, h = A4
@@ -595,23 +653,9 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
         alertas = ["—"]
 
     c.setFont("Helvetica", 10)
-    def wrap2(texto: str, max_chars: int = 110) -> list[str]:
-        words = (texto or "").split()
-        lines, cur = [], ""
-        for w in words:
-            if len(cur) + len(w) + 1 <= max_chars:
-                cur = (cur + " " + w).strip()
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
-        return lines
-
     for a in alertas:
         page = ensure_space(28 * mm, page)
-        for line in wrap2(f"• {a}", max_chars=110):
+        for line in _wrap_words(f"• {a}", max_chars=110):
             c.drawString(left, y, line)
             y -= 5.2 * mm
 
@@ -625,7 +669,7 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
         "Para un análisis completo y/o redacción contractual final, consulta con un profesional o usa la versión Pro."
     )
     c.setFont("Helvetica", 9)
-    for line in wrap2(aviso, max_chars=110):
+    for line in _wrap_words(aviso, max_chars=110):
         c.drawString(left, y, line)
         y -= 4.8 * mm
 
@@ -635,135 +679,6 @@ def generar_pdf_informe(inmueble: dict) -> bytes:
     out = buf.getvalue()
     buf.close()
     return out
-
-
-# ============================================================
-# PDF GENERATOR (CONTRATO ALQUILER MVP)
-# ============================================================
-def generar_pdf_contrato_alquiler(data: dict) -> bytes:
-    def wrap(texto: str, max_chars: int = 105) -> list[str]:
-        words = (texto or "").split()
-        lines, cur = [], ""
-        for w in words:
-            if len(cur) + len(w) + 1 <= max_chars:
-                cur = (cur + " " + w).strip()
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
-        return lines
-
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-    w, h = A4
-    left = 18 * mm
-    right = w - 18 * mm
-    top = h - 18 * mm
-    y = top
-
-    def header():
-        nonlocal y
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(left, top, "Lexia360")
-        c.setFont("Helvetica", 10)
-        c.drawRightString(right, top, "Contrato de Arrendamiento (MVP)")
-        c.setLineWidth(1)
-        c.line(left, top - 6 * mm, right, top - 6 * mm)
-        y = top - 14 * mm
-
-    def ensure(min_y: float):
-        nonlocal y
-        if y < min_y:
-            c.showPage()
-            header()
-
-    def h2(t: str):
-        nonlocal y
-        ensure(40 * mm)
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(left, y, t)
-        y -= 7 * mm
-        c.setStrokeGray(0.85)
-        c.setLineWidth(0.6)
-        c.line(left, y, right, y)
-        c.setStrokeGray(0)
-        y -= 8 * mm
-
-    def p(texto: str):
-        nonlocal y
-        c.setFont("Helvetica", 10)
-        for line in wrap(texto, 110):
-            ensure(22 * mm)
-            c.drawString(left, y, line)
-            y -= 5.2 * mm
-        y -= 2.5 * mm
-
-    header()
-
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(left, y, "CONTRATO DE ARRENDAMIENTO (MVP)")
-    y -= 10 * mm
-
-    h2("1) Partes")
-    p(f"Arrendador: {data['arrendador_nombre']} (DNI/NIE: {data['arrendador_dni']}).")
-    p(f"Arrendatario: {data['arrendatario_nombre']} (DNI/NIE: {data['arrendatario_dni']}).")
-
-    h2("2) Objeto e inmueble")
-    p(f"Inmueble sito en: {data.get('direccion','—')}, {data.get('municipio','—')}, {data.get('comunidad_autonoma','—')}.")
-    if data.get("codigo_postal"):
-        p(f"Código Postal: {data.get('codigo_postal')}.")
-    if data.get("superficie_m2"):
-        p(f"Superficie aproximada: {data.get('superficie_m2')} m².")
-
-    h2("3) Duración")
-    p(f"El contrato comienza el {data['fecha_inicio']} y tendrá una duración inicial de {data['duracion_meses']} meses, salvo prórrogas y normativa aplicable.")
-
-    h2("4) Renta y fianza")
-    p(f"Renta mensual: {data['renta_mensual']} €.")
-    p(f"Fianza: {data['fianza']} €.")
-    if data.get("cuenta_pago"):
-        p(f"Forma de pago: transferencia a la cuenta {data['cuenta_pago']}.")
-
-    h2("5) Cláusulas esenciales (MVP)")
-    p("a) Conservación: el arrendatario cuidará el inmueble y comunicará incidencias.")
-    p("b) Gastos y suministros: se asignarán conforme a pacto entre las partes y la normativa aplicable.")
-    p("c) Subarriendo/cesión: prohibido salvo autorización expresa por escrito del arrendador.")
-    p("d) Protección de datos: las partes se comprometen a tratar los datos conforme a la normativa aplicable.")
-
-    if data.get("observaciones"):
-        h2("6) Observaciones")
-        p(data["observaciones"])
-
-    h2("7) Firma")
-    p("En prueba de conformidad, las partes firman el presente documento en la fecha indicada.")
-    p("Arrendador: ______________________    Arrendatario: ______________________")
-
-    c.showPage()
-    c.save()
-    out = buf.getvalue()
-    buf.close()
-    return out
-
-
-# ============================================================
-# DOWNLOAD TOKEN (DOCUMENTS)
-# ============================================================
-def create_download_token(doc_id: int, minutes: int = 30) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=minutes)
-    payload = {"doc": doc_id, "exp": expire}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-def verify_download_token(token: str) -> int:
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        doc_id = payload.get("doc")
-        if not doc_id:
-            raise HTTPException(status_code=401, detail="Token de descarga inválido")
-        return int(doc_id)
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token de descarga inválido")
 
 
 # ============================================================
@@ -781,35 +696,25 @@ def root():
 def head_root():
     return Response(status_code=200)
 
-
-# ============================================================
-# ROUTES (STATUS) - NO FALLA + CAMPOS PARA DASHBOARD
-# ============================================================
 @app.get("/status")
-def status(user: Usuario = Depends(get_current_user)):
+def status():
     with Session(engine, expire_on_commit=False) as session:
-        users_count = scalar_count(session.exec(text("SELECT COUNT(*) FROM usuario")).one())
-        zonas_count = scalar_count(session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one())
+        users_count = session.exec(text("SELECT COUNT(*) FROM usuario")).one()
+        zonas_count = session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one()
+        inm_activos = session.exec(text("SELECT COUNT(*) FROM inmueble WHERE activo = TRUE")).one()
+        inm_eliminados = session.exec(text("SELECT COUNT(*) FROM inmueble WHERE activo = FALSE")).one()
+        docs = session.exec(text("SELECT COUNT(*) FROM document")).one()
 
-        inm_activos = scalar_count(session.exec(text(
-            "SELECT COUNT(*) FROM inmueble WHERE id_usuario = :uid AND activo = TRUE"
-        ), {"uid": user.id_usuario}).one())
-
-        inm_trash = scalar_count(session.exec(text(
-            "SELECT COUNT(*) FROM inmueble WHERE id_usuario = :uid AND activo = FALSE"
-        ), {"uid": user.id_usuario}).one())
-
-        docs = scalar_count(session.exec(text(
-            "SELECT COUNT(*) FROM document WHERE id_usuario = :uid"
-        ), {"uid": user.id_usuario}).one())
+        def scalar(x):
+            return x if isinstance(x, int) else x[0]
 
         return {
             "status": "✅ OK",
-            "usuarios_registrados": int(users_count or 0),
-            "zonas_tensionadas": int(zonas_count or 0),
-            "inmuebles_activos": int(inm_activos or 0),
-            "inmuebles_eliminados": int(inm_trash or 0),
-            "documentos": int(docs or 0),
+            "usuarios_registrados": int(scalar(users_count) or 0),
+            "zonas_tensionadas": int(scalar(zonas_count) or 0),
+            "inmuebles_activos": int(scalar(inm_activos) or 0),
+            "inmuebles_eliminados": int(scalar(inm_eliminados) or 0),
+            "documentos": int(scalar(docs) or 0),
             "version": APP_VERSION,
         }
 
@@ -854,7 +759,7 @@ def me(user: Usuario = Depends(get_current_user)):
 @app.post("/admin/bootstrap")
 def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
     if not ADMIN_BOOTSTRAP_SECRET:
-        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío.")
+        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío (Secret File no montado).")
     if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
         raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
@@ -962,6 +867,7 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
             raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
 
         session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
+        session.exec(text("DELETE FROM document WHERE id_inmueble = :iid AND id_usuario = :uid"), {"iid": id_inmueble, "uid": user.id_usuario})
         session.delete(inm)
         session.commit()
 
@@ -1023,6 +929,7 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
             select(Inmueble)
             .where(Inmueble.id_inmueble == id_inmueble)
             .where(Inmueble.id_usuario == user.id_usuario)
+            .where(Inmueble.activo == True)
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
@@ -1055,6 +962,7 @@ def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
         ).first()
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
+
         payload = inmueble_to_out(session, inm)
 
     pdf_bytes = generar_pdf_informe(payload)
@@ -1064,113 +972,138 @@ def inmueble_pdf(id_inmueble: int, user: Usuario = Depends(get_current_user)):
 
 
 # ============================================================
-# ROUTES (DOCUMENTS)
+# DOCUMENTS (Contrato de alquiler MVP)
 # ============================================================
+def generar_contrato_alquiler_mvp(data: LeaseDocPayload, inmueble: Inmueble) -> str:
+    fianza = data.fianza if data.fianza is not None else data.renta_mensual
+    notif = data.direccion_notificaciones or "(no indicada)"
+
+    return f"""CONTRATO DE ARRENDAMIENTO DE VIVIENDA (MVP)
+
+ARRENDADOR
+{data.arrendador_nombre} – DNI {data.arrendador_dni}
+
+ARRENDATARIO
+{data.arrendatario_nombre} – DNI {data.arrendatario_dni}
+
+VIVIENDA
+{inmueble.direccion}, {inmueble.municipio}, {inmueble.comunidad_autonoma}
+
+DURACIÓN
+Inicio: {data.fecha_inicio}
+Duración inicial: {data.duracion_meses} meses
+
+RENTA
+Renta mensual: {data.renta_mensual:.2f} €
+
+FIANZA
+Importe: {fianza:.2f} €
+
+NOTIFICACIONES
+{notif}
+
+CLÁUSULA BASE
+Este contrato se rige por la Ley de Arrendamientos Urbanos (LAU).
+El presente documento es un borrador MVP y deberá ser revisado antes de su firma.
+
+FIRMAS
+Arrendador: _______________________
+
+Arrendatario: _______________________
+"""
+
+
+def checklist_base_alquiler() -> list[str]:
+    return [
+        "Identificación correcta de las partes",
+        "Comprobación del título de propiedad",
+        "Destino a vivienda habitual",
+        "Duración conforme a LAU",
+        "Cláusula de renta y actualización",
+        "Fianza legal",
+        "Distribución de gastos y suministros",
+        "Estado de la vivienda e inventario",
+        "Notificaciones y comunicaciones",
+        "Firma de ambas partes",
+    ]
+
+
 @app.post("/documents/lease")
-def create_lease_document(payload: LeaseDocumentCreate, user: Usuario = Depends(get_current_user)):
+def create_lease_document(payload: LeaseDocPayload, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
-        inm = session.exec(
+        inmueble = session.exec(
             select(Inmueble)
             .where(Inmueble.id_inmueble == payload.inmueble_id)
             .where(Inmueble.id_usuario == user.id_usuario)
         ).first()
-        if not inm:
+        if not inmueble:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
 
-        doc_payload = {
-            "tipo": "lease",
-            "titulo": "Contrato de Arrendamiento (MVP)",
-            "arrendador_nombre": payload.arrendador_nombre.strip(),
-            "arrendador_dni": payload.arrendador_dni.strip(),
-            "arrendatario_nombre": payload.arrendatario_nombre.strip(),
-            "arrendatario_dni": payload.arrendatario_dni.strip(),
-            "fecha_inicio": str(payload.fecha_inicio),
-            "duracion_meses": int(payload.duracion_meses),
-            "renta_mensual": float(payload.renta_mensual),
-            "fianza": float(payload.fianza),
-            "cuenta_pago": (payload.cuenta_pago.strip() if payload.cuenta_pago else None),
-            "observaciones": (payload.observaciones.strip() if payload.observaciones else None),
-
-            "direccion": inm.direccion,
-            "municipio": inm.municipio,
-            "comunidad_autonoma": inm.comunidad_autonoma,
-            "codigo_postal": inm.codigo_postal,
-            "superficie_m2": inm.superficie_m2,
-        }
-
-        pdf = generar_pdf_contrato_alquiler(doc_payload)
+        texto = generar_contrato_alquiler_mvp(payload, inmueble)
 
         doc = Document(
             id_usuario=user.id_usuario,
-            id_inmueble=inm.id_inmueble,
-            tipo="lease",
-            titulo="Contrato de Arrendamiento (MVP)",
-            payload_json=json.dumps(doc_payload, ensure_ascii=False),
-            pdf_bytes=pdf,
+            id_inmueble=inmueble.id_inmueble,
+            tipo="lease_v1",
+            titulo=f"Contrato de alquiler · {inmueble.direccion}",
+            contenido_json=payload.model_dump_json(),
+            contenido_texto=texto,
         )
         session.add(doc)
         session.commit()
         session.refresh(doc)
 
-        dl_token = create_download_token(doc.id_document, minutes=60)
+        for item in checklist_base_alquiler():
+            session.add(ChecklistItem(id_document=doc.id_document, etiqueta=item))
 
-        return {"ok": True, "id_document": doc.id_document, "download_token": dl_token}
+        session.commit()
 
-
-@app.get("/documents")
-def list_documents(user: Usuario = Depends(get_current_user)):
-    with Session(engine, expire_on_commit=False) as session:
-        docs = session.exec(
-            select(Document)
-            .where(Document.id_usuario == user.id_usuario)
-            .order_by(Document.id_document.desc())
-        ).all()
-        return [{
-            "id_document": d.id_document,
-            "tipo": d.tipo,
-            "titulo": d.titulo,
-            "id_inmueble": d.id_inmueble,
-            "creado_en": d.creado_en.isoformat(),
-        } for d in docs]
+        return {"ok": True, "id_document": doc.id_document}
 
 
 @app.get("/documents/{id_document}/pdf")
-def download_document_pdf(id_document: int, request: Request, token: str | None = None):
-    """
-    Descarga:
-    - con token de descarga: /documents/{id}/pdf?token=...
-    - o con auth normal: Authorization: Bearer ...
-    """
+def download_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
-        doc = session.exec(select(Document).where(Document.id_document == id_document)).first()
-        if not doc or not doc.pdf_bytes:
+        doc = session.exec(
+            select(Document)
+            .where(Document.id_document == id_document)
+            .where(Document.id_usuario == user.id_usuario)
+        ).first()
+        if not doc:
             raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-        if token:
-            doc_id = verify_download_token(token)
-            if doc_id != id_document:
-                raise HTTPException(status_code=401, detail="Token no corresponde al documento")
-        else:
-            # auth normal
-            auth = request.headers.get("authorization") or ""
-            if not auth.lower().startswith("bearer "):
-                raise HTTPException(status_code=401, detail="Not authenticated")
-            tok = auth.split(" ", 1)[1].strip()
-            try:
-                payload = jwt.decode(tok, SECRET_KEY, algorithms=[ALGORITHM])
-                email = payload.get("sub")
-                if not email:
-                    raise HTTPException(status_code=401, detail="Token inválido")
-            except JWTError:
-                raise HTTPException(status_code=401, detail="Token inválido")
+    pdf = pdf_from_text(doc.titulo, doc.contenido_texto)
+    headers = {"Content-Disposition": f'attachment; filename="contrato_{id_document}.pdf"'}
+    return StreamingResponse(io.BytesIO(pdf), media_type="application/pdf", headers=headers)
 
-            user = session.exec(select(Usuario).where(Usuario.email == email)).first()
-            if not user or user.id_usuario != doc.id_usuario:
-                raise HTTPException(status_code=403, detail="No autorizado")
 
-        filename = f"lexia360_document_{id_document}.pdf"
-        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-        return StreamingResponse(io.BytesIO(doc.pdf_bytes), media_type="application/pdf", headers=headers)
+@app.get("/documents/{id_document}")
+def get_document(id_document: int, user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        doc = session.exec(
+            select(Document)
+            .where(Document.id_document == id_document)
+            .where(Document.id_usuario == user.id_usuario)
+        ).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+        items = session.exec(
+            select(ChecklistItem)
+            .where(ChecklistItem.id_document == doc.id_document)
+            .order_by(ChecklistItem.id_item.asc())
+        ).all()
+
+        return {
+            "id_document": doc.id_document,
+            "tipo": doc.tipo,
+            "titulo": doc.titulo,
+            "id_inmueble": doc.id_inmueble,
+            "creado_en": str(doc.creado_en),
+            "payload_json": json.loads(doc.contenido_json) if doc.contenido_json else {},
+            "contenido_texto": doc.contenido_texto,
+            "checklist": [{"id_item": i.id_item, "etiqueta": i.etiqueta, "completado": i.completado} for i in items],
+        }
 
 
 # ============================================================
