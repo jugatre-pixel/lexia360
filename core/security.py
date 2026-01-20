@@ -1,36 +1,77 @@
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-import logging
+from sqlmodel import select, Session
 
-from core.config import settings
+from app.core.config import settings
+from app.core.db import engine
+from app.models.user import Usuario  # si aún no existe, dime y lo ajusto
 
-logger = logging.getLogger("core.security")
 
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256"],
+    deprecated="auto"
+)
 
-def validate_password(password: str):
-    if not password or len(password) < 8:
-        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
-def get_password_hash(password: str) -> str:
+
+# =========================
+# PASSWORDS
+# =========================
+def hash_password(password: str) -> str:
     return pwd_context.hash(password)
+
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-def create_access_token(email: str) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=getattr(settings, "access_token_expire_minutes", 60))
-    payload = {"sub": email, "exp": expire}
-    return jwt.encode(payload, settings.secret_key, algorithm=getattr(settings, "algorithm", "HS256"))
 
-def decode_token(token: str) -> str:
+# =========================
+# TOKENS
+# =========================
+def create_access_token(email: str) -> str:
+    expire = datetime.utcnow() + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    payload = {
+        "sub": email,
+        "exp": expire,
+    }
+    return jwt.encode(
+        payload,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> Usuario:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[getattr(settings, "algorithm", "HS256")])
-        email = payload.get("sub")
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+        email: str | None = payload.get("sub")
         if not email:
             raise HTTPException(status_code=401, detail="Token inválido")
-        return email
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
+
+    with Session(engine, expire_on_commit=False) as session:
+        user = session.exec(
+            select(Usuario).where(Usuario.email == email)
+        ).first()
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario no existe")
+
+        return user
+
+
+def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
+    if user.rol != "admin":
+        raise HTTPException(status_code=403, detail="No autorizado (admin)")
+    return user
