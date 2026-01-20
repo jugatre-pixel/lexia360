@@ -1,16 +1,18 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Lexia360 · Wizard · Contrato de arrendamiento</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lexia360 · Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
   <style>
     :root{
       --brand:#0b5fff; --brand2:#5b8cff;
-      --bg:#0b1220; --muted:rgba(255,255,255,.72);
-      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
-      --radius:16px; --ink:#101828; --sub:#667085;
+      --bg:#0b1220; --muted:rgba(255,255,255,.74);
+      --card:#fff; --border:#e6e8ef;
+      --ink:#101828; --sub:#667085;
+      --shadow:0 18px 44px rgba(16,24,40,.12);
+      --radius:16px;
       --ok:#027a48; --danger:#b42318;
     }
     body{
@@ -18,9 +20,9 @@
       background:
         radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
         radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 52%, #f6f7fb 52%, #f6f7fb 100%);
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 46%, #f6f7fb 46%, #f6f7fb 100%);
     }
-    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+    .wrap{ max-width:1180px; margin:0 auto; padding:18px; }
     .topbar{
       position:sticky;top:0;z-index:50;
       background:rgba(11,18,32,.62);
@@ -49,43 +51,21 @@
       font-weight:900;cursor:pointer;
     }
     .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
-    .hero{padding:26px 0 12px;}
+    .hero{padding:26px 0 10px;}
     .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
     .sub{color:var(--muted);margin:0}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:start}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:start}
     @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    .kpi{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff}
+    .kpi .label{color:var(--sub);font-size:12px;font-weight:950;margin-bottom:6px}
+    .kpi .value{font-size:22px;font-weight:1000;color:var(--ink)}
     .muted2{color:var(--sub);font-size:13px}
-    .steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .step{
-      padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:#fff;
-      font-weight:950;font-size:12px;color:var(--sub)
-    }
-    .step.active{
-      border-color:rgba(11,95,255,.35); color:var(--ink);
-      box-shadow:0 10px 26px rgba(11,95,255,.12);
-    }
-    input, select{border-radius:12px!important;}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media(max-width:900px){.row{grid-template-columns:1fr}}
-    .alert{margin-top:10px;font-weight:950;font-size:13px}
-    .alert.ok{color:var(--ok)}
-    .alert.err{color:var(--danger)}
-    .kpi{
-      border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff;
-    }
-    .kpi .label{color:var(--sub); font-size:12px; font-weight:950; margin-bottom:6px;}
-    .kpi .value{font-size:18px; font-weight:1000; color:var(--ink);}
-    .check{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff}
-    .check b{display:block;margin-bottom:6px}
-    .divider{height:1px;background:var(--border);margin:12px 0}
-    .small{font-size:12px;color:var(--sub)}
-    .pdfbox{
-      border:1px solid rgba(11,95,255,.25);
-      background:rgba(11,95,255,.06);
-      border-radius:16px;
-      padding:12px;
-    }
+    .msg{margin-top:10px;font-size:13px;font-weight:950}
+    .msg.ok{color:var(--ok)}
+    .msg.err{color:var(--danger)}
     .linkbtn{
       display:inline-flex;align-items:center;gap:8px;
       padding:10px 14px;border-radius:12px;
@@ -97,6 +77,8 @@
       background:linear-gradient(135deg,var(--brand),var(--brand2));
       color:#fff;border-color:transparent;
     }
+    .divider{height:1px;background:var(--border);margin:12px 0}
+    .panel{display:grid;gap:10px}
   </style>
 </head>
 <body>
@@ -108,9 +90,9 @@
       </a>
 
       <div class="navlinks">
-        <a class="chip" href="/static/dashboard.html">Dashboard</a>
+        <a class="chip active" href="/static/dashboard.html">Dashboard</a>
         <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
-        <a class="chip active" href="/static/wizard.html">Wizard</a>
+        <a class="chip" href="/static/wizard.html">Wizard</a>
         <a class="chip" href="/static/papelera.html">Papelera</a>
         <button class="btn" onclick="logout()">Salir</button>
       </div>
@@ -118,349 +100,104 @@
   </div>
 
   <section class="wrap hero">
-    <h2 class="headline">Wizard · Contrato de arrendamiento</h2>
-    <p class="sub">Genera un contrato (MVP) y un checklist operativo en menos de 2 minutos.</p>
-    <div class="steps">
-      <span class="step active" id="s1">1) Inmueble</span>
-      <span class="step" id="s2">2) Partes</span>
-      <span class="step" id="s3">3) Confirmar</span>
-      <span class="step" id="s4">4) PDF + Checklist</span>
-    </div>
+    <h2 class="headline">Panel de control</h2>
+    <p class="sub">Estado del sistema y accesos directos al flujo “Contrato + Checklist”.</p>
   </section>
 
   <section class="wrap">
     <div class="grid">
       <div class="card">
-        <div id="alert" class="alert"></div>
+        <h3 style="margin:0 0 10px;">Estado</h3>
 
-        <!-- STEP 1 -->
-        <div id="step1">
-          <h3 style="margin:0 0 8px;">Selecciona un inmueble</h3>
-          <div class="muted2">El contrato se vincula a un expediente (inmueble).</div>
-
-          <label style="margin-top:10px;">Inmueble</label>
-          <select id="inmuebleSelect"></select>
-
-          <div class="divider"></div>
-
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-            <a class="linkbtn" href="/static/inmueble.html">Ver ficha (si tienes id)</a>
-            <button class="linkbtn primary" onclick="next(2)">Continuar</button>
-          </div>
-
-          <div class="small" style="margin-top:10px;">
-            ¿No tienes inmuebles? Crea uno en <a href="/static/inmueble.html">Nuevo expediente</a> (o desde Inmuebles).
-          </div>
+        <div class="kpis">
+          <div class="kpi"><div class="label">Usuarios</div><div class="value" id="k_users">—</div></div>
+          <div class="kpi"><div class="label">Inmuebles activos</div><div class="value" id="k_inm">—</div></div>
+          <div class="kpi"><div class="label">Papelera</div><div class="value" id="k_trash">—</div></div>
+          <div class="kpi"><div class="label">Documentos</div><div class="value" id="k_docs">—</div></div>
         </div>
 
-        <!-- STEP 2 -->
-        <div id="step2" style="display:none;">
-          <h3 style="margin:0 0 8px;">Partes y duración</h3>
-          <div class="muted2">MVP: datos mínimos. Sprint siguiente: cláusulas completas + anexos.</div>
+        <div id="sysMsg" class="msg"></div>
 
-          <div class="row" style="margin-top:10px;">
-            <div>
-              <label>Arrendatario (nombre)</label>
-              <input id="arrNombre" type="text" placeholder="Nombre y apellidos"/>
-            </div>
-            <div>
-              <label>Arrendatario (DNI/NIE)</label>
-              <input id="arrDni" type="text" placeholder="00000000X"/>
-            </div>
-          </div>
+        <div class="divider"></div>
 
-          <div class="row" style="margin-top:10px;">
-            <div>
-              <label>Fecha inicio</label>
-              <input id="fechaInicio" type="date"/>
-            </div>
-            <div>
-              <label>Duración (meses)</label>
-              <input id="duracionMeses" type="number" min="1" step="1" value="12"/>
-            </div>
-          </div>
-
-          <div class="divider"></div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between;">
-            <button class="linkbtn" onclick="next(1)">Atrás</button>
-            <button class="linkbtn primary" onclick="next(3)">Continuar</button>
-          </div>
+        <div class="muted2">
+          Si aquí ves “—” en KPIs, es que tu backend aún no está devolviendo esas claves en <code>/status</code>.
+          No rompe nada, pero el siguiente paso backend es dejarlo fino.
         </div>
-
-        <!-- STEP 3 -->
-        <div id="step3" style="display:none;">
-          <h3 style="margin:0 0 8px;">Confirmación</h3>
-          <div class="muted2">Revisa antes de generar el contrato.</div>
-
-          <div class="divider"></div>
-          <div id="review" class="check"></div>
-
-          <div class="divider"></div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between;">
-            <button class="linkbtn" onclick="next(2)">Atrás</button>
-            <button class="linkbtn primary" onclick="createDocument()">Generar contrato</button>
-          </div>
-        </div>
-
-        <!-- STEP 4 -->
-        <div id="step4" style="display:none;">
-          <h3 style="margin:0 0 8px;">Contrato generado</h3>
-          <div class="muted2">Descarga el PDF y sigue el checklist.</div>
-
-          <div class="divider"></div>
-
-          <div class="pdfbox">
-            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-              <div>
-                <b>Documento</b>
-                <div class="muted2">ID: <span id="docId">—</span></div>
-              </div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <a id="pdfLink" class="linkbtn primary" href="#" target="_blank" rel="noopener">⬇️ Descargar PDF</a>
-                <a class="linkbtn" href="/static/inmuebles.html">Volver a inmuebles</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="divider"></div>
-
-          <b>Checklist</b>
-          <div class="muted2">Sprint siguiente: marcar completado + auditoría.</div>
-          <div id="checklist" style="margin-top:10px; display:grid; gap:10px;"></div>
-        </div>
-
       </div>
 
-      <!-- SIDE -->
       <div class="card">
-        <h3 style="margin:0 0 10px;">Qué estás construyendo</h3>
-        <div class="muted2">
-          Este es el primer “producto” real: contrato + checklist. Con esto ya puedes vender.
+        <h3 style="margin:0 0 10px;">Acciones rápidas</h3>
+        <div class="panel">
+          <a class="linkbtn primary" href="/static/wizard.html">⚡ Generar contrato (Wizard)</a>
+          <a class="linkbtn" href="/static/inmuebles.html">📁 Gestionar inmuebles</a>
+          <a class="linkbtn" href="/static/papelera.html">🗑️ Ver papelera</a>
+          <div class="muted2">
+            Tip: cuando generes un contrato, te llevo a <code>documento.html?id=...</code>
+          </div>
         </div>
 
         <div class="divider"></div>
 
-        <div class="kpi">
-          <div class="label">Producto</div>
-          <div class="value">Contrato de alquiler (MVP)</div>
-          <div class="small">Roadmap: anexos, versión final, firma, burofax.</div>
-        </div>
-
-        <div style="height:10px;"></div>
-
-        <div class="kpi">
-          <div class="label">Objetivo Sprint 1</div>
-          <div class="value">End-to-end impecable</div>
-          <div class="small">Wizard → PDF → Checklist → trazabilidad.</div>
-        </div>
+        <div class="muted2" id="who"></div>
       </div>
     </div>
   </section>
 
 <script>
   const apiUrl = location.origin;
+  const TOKEN_KEY = "token";
 
-  function token(){ return localStorage.getItem("token"); }
+  function token(){ return localStorage.getItem(TOKEN_KEY); }
   function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
   function logout(){
-    localStorage.removeItem("token"); localStorage.removeItem("email");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
     window.location.href="/static/index.html";
   }
-  function setAlert(msg, ok=true){
-    const el = document.getElementById("alert");
-    el.className = "alert " + (ok ? "ok" : "err");
-    el.textContent = msg || "";
-  }
+  function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
   async function safeJson(res){ try{return await res.json();}catch{return {};} }
 
-  function setStep(n){
-    ["s1","s2","s3","s4"].forEach((id, idx)=>{
-      document.getElementById(id).classList.toggle("active", (idx+1)===n);
-    });
-    ["step1","step2","step3","step4"].forEach((id, idx)=>{
-      document.getElementById(id).style.display = ((idx+1)===n) ? "block" : "none";
-    });
-  }
-
-  let inmuebles = [];
-  let createdDocId = null;
-
-  function esc(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-  }
-
-  async function guard(){
+  // Evita bucles: /me solo una vez al cargar
+  async function guardOnce(){
     const t = token();
     if(!t){ logout(); return false; }
     const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
     if(res.status===401){ logout(); return false; }
-    return res.ok;
+    if(!res.ok){ return false; }
+    const me = await safeJson(res);
+    document.getElementById("who").textContent = `Sesión: ${me.email || localStorage.getItem("email") || ""}`;
+    return true;
   }
 
-  async function loadInmuebles(){
-    const ok = await guard();
-    if(!ok) return;
+  async function loadStatus(){
+    const msg = document.getElementById("sysMsg");
+    msg.className = "msg"; msg.textContent = "Cargando…";
 
-    setAlert("Cargando inmuebles...");
-    const res = await fetch(`${apiUrl}/inmuebles`, { headers: authHeaders() });
+    const res = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
     if(res.status===401){ logout(); return; }
     const data = await safeJson(res);
 
     if(!res.ok){
-      setAlert(data.detail || "No se pudo cargar inmuebles.", false);
+      msg.className = "msg err";
+      msg.textContent = (data.detail || "No se pudo cargar /status.");
       return;
     }
 
-    inmuebles = Array.isArray(data) ? data : [];
-    const sel = document.getElementById("inmuebleSelect");
-    sel.innerHTML = "";
+    setText("k_users", data.usuarios_registrados);
+    setText("k_inm", data.inmuebles_activos);
+    setText("k_trash", data.inmuebles_eliminados);
+    setText("k_docs", data.documentos);
 
-    if(inmuebles.length === 0){
-      sel.innerHTML = `<option value="">(No hay inmuebles activos)</option>`;
-      setAlert("No tienes inmuebles activos. Crea un expediente primero.", false);
-      return;
-    }
-
-    for(const i of inmuebles){
-      const id = i.id_inmueble;
-      const label = `${i.direccion} · ${i.municipio} (${i.comunidad_autonoma})`;
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = label;
-      sel.appendChild(opt);
-    }
-
-    setAlert("✅ Inmuebles cargados.");
-    setTimeout(()=>setAlert(""), 900);
+    msg.className = "msg ok";
+    msg.textContent = "✅ Estado cargado.";
+    setTimeout(()=>{ msg.textContent=""; }, 900);
   }
 
-  function collect(){
-    const inmueble_id = Number(document.getElementById("inmuebleSelect").value || "0");
-    const arrendatario_nombre = document.getElementById("arrNombre").value.trim() || null;
-    const arrendatario_dni = document.getElementById("arrDni").value.trim() || null;
-
-    const f = document.getElementById("fechaInicio").value;
-    const fecha_inicio = f ? f : null;
-
-    const dur = Number(document.getElementById("duracionMeses").value || "12");
-    const duracion_meses = dur > 0 ? dur : 12;
-
-    return { inmueble_id, arrendatario_nombre, arrendatario_dni, fecha_inicio, duracion_meses };
-  }
-
-  function buildReview(){
-    const p = collect();
-    const inm = inmuebles.find(x => x.id_inmueble === p.inmueble_id);
-
-    document.getElementById("review").innerHTML = `
-      <b>Resumen</b>
-      <div class="small">Inmueble</div>
-      <div>${esc(inm ? (inm.direccion + " · " + inm.municipio) : "—")}</div>
-
-      <div class="divider"></div>
-
-      <div class="small">Arrendatario</div>
-      <div>${esc(p.arrendatario_nombre || "—")} · ${esc(p.arrendatario_dni || "—")}</div>
-
-      <div class="divider"></div>
-
-      <div class="small">Duración</div>
-      <div>Inicio: <b>${esc(p.fecha_inicio || "(hoy)")}</b> · Meses: <b>${esc(p.duracion_meses)}</b></div>
-    `;
-  }
-
-  function next(n){
-    if(n===2){
-      const p = collect();
-      if(!p.inmueble_id){
-        setAlert("Selecciona un inmueble.", false);
-        return;
-      }
-    }
-   ôt
-    if(n===3){
-      buildReview();
-    }
-    setAlert("");
-    setStep(n);
-  }
-
-  async function createDocument(){
-    const p = collect();
-    if(!p.inmueble_id){
-      setAlert("Selecciona un inmueble.", false);
-      return;
-    }
-
-    setAlert("Generando contrato...");
-    const res = await fetch(`${apiUrl}/documents/lease`, {
-      method:"POST",
-      headers: authHeaders({ "Content-Type":"application/json" }),
-      body: JSON.stringify(p)
-    });
-
-    if(res.status===401){ logout(); return; }
-    const data = await safeJson(res);
-
-    if(!res.ok){
-      setAlert(data.detail || "No se pudo generar el contrato.", false);
-      return;
-    }
-
-    createdDocId = data.id_document;
-    document.getElementById("docId").textContent = createdDocId;
-
-    const pdfUrl = `${apiUrl}/documents/${createdDocId}/pdf`;
-    document.getElementById("pdfLink").href = pdfUrl;
-
-    setAlert("✅ Contrato generado.");
-    setTimeout(()=>setAlert(""), 900);
-
-    await loadChecklist(createdDocId);
-    setStep(4);
-  }
-
-  async function loadChecklist(id){
-    const res = await fetch(`${apiUrl}/documents/${id}`, { headers: authHeaders() });
-    if(res.status===401){ logout(); return; }
-    const data = await safeJson(res);
-
-    if(!res.ok){
-      setAlert(data.detail || "No se pudo cargar el documento.", false);
-      return;
-    }
-
-    const box = document.getElementById("checklist");
-    box.innerHTML = "";
-
-    const items = data.checklist || [];
-    if(items.length === 0){
-      box.innerHTML = `<div class="muted2">No hay checklist (aún).</div>`;
-      return;
-    }
-
-    for(const it of items){
-      const el = document.createElement("div");
-      el.className = "check";
-      el.innerHTML = `
-        <b>☐ ${esc(it.titulo)}</b>
-        <div class="muted2">${esc(it.descripcion || "")}</div>
-      `;
-      box.appendChild(el);
-    }
-  }
-
-  // INIT
   (async function init(){
-    const ok = await guard();
+    const ok = await guardOnce();
     if(!ok) return;
-    // default fecha inicio = hoy
-    const today = new Date().toISOString().slice(0,10);
-    document.getElementById("fechaInicio").value = today;
-    await loadInmuebles();
-    setStep(1);
+    await loadStatus();
   })();
 </script>
 </body>
