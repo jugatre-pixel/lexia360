@@ -5,105 +5,124 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Inmueble</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <style>
+    .muted{ color:#667085; font-size:13px; }
+    pre{ background:#0b1220; color:#e6e8ef; padding:12px; border-radius:12px; overflow:auto; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .msg{ margin-top:10px; font-weight:900; font-size:13px; }
+    .msg.ok{ color:#027a48; }
+    .msg.err{ color:#b42318; }
+  </style>
 </head>
 <body>
 <main class="container">
-  <nav>
-    <ul>
-      <li><strong>Lexia360</strong></li>
-    </ul>
-    <ul>
-      <li><a href="/static/dashboard.html">Dashboard</a></li>
-      <li><a href="/static/inmuebles.html">Inmuebles</a></li>
-      <li><a href="/static/papelera.html">Papelera</a></li>
-      <li><a href="#" onclick="logout(); return false;">Salir</a></li>
-    </ul>
+  <nav class="row">
+    <a href="/static/dashboard.html" role="button" class="secondary">← Dashboard</a>
+    <a href="/static/inmuebles.html" role="button" class="secondary">← Inmuebles</a>
+    <a href="/static/papelera.html" role="button" class="secondary">🗑️ Papelera</a>
+    <button onclick="logout()">Salir</button>
   </nav>
 
-  <h2 id="title" style="margin-top:12px;"></h2>
+  <h2 id="title" style="margin-top:14px;">Inmueble</h2>
+  <div class="muted" id="subtitle"></div>
 
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0;">
-    <button id="btnPdf" class="primary" onclick="downloadPDF()">📄 Descargar PDF</button>
-    <a id="back" role="button" class="secondary" href="/static/inmuebles.html">Volver</a>
+  <div class="row" style="margin-top:14px;">
+    <a id="pdf_open" role="button" target="_blank" rel="noopener">Abrir PDF</a>
+    <a id="pdf_download" role="button" class="secondary" download>Descargar PDF</a>
+    <button class="secondary" onclick="reloadAll()">Actualizar</button>
   </div>
 
-  <details open>
-    <summary>Ver JSON (debug)</summary>
-    <pre id="data" style="white-space:pre-wrap;"></pre>
-  </details>
+  <div id="msg" class="msg"></div>
 
-  <p id="msg" style="margin-top:10px;"></p>
+  <h4 style="margin-top:18px;">JSON (debug)</h4>
+  <pre id="data">{}</pre>
 </main>
 
 <script>
-  const api = location.origin;
-  const token = localStorage.getItem("token");
-  const id = new URLSearchParams(location.search).get("id");
+const api = location.origin;
+const token = localStorage.getItem("token");
+const id = new URLSearchParams(location.search).get("id");
 
-  function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    location.href="/static/index.html";
+function logout(){
+  localStorage.removeItem("token");
+  localStorage.removeItem("email");
+  location.href="/static/index.html";
+}
+
+function setMsg(text, ok=true){
+  const el = document.getElementById("msg");
+  el.className = "msg " + (ok ? "ok" : "err");
+  el.textContent = text || "";
+}
+
+async function safeJson(res){
+  try{ return await res.json(); }catch{ return {}; }
+}
+
+async function loadInmueble(){
+  if(!token) return logout();
+  if(!id){
+    setMsg("Falta ?id= en la URL", false);
+    return;
   }
 
-  function setMsg(text, ok=true){
-    const el = document.getElementById("msg");
-    el.textContent = text || "";
-    el.style.color = ok ? "#027a48" : "#b42318";
+  const r = await fetch(`${api}/inmuebles/${id}`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+
+  if(r.status === 401) return logout();
+
+  const d = await safeJson(r);
+
+  if(!r.ok){
+    setMsg(d.detail || "Error cargando inmueble", false);
+    return;
   }
 
-  async function load(){
-    if(!token){ location.href="/static/index.html"; return; }
-    if(!id){ setMsg("Falta ?id= en la URL", false); return; }
+  document.getElementById("title").textContent = d.direccion || `Inmueble ${id}`;
+  document.getElementById("subtitle").textContent =
+    `${d.municipio || "—"} · ${d.comunidad_autonoma || "—"} · ${d.codigo_postal || "—"}`;
 
-    try{
-      const r = await fetch(`${api}/inmuebles/${id}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+  document.getElementById("data").textContent = JSON.stringify(d, null, 2);
+  setMsg("✅ Inmueble cargado.", true);
+}
 
-      if(r.status === 401){ logout(); return; }
+async function loadPdfTokenAndLink(){
+  if(!token) return logout();
 
-      const d = await r.json().catch(()=>null);
-      if(!r.ok){
-        setMsg(d?.detail || "No se pudo cargar el inmueble.", false);
-        return;
-      }
+  // 1) Pedimos token temporal para PDF con Bearer
+  const r = await fetch(`${api}/inmuebles/${id}/pdf-token`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  });
 
-      document.getElementById("title").textContent = d?.direccion || `Inmueble ${id}`;
-      document.getElementById("data").textContent = JSON.stringify(d, null, 2);
-      setMsg("");
-    }catch(e){
-      setMsg("⚠️ Error de conexión con el servidor.", false);
-    }
+  if(r.status === 401) return logout();
+  const d = await safeJson(r);
+
+  if(!r.ok || !d.token){
+    setMsg((d.detail || "No se pudo obtener token PDF.") + " (revisa backend)", false);
+    // dejamos links vacíos por seguridad
+    document.getElementById("pdf_open").removeAttribute("href");
+    document.getElementById("pdf_download").removeAttribute("href");
+    return;
   }
 
-  async function downloadPDF(){
-    if(!token){ logout(); return; }
-    setMsg("");
+  // 2) Construimos link con query token -> el navegador ya no necesita Authorization header
+  const pdfUrl = `${api}/inmuebles/${id}/pdf?t=${encodeURIComponent(d.token)}`;
 
-    try{
-      // 1) Pedir token de descarga
-      const r = await fetch(`${api}/inmuebles/${id}/pdf-token`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+  document.getElementById("pdf_open").href = pdfUrl;
+  document.getElementById("pdf_download").href = pdfUrl;
 
-      if(r.status === 401){ logout(); return; }
+  setMsg("✅ Link PDF listo (sin 401).", true);
+}
 
-      const data = await r.json().catch(()=>({}));
-      if(!r.ok || !data.token){
-        setMsg(data.detail || "No se pudo generar el token de descarga.", false);
-        return;
-      }
+async function reloadAll(){
+  setMsg("");
+  await loadInmueble();
+  await loadPdfTokenAndLink();
+}
 
-      // 2) Descargar por URL con token en querystring
-      window.location.href = `${api}/inmuebles/${id}/pdf?t=${encodeURIComponent(data.token)}`;
-
-    }catch(e){
-      setMsg("⚠️ Error de conexión al generar token PDF.", false);
-    }
-  }
-
-  load();
+// init
+reloadAll();
 </script>
 </body>
 </html>
