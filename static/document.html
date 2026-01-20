@@ -221,7 +221,6 @@
     setAlert("✅ Documento cargado.");
     setTimeout(()=>setAlert(""), 900);
 
-    // summary
     const meta = data.meta || {};
     const inm = data.inmueble || null;
 
@@ -232,7 +231,6 @@
     }
     document.getElementById("summary").innerHTML = html;
 
-    // checklist
     const box = document.getElementById("checklist");
     box.innerHTML = "";
     const items = Array.isArray(data.checklist) ? data.checklist : [];
@@ -251,7 +249,6 @@
       }
     }
 
-    // debug
     document.getElementById("debug").textContent = JSON.stringify(data, null, 2);
   }
 
