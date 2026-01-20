@@ -1,490 +1,59 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Lexia360 · Inmuebles</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
-  <style>
-    :root{
-      --brand:#0b5fff; --brand2:#5b8cff;
-      --bg:#0b1220; --muted:rgba(255,255,255,.72);
-      --card:#ffffff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
-      --radius:16px;
-    }
-    body{
-      margin:0;
-      background:
-        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
-        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 62%, #f6f7fb 62%, #f6f7fb 100%);
-    }
-    .wrap{max-width:1180px;margin:0 auto;padding:18px;}
-    .topbar{
-      position:sticky;top:0;z-index:50;
-      background:rgba(11,18,32,.62);
-      backdrop-filter: blur(12px);
-      border-bottom:1px solid rgba(255,255,255,.10);
-    }
-    .toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:950}
-    .badge{
-      width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:0 14px 28px rgba(11,95,255,.22);
-    }
-    .navlinks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .chip{
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.06);
-      color:#fff;padding:8px 12px;border-radius:999px;
-      text-decoration:none;font-weight:900;font-size:13px;
-    }
-    .chip.active{background:rgba(255,255,255,.12)}
-    .btn{
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.06);
-      color:#fff;padding:10px 14px;border-radius:12px;
-      font-weight:900;cursor:pointer;
-    }
-    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
-    .hero{padding:28px 0 10px;}
-    .headline{color:#fff;font-weight:1000;letter-spacing:-.3px;margin:0 0 6px}
-    .sub{color:var(--muted);margin:0}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-    .muted2{color:#667085;font-size:13px}
-    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
-    @media(max-width:900px){ .kpis{grid-template-columns:1fr 1fr} }
-    .kpi{background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px}
-    .kpi .n{font-weight:1000;font-size:22px;margin:2px 0}
-    .kpi .l{font-size:12px;color:#667085;font-weight:900}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    input, select, textarea{border-radius:12px !important;}
-    table{border-radius:16px;overflow:hidden}
-    .pill{
-      font-size:12px;color:#111827;border:1px solid var(--border);background:#fff;
-      padding:6px 10px;border-radius:999px;font-weight:900;
-    }
-    .pill.red{background:#fff5f5;border-color:#fecaca;color:#7f1d1d}
-    .pill.green{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}
-    .pill.gray{background:#f8fafc;border-color:#e2e8f0;color:#0f172a}
-    .actions{display:flex;gap:8px;flex-wrap:wrap}
-    .danger{background:#b42318 !important;border-color:#b42318 !important;color:#fff !important}
-    .ghost{background:#fff !important;border:1px solid var(--border) !important;color:#111827 !important}
-    .toast{
-      position:fixed;left:18px;bottom:18px;z-index:9999;
-      background:#111827;color:#fff;border:1px solid rgba(255,255,255,.12);
-      padding:12px 14px;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.25);
-      display:none;max-width:560px;
-    }
-    .toast.show{display:block}
-    dialog{border:none;border-radius:18px;max-width:860px;box-shadow:0 30px 120px rgba(0,0,0,.25)}
-    dialog::backdrop{background:rgba(2,6,23,.62)}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media(max-width:900px){ .grid2{grid-template-columns:1fr} }
-    .req{color:#b42318;font-weight:900}
-  </style>
+<meta charset="utf-8"/>
+<title>Lexia360 · Inmuebles</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
 </head>
 <body>
-  <div class="topbar">
-    <div class="wrap toprow">
-      <a class="brand" href="/static/dashboard.html">
-        <div class="badge">⚖️</div>
-        <div>Lexia360</div>
-      </a>
+<nav class="container-fluid">
+  <ul><li><strong>Inmuebles</strong></li></ul>
+  <ul>
+    <li><a href="/static/dashboard.html">Dashboard</a></li>
+    <li><a href="/static/wizard.html">Nuevo</a></li>
+    <li><a href="/static/papelera.html">Papelera</a></li>
+  </ul>
+</nav>
 
-      <div class="navlinks">
-        <a class="chip" href="/static/dashboard.html">Dashboard</a>
-        <a class="chip active" href="/static/inmuebles.html">Inmuebles</a>
-        <a class="chip" href="/static/wizard.html">Wizard</a>
-        <a class="chip" href="/static/papelera.html">Papelera</a>
-        <button class="btn" onclick="logout()">Salir</button>
-      </div>
-    </div>
-  </div>
-
-  <section class="wrap hero">
-    <h2 class="headline">Inmuebles</h2>
-    <p class="sub">Crea y gestiona expedientes. Borrar manda a la papelera.</p>
-
-    <div class="kpis">
-      <div class="kpi">
-        <div class="l">Activos</div>
-        <div class="n" id="kpiActivos">—</div>
-        <div class="muted2">Inmuebles en uso</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Semáforo rojo</div>
-        <div class="n" id="kpiRojos">—</div>
-        <div class="muted2">Riesgo (MVP)</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Zona tensionada</div>
-        <div class="n" id="kpiZonas">—</div>
-        <div class="muted2">Marcados en dataset</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Tu sesión</div>
-        <div class="n" id="kpiUser">—</div>
-        <div class="muted2" id="kpiRole">—</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="wrap">
-    <div class="card">
-      <div class="row">
-        <div>
-          <b>Listado</b>
-          <div class="muted2">Buscar por dirección/municipio. Descargar PDF del informe.</div>
-        </div>
-        <div class="toolbar">
-          <input id="q" type="search" placeholder="Buscar (dirección, municipio)..." oninput="applyFilters()" />
-          <select id="fSem" onchange="applyFilters()">
-            <option value="">Semáforo (todos)</option>
-            <option value="ROJO">ROJO</option>
-            <option value="VERDE">VERDE</option>
-          </select>
-          <button class="btn" onclick="load()">Actualizar</button>
-          <button class="btn primary" onclick="openCreate()">+ Nuevo inmueble</button>
-        </div>
-      </div>
-
-      <figure style="margin:12px 0 0;">
-        <table role="grid">
-          <thead>
-            <tr>
-              <th style="width:86px;">ID</th>
-              <th>Dirección</th>
-              <th>Municipio</th>
-              <th>CCAA</th>
-              <th>Renta</th>
-              <th>Semáforo</th>
-              <th>Zona</th>
-              <th style="width:320px;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </figure>
-
-      <div class="muted2" id="empty" style="display:none;margin-top:12px;">
-        No tienes inmuebles todavía. Crea el primero.
-      </div>
-    </div>
-  </section>
-
-  <dialog id="dlgCreate">
-    <article style="margin:0;">
-      <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <div>
-          <strong style="font-size:18px;">Nuevo inmueble</strong>
-          <div class="muted2">Los campos marcados con <span class="req">*</span> son obligatorios.</div>
-        </div>
-        <button aria-label="Close" class="secondary" onclick="closeCreate()">✕</button>
-      </header>
-
-      <div class="grid2">
-        <div>
-          <label>Dirección <span class="req">*</span></label>
-          <input id="c_direccion" placeholder="C/ Ejemplo 123, Piso 2" />
-        </div>
-        <div>
-          <label>Municipio <span class="req">*</span></label>
-          <input id="c_municipio" placeholder="Madrid" />
-        </div>
-
-        <div>
-          <label>Comunidad Autónoma <span class="req">*</span></label>
-          <input id="c_ca" placeholder="Comunidad de Madrid" />
-        </div>
-        <div>
-          <label>Código Postal</label>
-          <input id="c_cp" placeholder="28001" />
-        </div>
-
-        <div>
-          <label>Superficie m²</label>
-          <input id="c_m2" type="number" min="0" placeholder="80" />
-        </div>
-        <div>
-          <label>Tipo de arrendamiento</label>
-          <select id="c_tipo_arr">
-            <option value="vivienda_habitual">Vivienda habitual</option>
-            <option value="uso_distinto">Uso distinto</option>
-            <option value="temporada">Temporada</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Tipo de arrendador</label>
-          <select id="c_tipo_arrendador">
-            <option value="persona_fisica">Persona física</option>
-            <option value="persona_juridica">Persona jurídica</option>
-          </select>
-        </div>
-        <div>
-          <label>Renta propuesta (€) <span class="req">*</span></label>
-          <input id="c_renta" type="number" min="0" step="0.01" placeholder="1200" />
-        </div>
-
-        <div>
-          <label>Renta anterior (€)</label>
-          <input id="c_renta_ant" type="number" min="0" step="0.01" placeholder="1100" />
-        </div>
-      </div>
-
-      <footer style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-        <button class="ghost" onclick="closeCreate()">Cancelar</button>
-        <button class="primary" onclick="create()">Crear</button>
-      </footer>
-
-      <div id="createMsg" class="muted2" style="margin-top:8px;"></div>
-    </article>
-  </dialog>
-
-  <div id="toast" class="toast"></div>
+<main class="container">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Dirección</th><th>Acciones</th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</main>
 
 <script>
-  const apiUrl = location.origin;
-  let inmuebles = [];
-  let filtered = [];
+const api = location.origin;
+const token = localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
 
-  function token(){ return localStorage.getItem("token"); }
-  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
-
-  function toast(msg){
-    const el=document.getElementById("toast");
-    el.textContent=msg; el.classList.add("show");
-    setTimeout(()=>el.classList.remove("show"), 4200);
-  }
-
-  function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    window.location.href="/static/index.html";
-  }
-
-  function guard(){
-    const t = token();
-    if(!t){ logout(); return false; }
-    return true;
-  }
-
-  async function safeJson(res){ try{return await res.json();}catch{return {};} }
-
-  function escapeHtml(s){
-    return (s??"").toString()
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-  }
-
-  function pillSem(v){
-    const s = (v||"—").toString().toUpperCase();
-    if(s==="ROJO") return `<span class="pill red">ROJO</span>`;
-    if(s==="VERDE") return `<span class="pill green">VERDE</span>`;
-    return `<span class="pill gray">${escapeHtml(s)}</span>`;
-  }
-
-  function pillZona(z){
-    if(z===true) return `<span class="pill">Sí</span>`;
-    if(z===false) return `<span class="pill gray">No</span>`;
-    return `<span class="pill gray">—</span>`;
-  }
-
-  function getId(i){ return i.id_inmueble ?? i.id ?? i.idInmueble; }
-
-  function computeKpis(){
-    document.getElementById("kpiActivos").textContent = String(inmuebles.length);
-    document.getElementById("kpiRojos").textContent = String(inmuebles.filter(x => (x.semaforo||"").toUpperCase()==="ROJO").length);
-    document.getElementById("kpiZonas").textContent = String(inmuebles.filter(x => x.zona_tensionada===true).length);
-  }
-
-  async function ensureSession(){
-    if(!guard()) return false;
-    try{
-      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-      if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return false; }
-      const data = await safeJson(res);
-      if(!res.ok){ toast("🔒 No autenticado."); logout(); return false; }
-
-      document.getElementById("kpiUser").textContent = (data.email || "—");
-      document.getElementById("kpiRole").textContent = (data.rol ? `Rol: ${data.rol}` : "—");
-      return true;
-    }catch(e){
-      toast("⚠️ No se pudo validar sesión.");
-      return false;
-    }
-  }
-
-  function render(){
-    const tbody = document.getElementById("rows");
-    tbody.innerHTML = "";
-    document.getElementById("empty").style.display = (filtered.length===0) ? "block" : "none";
-
-    for(const i of filtered){
-      const id = getId(i);
-      const direccion = i.direccion || "—";
-      const municipio = i.municipio || "—";
-      const ca = i.comunidad_autonoma || "—";
-      const renta = (i.renta_propuesta!=null) ? `${i.renta_propuesta} €` : "—";
-      const sem = pillSem(i.semaforo);
-      const zona = pillZona(i.zona_tensionada);
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><b>${id ?? "—"}</b></td>
-        <td style="font-weight:900;">${escapeHtml(direccion)}</td>
-        <td>${escapeHtml(municipio)}</td>
-        <td>${escapeHtml(ca)}</td>
-        <td>${escapeHtml(renta)}</td>
-        <td>${sem}</td>
-        <td>${zona}</td>
+async function load(){
+  const r = await fetch(api+"/inmuebles",{headers:{Authorization:`Bearer ${token}`}});
+  if(r.status===401) location.href="/static/index.html";
+  const data = await r.json();
+  const tbody = document.getElementById("rows");
+  tbody.innerHTML="";
+  data.forEach(i=>{
+    tbody.innerHTML+=`
+      <tr>
+        <td>${i.id_inmueble}</td>
+        <td>${i.direccion}</td>
         <td>
-          <div class="actions">
-            <button class="ghost" onclick="downloadPdf(${Number(id)})">📄 PDF</button>
-            <button class="ghost" onclick="goWizard(${Number(id)})">🧭 Wizard</button>
-            <button class="danger" onclick="trashIt(${Number(id)})">🗑️ Borrar</button>
-          </div>
+          <a href="/static/inmueble.html?id=${i.id_inmueble}">Ver</a>
+          <button onclick="del(${i.id_inmueble})">Eliminar</button>
         </td>
-      `;
-      tbody.appendChild(tr);
-    }
+      </tr>`;
+  });
+}
 
-    computeKpis();
-  }
-
-  function applyFilters(){
-    const q = (document.getElementById("q").value||"").toLowerCase().trim();
-    const fSem = (document.getElementById("fSem").value||"").toUpperCase();
-
-    filtered = inmuebles.filter(x => {
-      const s = `${x.direccion||""} ${x.municipio||""} ${x.comunidad_autonoma||""}`.toLowerCase();
-      if(q && !s.includes(q)) return false;
-      if(fSem && (String(x.semaforo||"").toUpperCase() !== fSem)) return false;
-      return true;
-    });
-
-    render();
-  }
-
-  async function load(){
-    if(!await ensureSession()) return;
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles`, { headers: authHeaders() });
-      if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
-      const data = await safeJson(res);
-
-      if(!res.ok){
-        toast(data.detail || "❌ No se pudo cargar inmuebles.");
-        inmuebles = [];
-        filtered = [];
-        render();
-        return;
-      }
-
-      inmuebles = Array.isArray(data) ? data : [];
-      filtered = inmuebles.slice();
-      render();
-    }catch(e){
-      toast("⚠️ Error de conexión.");
-    }
-  }
-
-  function openCreate(){
-    document.getElementById("createMsg").textContent = "";
-    document.getElementById("dlgCreate").showModal();
-  }
-
-  function closeCreate(){
-    document.getElementById("dlgCreate").close();
-  }
-
-  function v(id){ return document.getElementById(id).value; }
-
-  async function create(){
-    const msg = document.getElementById("createMsg");
-    msg.textContent = "";
-
-    const payload = {
-      direccion: v("c_direccion").trim(),
-      municipio: v("c_municipio").trim(),
-      comunidad_autonoma: v("c_ca").trim(),
-      codigo_postal: v("c_cp").trim() || null,
-      superficie_m2: v("c_m2") ? Number(v("c_m2")) : null,
-      tipo_arrendamiento: v("c_tipo_arr"),
-      tipo_arrendador: v("c_tipo_arrendador"),
-      renta_propuesta: v("c_renta") ? Number(v("c_renta")) : null,
-      renta_anterior: v("c_renta_ant") ? Number(v("c_renta_ant")) : null
-    };
-
-    if(!payload.direccion || !payload.municipio || !payload.comunidad_autonoma || payload.renta_propuesta==null){
-      msg.innerHTML = `<span style="color:#b42318;font-weight:900;">❌ Rellena dirección, municipio, CCAA y renta propuesta.</span>`;
-      return;
-    }
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles`, {
-        method:"POST",
-        headers: authHeaders({ "Content-Type":"application/json" }),
-        body: JSON.stringify(payload)
-      });
-
-      if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
-      const data = await safeJson(res);
-
-      if(!res.ok){
-        msg.innerHTML = `<span style="color:#b42318;font-weight:900;">${escapeHtml(data.detail || "Error al crear.")}</span>`;
-        return;
-      }
-
-      msg.innerHTML = `<span style="color:#027a48;font-weight:900;">✅ Creado (ID ${escapeHtml(String(data.id_inmueble||""))}).</span>`;
-      toast("✅ Inmueble creado.");
-      closeCreate();
-      await load();
-    }catch(e){
-      msg.innerHTML = `<span style="color:#b42318;font-weight:900;">⚠️ Error de conexión.</span>`;
-    }
-  }
-
-  async function trashIt(id){
-    if(!confirm("¿Mover a papelera este inmueble?")) return;
-
-    try{
-      const res = await fetch(`${apiUrl}/inmuebles/${id}`, { method:"DELETE", headers: authHeaders() });
-      if(res.status===401){ toast("🔒 Sesión caducada. Vuelve a entrar."); logout(); return; }
-      const data = await safeJson(res);
-
-      if(!res.ok){
-        toast(data.detail || "❌ No se pudo borrar (papelera).");
-        return;
-      }
-
-      toast("🗑️ Movido a papelera.");
-      await load();
-
-      // si quieres mandarlo directamente a papelera tras borrar:
-      // window.location.href="/static/papelera.html";
-    }catch(e){
-      toast("⚠️ Error de conexión al borrar.");
-    }
-  }
-
-  function goWizard(id){
-    // Si tu wizard soporta query param, perfecto.
-    // Si no, lo ajustamos luego.
-    window.location.href = `/static/wizard.html?inmueble_id=${encodeURIComponent(id)}`;
-  }
-
-  function downloadPdf(id){
-    // Abrimos en otra pestaña para descarga directa
-    window.open(`${apiUrl}/inmuebles/${id}/pdf`, "_blank");
-  }
-
-  // INIT
+async function del(id){
+  if(!confirm("¿Enviar a papelera?")) return;
+  await fetch(api+"/inmuebles/"+id,{method:"DELETE",headers:{Authorization:`Bearer ${token}`}});
   load();
+}
+load();
 </script>
 </body>
 </html>
