@@ -1,234 +1,58 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Dashboard</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
-  <style>
-    :root{
-      --brand:#0b5fff; --brand2:#5b8cff;
-      --bg:#0b1220; --muted:rgba(255,255,255,.74);
-      --card:#fff; --border:#e6e8ef;
-      --ink:#101828;
-    }
-    body{
-      margin:0;
-      background:
-        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
-        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0f1a33 46%, #f6f7fb 46%, #f6f7fb 100%);
-    }
-    .wrap{ max-width:1150px; margin:0 auto; padding:18px; }
-    .nav{
-      position:sticky; top:0; z-index:20;
-      background:rgba(11,18,32,.55);
-      backdrop-filter: blur(12px);
-      border-bottom:1px solid rgba(255,255,255,.10);
-    }
-    .nav-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .logo{ display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:900; letter-spacing:.2px; }
-    .badge{ width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:0 14px 28px rgba(11,95,255,.22);
-    }
-    .nav-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .btn{
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.06);
-      color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer;
-    }
-    .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
-    .hero{ padding:22px 0 12px; }
-    .headline{ color:#fff; font-size:34px; line-height:1.06; margin:0 0 8px; font-weight:1000; letter-spacing:-.2px; }
-    .sub{ color:var(--muted); margin:0; font-size:14px; }
-    .grid{ display:grid; grid-template-columns: 1.25fr .75fr; gap:14px; align-items:start; }
-    @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:16px;
-      box-shadow:0 18px 44px rgba(16,24,40,.12);
-    }
-    .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-    @media(max-width:900px){ .kpis{ grid-template-columns:repeat(2,1fr); } }
-    .kpi{ border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff; }
-    .kpi .label{ color:#667085; font-size:12px; font-weight:900; margin-bottom:6px; }
-    .kpi .value{ font-size:22px; font-weight:1000; color:var(--ink); }
-    .muted2{ color:#667085; font-size:13px; }
-    .msg{ margin-top:10px; font-size:13px; font-weight:900; }
-    .msg.error{ color:#b42318; }
-    .msg.ok{ color:#027a48; }
-    .msg.warn{ color:#b54708; }
-    .pill{
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.06);
-      color:#fff;
-      font-size:12px;
-      font-weight:900;
-    }
-  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
 </head>
 <body>
-  <div class="nav">
-    <div class="wrap nav-row">
-      <a class="logo" href="/static/dashboard.html">
-        <div class="badge">⚖️</div>
-        <div>Lexia360</div>
-      </a>
-      <div class="nav-actions">
-        <span id="who" class="pill" style="display:none;"></span>
-        <button class="btn" onclick="go('/static/wizard.html')">Wizard</button>
-        <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
-        <button class="btn" onclick="go('/static/papelera.html')">Papelera</button>
-        <button class="btn primary" onclick="logout()">Salir</button>
-      </div>
-    </div>
-  </div>
+<nav class="container-fluid">
+  <ul>
+    <li><strong>⚖️ Lexia360</strong></li>
+  </ul>
+  <ul>
+    <li><a href="/static/inmuebles.html">Inmuebles</a></li>
+    <li><a href="/static/papelera.html">Papelera</a></li>
+    <li><a href="/static/wizard.html">Nuevo</a></li>
+    <li><a href="#" onclick="logout()">Salir</a></li>
+  </ul>
+</nav>
 
-  <section class="wrap hero">
-    <h1 class="headline">Panel de control</h1>
-    <p class="sub">Centro de operaciones: expedientes, documentos y trazabilidad.</p>
-  </section>
+<main class="container">
+  <h2>Panel de control</h2>
+  <p id="who"></p>
 
-  <section class="wrap">
-    <div class="grid">
-      <div class="card">
-        <h3 style="margin:0 0 10px;">Estado</h3>
-
-        <div class="kpis">
-          <div class="kpi"><div class="label">Usuarios</div><div class="value" id="k_users">—</div></div>
-          <div class="kpi"><div class="label">Inmuebles</div><div class="value" id="k_inm">—</div></div>
-          <div class="kpi"><div class="label">Papelera</div><div class="value" id="k_trash">—</div></div>
-          <div class="kpi"><div class="label">Docs</div><div class="value" id="k_docs">—</div></div>
-        </div>
-
-        <div id="sysMsg" class="msg"></div>
-        <div class="muted2" style="margin-top:10px;">
-          <span class="muted2">Nota:</span> “Docs” se activará cuando exista endpoint real (por ejemplo <code>/documents</code>).
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin:0 0 10px;">Atajos</h3>
-        <div class="muted2" style="margin-bottom:10px;">Acciones rápidas.</div>
-        <button class="btn primary" style="width:100%;margin-bottom:10px;" onclick="go('/static/wizard.html')">Crear contrato (Wizard)</button>
-        <button class="btn" style="width:100%;margin-bottom:10px;" onclick="go('/static/inmuebles.html')">Gestionar inmuebles</button>
-        <button class="btn" style="width:100%;" onclick="go('/static/papelera.html')">Ver papelera</button>
-      </div>
-    </div>
-  </section>
+  <article>
+    <ul>
+      <li>Usuarios registrados: <b id="k_users">—</b></li>
+      <li>Versión sistema: <b id="k_version">—</b></li>
+    </ul>
+  </article>
+</main>
 
 <script>
-  const apiUrl = location.origin;
+const api = location.origin;
+const token = localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
 
-  function token(){ return localStorage.getItem("token"); }
-  function authHeaders(){ return { "Authorization": `Bearer ${token()}` }; }
-  function go(path){ window.location.href = path; }
-  function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    window.location.href="/static/index.html";
-  }
-  function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
+function logout(){
+  localStorage.clear();
+  location.href="/static/index.html";
+}
 
-  async function safeJson(res){ try{ return await res.json(); } catch { return null; } }
+async function init(){
+  const me = await fetch(api+"/me",{headers:{Authorization:`Bearer ${token}`}});
+  if(me.status===401) return logout();
+  const u = await me.json();
+  document.getElementById("who").textContent = "Usuario: "+u.email;
 
-  async function guardOnce(){
-    const t = token();
-    if(!t){ logout(); return null; }
-
-    try{
-      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-      if(res.status === 401){ logout(); return null; }
-      if(!res.ok){ logout(); return null; }
-      const me = await safeJson(res);
-
-      const who = document.getElementById("who");
-      const email = me?.email || localStorage.getItem("email") || "";
-      if(email){
-        who.style.display = "inline-block";
-        who.textContent = email;
-      }
-      return me;
-    }catch(e){
-      // Si falla red, NO logout automático; solo informamos.
-      return null;
-    }
-  }
-
-  async function loadStatusAndCounts(){
-    const msg = document.getElementById("sysMsg");
-    msg.className = "msg";
-    msg.textContent = "";
-
-    // 1) Usuarios desde /status (no requiere cambios en backend)
-    try{
-      const resS = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
-      if(resS.status===401){ logout(); return; }
-      const s = await safeJson(resS);
-
-      if(resS.ok && s){
-        setText("k_users", s.usuarios_registrados ?? "—");
-      }else{
-        setText("k_users", "—");
-      }
-    }catch(e){
-      setText("k_users", "—");
-    }
-
-    // 2) Inmuebles activos desde /inmuebles
-    try{
-      const resI = await fetch(`${apiUrl}/inmuebles`, { headers: authHeaders() });
-      if(resI.status===401){ logout(); return; }
-      const dataI = await safeJson(resI);
-
-      if(resI.ok && Array.isArray(dataI)){
-        setText("k_inm", dataI.length);
-      }else{
-        setText("k_inm", "—");
-      }
-    }catch(e){
-      setText("k_inm", "—");
-    }
-
-    // 3) Papelera desde /inmuebles/trash
-    try{
-      const resT = await fetch(`${apiUrl}/inmuebles/trash`, { headers: authHeaders() });
-      if(resT.status===401){ logout(); return; }
-      const dataT = await safeJson(resT);
-
-      if(resT.ok && Array.isArray(dataT)){
-        setText("k_trash", dataT.length);
-      }else{
-        setText("k_trash", "—");
-      }
-    }catch(e){
-      setText("k_trash", "—");
-    }
-
-    // 4) Docs: aún no hay endpoint real
-    setText("k_docs", "—");
-
-    msg.className = "msg ok";
-    msg.textContent = "✅ Estado cargado.";
-    setTimeout(()=>{ msg.textContent=""; }, 900);
-  }
-
-  (async function init(){
-    const me = await guardOnce();
-    if(!me) {
-      // si no pudo validar /me pero hay token, no hacemos logout automático por posible fallo temporal
-      // si quieres forzar, descomenta:
-      // logout();
-      return;
-    }
-    await loadStatusAndCounts();
-  })();
+  const st = await fetch(api+"/status");
+  const s = await st.json();
+  document.getElementById("k_users").textContent = s.usuarios_registrados;
+  document.getElementById("k_version").textContent = s.version;
+}
+init();
 </script>
 </body>
 </html>
