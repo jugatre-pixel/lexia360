@@ -623,27 +623,41 @@ def _scalar_first(session: Session, sql: str) -> int:
 
 
 @app.get("/status")
-def status(user: Usuario = Depends(get_current_user)):
-    # ✅ protegido por auth para evitar que bots te lo machaquen
+def status():
+    def scalar_count(x) -> int:
+        # SQLAlchemy/SQLModel puede devolver Row, tuple o int según versión
+        if x is None:
+            return 0
+        if isinstance(x, (int, float)):
+            return int(x)
+        try:
+            return int(x[0])
+        except Exception:
+            try:
+                return int(list(x)[0])
+            except Exception:
+                return 0
+
     with Session(engine, expire_on_commit=False) as session:
-        users_count = _scalar_first(session, "SELECT COUNT(*) FROM usuario")
-        zonas_count = _scalar_first(session, "SELECT COUNT(*) FROM zonatensionada")
-        inm_activos = session.exec(
-            select(Inmueble).where(Inmueble.id_usuario == user.id_usuario).where(Inmueble.activo == True)
-        ).all()
-        inm_trash = session.exec(
-            select(Inmueble).where(Inmueble.id_usuario == user.id_usuario).where(Inmueble.activo == False)
-        ).all()
+        users_count = scalar_count(session.exec(text("SELECT COUNT(*) FROM usuario")).one())
+        zonas_count = scalar_count(session.exec(text("SELECT COUNT(*) FROM zonatensionada")).one())
+        inm_activos = scalar_count(session.exec(text("SELECT COUNT(*) FROM inmueble WHERE activo = TRUE")).one())
+        inm_eliminados = scalar_count(session.exec(text("SELECT COUNT(*) FROM inmueble WHERE activo = FALSE")).one())
+
+        # “documentos”: todavía no tienes tabla Document.
+        # De momento lo más honesto es contar “rulerun” (análisis/generaciones).
+        docs = scalar_count(session.exec(text("SELECT COUNT(*) FROM rulerun")).one())
 
         return {
             "status": "✅ OK",
-            "usuarios_registrados": int(users_count or 0),
-            "zonas_tensionadas": int(zonas_count or 0),
-            "inmuebles_activos": len(inm_activos),
-            "inmuebles_eliminados": len(inm_trash),
-            "documentos": 0,
+            "usuarios_registrados": users_count,
+            "inmuebles_activos": inm_activos,
+            "inmuebles_eliminados": inm_eliminados,
+            "documentos": docs,
+            "zonas_tensionadas": zonas_count,
             "version": APP_VERSION,
         }
+
 
 
 # ============================================================
