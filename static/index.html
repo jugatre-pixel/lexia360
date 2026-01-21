@@ -33,6 +33,7 @@
     }
     .btn{ border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer; }
     .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; }
     .hero{ padding:38px 0 26px; }
     .grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:18px; align-items:start; }
     @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
@@ -89,12 +90,12 @@
           <div class="muted2">Entra al panel y gestiona tus expedientes.</div>
 
           <label>Email</label>
-          <input id="loginEmail" type="email" placeholder="tucorreo@..." />
+          <input id="loginEmail" type="email" placeholder="tucorreo@..." autocomplete="username" />
 
           <label>Contraseña</label>
-          <input id="loginPassword" type="password" placeholder="••••••••" />
+          <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
 
-          <button onclick="login()" class="primary" style="width:100%;">Entrar</button>
+          <button id="loginBtn" onclick="login()" class="btn primary" style="width:100%;">Entrar</button>
           <div id="loginMsg" class="error"></div>
         </section>
 
@@ -103,15 +104,15 @@
           <div class="muted2">Crea tu cuenta en 30 segundos.</div>
 
           <label>Nombre</label>
-          <input id="regNombre" type="text" placeholder="Nombre y apellidos" />
+          <input id="regNombre" type="text" placeholder="Nombre y apellidos" autocomplete="name" />
 
           <label>Email</label>
-          <input id="regEmail" type="email" placeholder="tucorreo@..." />
+          <input id="regEmail" type="email" placeholder="tucorreo@..." autocomplete="email" />
 
           <label>Contraseña</label>
-          <input id="regPassword" type="password" placeholder="mínimo 8 caracteres" />
+          <input id="regPassword" type="password" placeholder="mínimo 8 caracteres" autocomplete="new-password" />
 
-          <button onclick="register()" class="primary" style="width:100%;">Crear cuenta</button>
+          <button id="regBtn" onclick="register()" class="btn primary" style="width:100%;">Crear cuenta</button>
           <div id="regMsg" class="error"></div>
         </section>
       </div>
@@ -159,6 +160,19 @@
     document.getElementById("regMsg").textContent = "";
   }
 
+  function setBusy(btnId, busy){
+    const btn = document.getElementById(btnId);
+    if(!btn) return;
+    btn.disabled = !!busy;
+    if(busy){
+      btn.dataset._txt = btn.textContent;
+      btn.textContent = "Cargando…";
+    }else{
+      btn.textContent = btn.dataset._txt || btn.textContent;
+      delete btn.dataset._txt;
+    }
+  }
+
   async function register(){
     const nombre = document.getElementById("regNombre").value.trim();
     const email = document.getElementById("regEmail").value.trim();
@@ -167,6 +181,16 @@
     const msg = document.getElementById("regMsg");
     msg.className = "error"; msg.textContent = "";
 
+    if(!nombre || !email || !password){
+      msg.textContent = "Completa nombre, email y contraseña.";
+      return;
+    }
+    if(password.length < 8){
+      msg.textContent = "La contraseña debe tener al menos 8 caracteres.";
+      return;
+    }
+
+    setBusy("regBtn", true);
     try{
       const res = await fetch(`${apiUrl}/register`, {
         method:"POST",
@@ -185,6 +209,8 @@
       setTimeout(()=>show("login"), 700);
     }catch(e){
       msg.textContent = "⚠️ No se pudo conectar con el servidor.";
+    }finally{
+      setBusy("regBtn", false);
     }
   }
 
@@ -195,23 +221,35 @@
     const msg = document.getElementById("loginMsg");
     msg.className = "error"; msg.textContent = "";
 
+    if(!email || !password){
+      msg.textContent = "Introduce email y contraseña.";
+      return;
+    }
+
     const formData = new URLSearchParams();
     formData.append("username", email);
     formData.append("password", password);
 
+    setBusy("loginBtn", true);
     try{
-      const res = await fetch(`${apiUrl}/token`, { method:"POST", body: formData });
+      const res = await fetch(`${apiUrl}/token`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+        body: formData
+      });
       const data = await res.json().catch(()=>({}));
 
-      if(data.access_token){
+      if(res.ok && data.access_token){
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("email", email);
         window.location.href = "/static/dashboard.html";
       }else{
-        msg.textContent = "❌ Credenciales incorrectas.";
+        msg.textContent = data.detail || "❌ Credenciales incorrectas.";
       }
     }catch(e){
       msg.textContent = "⚠️ No se pudo conectar con el servidor.";
+    }finally{
+      setBusy("loginBtn", false);
     }
   }
 </script>
