@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Wizard Contrato (Lease)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <!-- Opcional: si separas frontend/backend:
+  <meta name="api-base" content="https://tu-api.com"> -->
   <style>
     :root{ --brand:#0b5fff; --muted:#667085; --border:#e6e8ef; --danger:#b42318; --ok:#027a48; }
     body{ margin:0; background:#f6f7fb; }
@@ -28,14 +30,14 @@
 <body>
 <header>
   <div class="wrap top">
-    <a class="brand" href="/static/dashboard.html">
+    <a class="brand" href="/static/dashboard.html" aria-label="Volver al dashboard">
       <div class="badge">⚖️</div>
       <div>Lexia360</div>
     </a>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn" href="/static/inmuebles.html">🏠 Inmuebles</a>
       <a class="btn" href="/static/papelera.html">🗑️ Papelera</a>
-      <button class="btn" onclick="logout()">Cerrar sesión</button>
+      <button class="btn" type="button" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
 </header>
@@ -47,43 +49,49 @@
       Genera un documento “lease” y su checklist base.
     </div>
 
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <label>Selecciona inmueble *</label>
+    <label for="inmuebleId">Selecciona inmueble *</label>
     <select id="inmuebleId"></select>
 
     <div class="row" style="margin-top:10px;">
       <div>
-        <label>Arrendatario (nombre)</label>
-        <input id="arrNombre" type="text" placeholder="Nombre y apellidos"/>
+        <label for="arrNombre">Arrendatario (nombre)</label>
+        <input id="arrNombre" type="text" placeholder="Nombre y apellidos" autocomplete="name"/>
       </div>
       <div>
-        <label>DNI/NIE</label>
+        <label for="arrDni">DNI/NIE</label>
         <input id="arrDni" type="text" placeholder="12345678X"/>
       </div>
     </div>
 
     <div class="row" style="margin-top:10px;">
       <div>
-        <label>Fecha inicio</label>
+        <label for="fechaInicio">Fecha inicio</label>
         <input id="fechaInicio" type="date"/>
       </div>
       <div>
-        <label>Duración (meses)</label>
-        <input id="duracion" type="number" min="1" placeholder="12"/>
+        <label for="duracion">Duración (meses)</label>
+        <input id="duracion" type="number" min="1" placeholder="12" value="12"/>
       </div>
     </div>
 
     <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:14px;">
-      <button class="btn primary" onclick="createLease()">Generar contrato</button>
+      <button class="btn primary" type="button" onclick="createLease()">Generar contrato</button>
     </div>
   </section>
 </main>
 
 <script>
-  const api = location.origin;
-  const token = localStorage.getItem("token");
-  if(!token) location.href="/static/index.html";
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const api = getApiBase();
+
+  function token(){ return localStorage.getItem("token"); }
+  const t = token();
+  if(!t) location.href="/static/index.html";
 
   function logout(){
     localStorage.removeItem("token");
@@ -100,11 +108,17 @@
     }
   }
 
+  function esc(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
   async function loadInmuebles(){
     try{
-      const r = await fetch(api + "/inmuebles", { headers:{ Authorization:`Bearer ${token}` }});
+      const r = await fetch(`${api}/inmuebles`, { headers:{ Authorization:`Bearer ${token()}` }});
       if(r.status===401) return logout();
-      const data = await r.json();
+      const data = await r.json().catch(()=>[]);
       const sel = document.getElementById("inmuebleId");
       sel.innerHTML = "";
 
@@ -114,12 +128,20 @@
         return;
       }
 
-      data.forEach(i=>{
+      for(const i of data){
         const opt = document.createElement("option");
         opt.value = i.id_inmueble;
-        opt.textContent = `#${i.id_inmueble} · ${i.direccion}`;
+        opt.textContent = `#${i.id_inmueble} · ${i.direccion || "—"}`;
         sel.appendChild(opt);
-      });
+      }
+
+      // Si vienes desde inmueble.html con ?inmueble_id=...
+      const pre = new URLSearchParams(location.search).get("inmueble_id");
+      if(pre){
+        const exists = Array.from(sel.options).some(o => String(o.value) === String(pre));
+        if(exists) sel.value = String(pre);
+      }
+
     }catch(e){
       setToast("⚠️ No se pudo cargar inmuebles.", false);
     }
@@ -138,14 +160,14 @@
     const fechaInicio = document.getElementById("fechaInicio").value;
     const fecha_inicio = fechaInicio ? fechaInicio : null;
 
-    const durRaw = document.getElementById("duracion").value;
-    const duracion_meses = durRaw ? Number(durRaw) : null;
+    const durRaw = Number(document.getElementById("duracion").value || "12");
+    const duracion_meses = (Number.isFinite(durRaw) && durRaw >= 1) ? Math.floor(durRaw) : 12;
 
     try{
-      const r = await fetch(api + "/documents/lease", {
+      const r = await fetch(`${api}/documents/lease`, {
         method:"POST",
         headers:{
-          "Authorization": `Bearer ${token}`,
+          "Authorization": `Bearer ${token()}`,
           "Content-Type":"application/json"
         },
         body: JSON.stringify({ inmueble_id, arrendatario_nombre, arrendatario_dni, fecha_inicio, duracion_meses })
@@ -160,13 +182,17 @@
       }
 
       setToast("✅ Contrato generado.", true);
-      setTimeout(()=>location.href = `/static/documento.html?id=${data.id_document}`, 600);
+
+      // Si tienes documento.html, perfecto:
+      setTimeout(()=>location.href = `/static/documento.html?id=${encodeURIComponent(data.id_document)}`, 600);
 
     }catch(e){
       setToast("⚠️ No se pudo conectar.", false);
     }
   }
 
+  // init
+  document.getElementById("fechaInicio").value = new Date().toISOString().slice(0,10);
   loadInmuebles();
 </script>
 </body>
