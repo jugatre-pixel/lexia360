@@ -16,6 +16,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from sqlmodel import SQLModel, Field, Session, select, create_engine
 from sqlalchemy import text
+from sqlalchemy.sql import or_
 
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -45,8 +46,6 @@ if len(SECRET_KEY) < 32:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-
-# ✅ CRÍTICO: esto va en CONFIG, global
 PDF_TOKEN_EXPIRE_MINUTES = int(os.getenv("PDF_TOKEN_EXPIRE_MINUTES", "10"))
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").strip()
@@ -57,7 +56,7 @@ engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 # Hash robusto (evita líos con bcrypt)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-# ✅ auto_error=False para permitir endpoints PDF con token ?t=... sin Authorization
+# auto_error=False para permitir endpoints PDF con token ?t=... sin Authorization
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
@@ -98,6 +97,7 @@ async def catch_exceptions(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception:
+        # Log a consola (server logs). Evita devolver stacktrace al cliente.
         traceback.print_exc()
         raise
 
@@ -113,7 +113,7 @@ if os.path.exists("static"):
 class Usuario(SQLModel, table=True):
     id_usuario: int | None = Field(default=None, primary_key=True)
     nombre: str
-    email: str = Field(index=True)
+    email: str = Field(index=True)  # ver autofix: intentamos crear UNIQUE si se puede
     hashed_password: str
     rol: str = Field(default="cliente")  # cliente | admin
     creado_en: datetime = Field(default_factory=datetime.utcnow)
@@ -244,96 +244,81 @@ class LeaseCreate(BaseModel):
 # ============================================================
 # STARTUP + AUTO FIX SCHEMA
 # ============================================================
+def _col_exists(conn, table: str, column: str) -> bool:
+    r = conn.execute(text("""
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = :t AND column_name = :c
+        LIMIT 1
+    """), {"t": table, "c": column}).first()
+    return r is not None
+
+def _table_exists(conn, table: str) -> bool:
+    r = conn.execute(text("""
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = :t
+        LIMIT 1
+    """), {"t": table}).first()
+    return r is not None
+
 def _autofix_schema():
     """
     No sustituye Alembic, pero evita roturas típicas en MVP.
     """
     with engine.begin() as conn:
         # usuario.creado_en
-        exists_user_creado = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='usuario' AND column_name='creado_en'
-        """)).first()
-        if not exists_user_creado:
+        if _table_exists(conn, "usuario") and not _col_exists(conn, "usuario", "creado_en"):
             conn.execute(text("ALTER TABLE usuario ADD COLUMN creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
             conn.execute(text("UPDATE usuario SET creado_en = CURRENT_TIMESTAMP WHERE creado_en IS NULL"))
             conn.execute(text("ALTER TABLE usuario ALTER COLUMN creado_en SET NOT NULL"))
 
         # usuario.rol
-        exists_user_rol = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='usuario' AND column_name='rol'
-        """)).first()
-        if not exists_user_rol:
+        if _table_exists(conn, "usuario") and not _col_exists(conn, "usuario", "rol"):
             conn.execute(text("ALTER TABLE usuario ADD COLUMN rol VARCHAR(32) DEFAULT 'cliente'"))
             conn.execute(text("UPDATE usuario SET rol = 'cliente' WHERE rol IS NULL"))
             conn.execute(text("ALTER TABLE usuario ALTER COLUMN rol SET NOT NULL"))
 
+        # Intentar (best-effort) hacer email UNIQUE
+        if _table_exists(conn, "usuario"):
+            try:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email ON usuario (email)"))
+            except Exception:
+                # si hay duplicados históricos, no rompemos el arranque
+                pass
+
         # rulerun.fecha_analisis
-        exists_fecha = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='rulerun' AND column_name='fecha_analisis'
-        """)).first()
-        if not exists_fecha:
+        if _table_exists(conn, "rulerun") and not _col_exists(conn, "rulerun", "fecha_analisis"):
             conn.execute(text("ALTER TABLE rulerun ADD COLUMN fecha_analisis DATE"))
             conn.execute(text("UPDATE rulerun SET fecha_analisis = CURRENT_DATE WHERE fecha_analisis IS NULL"))
             conn.execute(text("ALTER TABLE rulerun ALTER COLUMN fecha_analisis SET NOT NULL"))
 
         # inmueble.activo
-        exists_activo = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='inmueble' AND column_name='activo'
-        """)).first()
-        if not exists_activo:
+        if _table_exists(conn, "inmueble") and not _col_exists(conn, "inmueble", "activo"):
             conn.execute(text("ALTER TABLE inmueble ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
-        # document.payload_json (si document existía sin esa columna)
-        exists_doc_payload = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='document' AND column_name='payload_json'
-        """)).first()
-        if exists_doc_payload and not exists_doc_payload:
-            conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
-            # document.estado
-            exists_doc_estado = conn.execute(text("""
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name='document' AND column_name='estado'
-            """)).first()
-            if not exists_doc_estado:
+        # ---- FIX CRÍTICO: document.* (tu versión tenía un if imposible) ----
+        if _table_exists(conn, "document"):
+            if not _col_exists(conn, "document", "payload_json"):
+                conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
+            if not _col_exists(conn, "document", "estado"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN estado VARCHAR(32) DEFAULT 'generado'"))
                 conn.execute(text("UPDATE document SET estado = 'generado' WHERE estado IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN estado SET NOT NULL"))
-
-            # document.titulo
-            exists_doc_titulo = conn.execute(text("""
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name='document' AND column_name='titulo'
-            """)).first()
-            if not exists_doc_titulo:
+            if not _col_exists(conn, "document", "titulo"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN titulo TEXT DEFAULT ''"))
                 conn.execute(text("UPDATE document SET titulo = '' WHERE titulo IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN titulo SET NOT NULL"))
-
-            # document.tipo
-            exists_doc_tipo = conn.execute(text("""
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name='document' AND column_name='tipo'
-            """)).first()
-            if not exists_doc_tipo:
+            if not _col_exists(conn, "document", "tipo"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN tipo VARCHAR(64) DEFAULT 'lease'"))
                 conn.execute(text("UPDATE document SET tipo = 'lease' WHERE tipo IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN tipo SET NOT NULL"))
-
-            # document.id_inmueble (por si la tabla se creó sin FK)
-            exists_doc_inm = conn.execute(text("""
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name='document' AND column_name='id_inmueble'
-            """)).first()
-            if not exists_doc_inm:
+            if not _col_exists(conn, "document", "id_inmueble"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN id_inmueble INTEGER NULL"))
 
+        # checklistitem.completado_en (por si venía de una versión anterior)
+        if _table_exists(conn, "checklistitem") and not _col_exists(conn, "checklistitem", "completado_en"):
+            conn.execute(text("ALTER TABLE checklistitem ADD COLUMN completado_en TIMESTAMP NULL"))
 
 @app.on_event("startup")
 def on_startup():
@@ -352,27 +337,24 @@ def validate_password(password: str):
     if len(password) < 8:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
 
+def normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-
-# ✅ CRÍTICO: create_access_token bien (sin funciones anidadas)
 def create_access_token(email: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-
 def create_pdf_token(user_id: int, inmueble_id: int) -> str:
     expire = datetime.utcnow() + timedelta(minutes=PDF_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": f"pdf:{user_id}:{inmueble_id}", "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def decode_pdf_token(token: str) -> Optional[Tuple[int, int]]:
     """
@@ -392,7 +374,6 @@ def decode_pdf_token(token: str) -> Optional[Tuple[int, int]]:
     except Exception:
         return None
 
-
 def get_current_user(token: str | None = Depends(oauth2_scheme)) -> Usuario:
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -410,7 +391,6 @@ def get_current_user(token: str | None = Depends(oauth2_scheme)) -> Usuario:
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no existe")
         return user
-
 
 def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
     if user.rol != "admin":
@@ -430,7 +410,7 @@ def find_zona_tensionada(session: Session, municipio: str, comunidad_autonoma: s
         .where(ZonaTensionada.municipio == mun)
         .where(ZonaTensionada.comunidad_autonoma == ca)
         .where(ZonaTensionada.fecha_inicio <= fecha)
-        .where((ZonaTensionada.fecha_fin == None) | (ZonaTensionada.fecha_fin >= fecha))
+        .where(or_(ZonaTensionada.fecha_fin.is_(None), ZonaTensionada.fecha_fin >= fecha))
         .where(ZonaTensionada.activo == True)
         .order_by(ZonaTensionada.fecha_inicio.desc())
     ).first()
@@ -503,8 +483,17 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
         select(RuleRun).where(RuleRun.id_inmueble == inm.id_inmueble).order_by(RuleRun.id_run.desc())
     ).first()
 
-    resultados = json.loads(last_run.resultados_json) if last_run else {}
-    alertas = json.loads(last_run.alertas_json) if last_run else []
+    resultados = {}
+    alertas = []
+    if last_run:
+        try:
+            resultados = json.loads(last_run.resultados_json or "{}")
+        except Exception:
+            resultados = {}
+        try:
+            alertas = json.loads(last_run.alertas_json or "[]")
+        except Exception:
+            alertas = []
 
     return {
         "id_inmueble": inm.id_inmueble,
@@ -526,11 +515,16 @@ def inmueble_to_out(session: Session, inm: Inmueble) -> dict:
         "alertas": alertas,
     }
 
-
 def document_to_out(session: Session, doc: Document) -> dict:
     items = session.exec(
         select(ChecklistItem).where(ChecklistItem.id_document == doc.id_document).order_by(ChecklistItem.id_item.asc())
     ).all()
+
+    payload = {}
+    try:
+        payload = json.loads(doc.payload_json or "{}")
+    except Exception:
+        payload = {}
 
     return {
         "id_document": doc.id_document,
@@ -540,7 +534,7 @@ def document_to_out(session: Session, doc: Document) -> dict:
         "titulo": doc.titulo,
         "estado": doc.estado,
         "creado_en": doc.creado_en.isoformat(),
-        "payload": json.loads(doc.payload_json or "{}"),
+        "payload": payload,
         "checklist": [{
             "id_item": it.id_item,
             "titulo": it.titulo,
@@ -795,16 +789,13 @@ def generar_pdf_contrato_arrendamiento(doc: dict, inmueble: dict) -> bytes:
 def version():
     return {"version": APP_VERSION}
 
-
 @app.get("/")
 def root():
     return {"mensaje": "Lexia360 API OK 🚀", "static": "/static/index.html", "version": APP_VERSION}
 
-
 @app.head("/")
 def head_root():
     return Response(status_code=200)
-
 
 @app.get("/status")
 def status():
@@ -842,13 +833,18 @@ def status():
 @app.post("/register")
 def register(payload: RegisterPayload):
     validate_password(payload.password)
+    email = normalize_email(payload.email)
+    nombre = (payload.nombre or "").strip()
+    if not nombre:
+        raise HTTPException(status_code=400, detail="El nombre es obligatorio")
+
     with Session(engine, expire_on_commit=False) as session:
-        existing = session.exec(select(Usuario).where(Usuario.email == payload.email)).first()
+        existing = session.exec(select(Usuario).where(Usuario.email == email)).first()
         if existing:
             raise HTTPException(status_code=400, detail="El usuario ya existe")
         user = Usuario(
-            nombre=payload.nombre,
-            email=payload.email,
+            nombre=nombre,
+            email=email,
             hashed_password=get_password_hash(payload.password),
             rol="cliente"
         )
@@ -856,16 +852,15 @@ def register(payload: RegisterPayload):
         session.commit()
     return {"mensaje": "✅ Registro completado", "version": APP_VERSION}
 
-
 @app.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends()):
+    email = normalize_email(form.username)
     with Session(engine, expire_on_commit=False) as session:
-        user = session.exec(select(Usuario).where(Usuario.email == form.username)).first()
+        user = session.exec(select(Usuario).where(Usuario.email == email)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
-
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
@@ -875,11 +870,14 @@ def me(user: Usuario = Depends(get_current_user)):
 # ============================================================
 # TEMP ADMIN BOOTSTRAP
 # ============================================================
+class AdminBootstrapPayload(BaseModel):
+    secret: str
+
 @app.post("/admin/bootstrap")
-def bootstrap_admin(secret: str, user: Usuario = Depends(get_current_user)):
+def bootstrap_admin(payload: AdminBootstrapPayload, user: Usuario = Depends(get_current_user)):
     if not ADMIN_BOOTSTRAP_SECRET:
         raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío (Secret File no montado).")
-    if not secrets.compare_digest(secret, ADMIN_BOOTSTRAP_SECRET):
+    if not secrets.compare_digest(payload.secret, ADMIN_BOOTSTRAP_SECRET):
         raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
     with Session(engine, expire_on_commit=False) as session:
@@ -909,7 +907,6 @@ def check_zona(municipio: str, comunidad_autonoma: str, fecha: date | None = Non
             "fuente_oficial": zona.fuente_oficial if zona else None
         }
 
-
 @app.post("/admin/zonas-tensionadas")
 def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
     with Session(engine, expire_on_commit=False) as session:
@@ -925,7 +922,6 @@ def crear_zona(payload: ZonaCreate, admin: Usuario = Depends(require_admin)):
         session.commit()
         session.refresh(z)
         return {"ok": True, "id_zona": z.id_zona}
-
 
 @app.get("/admin/zonas-tensionadas")
 def listar_zonas(admin: Usuario = Depends(require_admin)):
@@ -956,7 +952,6 @@ def listar_papelera(user: Usuario = Depends(get_current_user)):
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
 
-
 @app.post("/inmuebles/{id_inmueble}/restore")
 def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -974,7 +969,6 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
         session.commit()
 
     return {"ok": True, "mensaje": "✅ Inmueble restaurado"}
-
 
 @app.delete("/inmuebles/{id_inmueble}/purge")
 def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -995,12 +989,10 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
 
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
 
-
-# ✅ alias por compatibilidad con tu HTML
+# alias por compatibilidad con tu HTML
 @app.delete("/inmuebles/{id_inmueble}/hard")
 def borrar_definitivo_alias(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     return borrar_definitivo(id_inmueble, user)
-
 
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
@@ -1040,7 +1032,6 @@ def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"INMUEBLE_CREATE_ERROR: {type(e).__name__}: {str(e)}")
 
-
 @app.get("/inmuebles")
 def listar_inmuebles(user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -1051,7 +1042,6 @@ def listar_inmuebles(user: Usuario = Depends(get_current_user)):
             .order_by(Inmueble.id_inmueble.desc())
         ).all()
         return [inmueble_to_out(session, inm) for inm in inmuebles]
-
 
 @app.get("/inmuebles/{id_inmueble}")
 def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -1065,7 +1055,6 @@ def get_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
         if not inm:
             raise HTTPException(status_code=404, detail="Inmueble no encontrado")
         return inmueble_to_out(session, inm)
-
 
 @app.delete("/inmuebles/{id_inmueble}")
 def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user)):
@@ -1083,7 +1072,6 @@ def borrar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_user))
         session.commit()
     return {"ok": True, "mensaje": "✅ Inmueble movido a papelera"}
 
-
 @app.get("/inmuebles/{id_inmueble}/pdf-token")
 def inmueble_pdf_token(id_inmueble: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -1098,7 +1086,6 @@ def inmueble_pdf_token(id_inmueble: int, user: Usuario = Depends(get_current_use
 
     t = create_pdf_token(user.id_usuario, id_inmueble)
     return {"token": t, "expires_minutes": PDF_TOKEN_EXPIRE_MINUTES}
-
 
 @app.get("/inmuebles/{id_inmueble}/pdf")
 def inmueble_pdf(
@@ -1156,7 +1143,6 @@ def inmueble_pdf(
 class ChecklistUpdate(BaseModel):
     completado: bool
 
-
 @app.patch("/documents/{id_document}/checklist/{id_item}")
 def update_checklist_item(
     id_document: int,
@@ -1165,7 +1151,6 @@ def update_checklist_item(
     user: Usuario = Depends(get_current_user)
 ):
     with Session(engine, expire_on_commit=False) as session:
-        # Verifica doc del usuario
         doc = session.exec(
             select(Document)
             .where(Document.id_document == id_document)
@@ -1174,7 +1159,6 @@ def update_checklist_item(
         if not doc:
             raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-        # Item del doc
         item = session.exec(
             select(ChecklistItem)
             .where(ChecklistItem.id_item == id_item)
@@ -1197,7 +1181,6 @@ def update_checklist_item(
             "completado": item.completado,
             "completado_en": item.completado_en.isoformat() if item.completado_en else None
         }
-
 
 @app.post("/documents/lease")
 def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_current_user)):
@@ -1247,7 +1230,6 @@ def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_curr
             "version": APP_VERSION
         }
 
-
 @app.get("/documents/{id_document}")
 def get_document(id_document: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -1259,7 +1241,6 @@ def get_document(id_document: int, user: Usuario = Depends(get_current_user)):
         if not doc:
             raise HTTPException(status_code=404, detail="Documento no encontrado")
         return document_to_out(session, doc)
-
 
 @app.get("/documents/{id_document}/pdf")
 def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)):
@@ -1294,8 +1275,9 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
 
+
 # ============================================================
-# ROUTES (DOCUMENTS LIST) ✅ NUEVO
+# ROUTES (DOCUMENTS LIST)
 # ============================================================
 @app.get("/documents")
 def list_documents(
@@ -1314,7 +1296,6 @@ def list_documents(
 
         out = []
         for d in docs:
-            # checklist count rápido
             total = session.exec(
                 text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id"),
                 {"id": d.id_document}
