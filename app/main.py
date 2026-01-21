@@ -393,6 +393,28 @@ def _autofix_schema():
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
+        # ------------------------------------------------------------
+        # ✅ FIX: template.activo (lo que te está fallando ahora)
+        # ------------------------------------------------------------
+        if _table_exists(conn, "template") and not _col_exists(conn, "template", "activo"):
+            conn.execute(text("ALTER TABLE template ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
+            conn.execute(text("UPDATE template SET activo = TRUE WHERE activo IS NULL"))
+            conn.execute(text("ALTER TABLE template ALTER COLUMN activo SET NOT NULL"))
+
+        # Opcional pero muy útil si tu seed/catálogo usa estado published/draft
+        if _table_exists(conn, "template") and not _col_exists(conn, "template", "estado"):
+            conn.execute(text("ALTER TABLE template ADD COLUMN estado VARCHAR(32) DEFAULT 'published'"))
+            conn.execute(text("UPDATE template SET estado = 'published' WHERE estado IS NULL"))
+            conn.execute(text("ALTER TABLE template ALTER COLUMN estado SET NOT NULL"))
+
+        # ------------------------------------------------------------
+        # ✅ FIX: product.activo (por si tu /products filtra por activo)
+        # ------------------------------------------------------------
+        if _table_exists(conn, "product") and not _col_exists(conn, "product", "activo"):
+            conn.execute(text("ALTER TABLE product ADD COLUMN activo BOOLEAN DEFAULT TRUE"))
+            conn.execute(text("UPDATE product SET activo = TRUE WHERE activo IS NULL"))
+            conn.execute(text("ALTER TABLE product ALTER COLUMN activo SET NOT NULL"))
+
         # document base cols
         if _table_exists(conn, "document"):
             if not _col_exists(conn, "document", "payload_json"):
@@ -429,6 +451,7 @@ def _autofix_schema():
         # order.id_document (tabla "order" va entre comillas)
         if _table_exists(conn, "order") and not _col_exists(conn, "order", "id_document"):
             conn.execute(text('ALTER TABLE "order" ADD COLUMN id_document INTEGER NULL'))
+
 
 
 def seed_products_and_templates():
