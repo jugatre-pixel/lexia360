@@ -1539,8 +1539,8 @@ def checkout_create(body: CheckoutCreate, request: Request, user: Usuario = Depe
                 detail="Falta PUBLIC_BASE_URL. Ponlo en ENV o llama desde navegador para que Origin exista."
             )
 
-        success_url = f"{base_url}/static/checkout_success.html?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{base_url}/static/checkout_cancel.html"
+        success_url = f"{base_url}/static/success.html?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base_url}/static/cancel.html"
 
         try:
             s = stripe.checkout.Session.create(
