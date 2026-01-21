@@ -1474,17 +1474,15 @@ async def stripe_webhook(request: Request, stripe_signature: str | None = Header
 class AdminBootstrapPayload(BaseModel):
     secret: str
 
+
 @app.post("/admin/bootstrap")
 def bootstrap_admin(payload: AdminBootstrapPayload, user: Usuario = Depends(get_current_user)):
     if not ADMIN_BOOTSTRAP_SECRET:
-        
-        STRIPE_SECRET_KEY = load_secret_from_env_or_file("STRIPE_SECRET_KEY", "/etc/secrets/STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = load_secret_from_env_or_file("STRIPE_WEBHOOK_SECRET", "/etc/secrets/STRIPE_WEBHOOK_SECRET")
+        raise HTTPException(
+            status_code=500,
+            detail="ADMIN_BOOTSTRAP_SECRET vacío (Secret File no montado)."
+        )
 
-if STRIPE_SECRET_KEY:
-    stripe.api_key = STRIPE_SECRET_KEY
-
-        raise HTTPException(status_code=500, detail="ADMIN_BOOTSTRAP_SECRET vacío (Secret File no montado).")
     if not secrets.compare_digest(payload.secret, ADMIN_BOOTSTRAP_SECRET):
         raise HTTPException(status_code=403, detail="Secreto incorrecto")
 
@@ -1497,6 +1495,7 @@ if STRIPE_SECRET_KEY:
         session.commit()
 
     return {"ok": True, "mensaje": f"✅ {user.email} ahora es admin"}
+
 
 
 # ============================================================
