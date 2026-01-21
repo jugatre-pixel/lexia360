@@ -1207,6 +1207,69 @@ def checkout_create(body: CheckoutCreate, user: Usuario = Depends(get_current_us
 
         return {"ok": True, "order_id": order.id_order, "checkout_url": checkout.get("url")}
 
+@app.post("/checkout/create")
+def checkout_create(payload: CheckoutCreate, user: Usuario = Depends(get_current_user)):
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="STRIPE_SECRET_KEY no configurada en Secret Files")
+
+    with Session(engine, expire_on_commit=False) as session:
+        product = session.exec(
+            select(Product).where(Product.id_product == payload.product_id).where(Product.activo == True)
+        ).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+        # Crear Order pending
+        order = Order(
+            id_usuario=user.id_usuario,
+            id_product=product.id_product,
+            status="pending",
+            inmueble_id=payload.inmueble_id,
+            input_json=json.dumps(payload.input or {}, ensure_ascii=False, default=str),
+        )
+        session.add(order)
+        session.commit()
+        session.refresh(order)
+
+        success_url = f"{os.getenv('PUBLIC_BASE_URL', '').strip() or ''}/static/checkout_success.html?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{os.getenv('PUBLIC_BASE_URL', '').strip() or ''}/static/checkout_cancel.html"
+
+        # fallback: si no tienes PUBLIC_BASE_URL, usamos origin en frontend (te lo devuelvo igualmente)
+        if not success_url.startswith("http"):
+            success_url = "https://example.invalid/static/checkout_success.html?session_id={CHECKOUT_SESSION_ID}"
+        if not cancel_url.startswith("http"):
+            cancel_url = "https://example.invalid/static/checkout_cancel.html"
+
+        try:
+            s = stripe.checkout.Session.create(
+                mode="payment",
+                customer_email=user.email,
+                line_items=[{
+                    "price_data": {
+                        "currency": product.currency,
+                        "product_data": {"name": product.name, "description": product.description or ""},
+                        "unit_amount": product.unit_amount_cents,
+                    },
+                    "quantity": 1
+                }],
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata={
+                    "order_id": str(order.id_order),
+                    "user_id": str(user.id_usuario),
+                    "product_id": str(product.id_product),
+                    "template_code": product.template_code,
+                    "inmueble_id": str(payload.inmueble_id or ""),
+                },
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"STRIPE_ERROR: {type(e).__name__}: {str(e)}")
+
+        order.stripe_session_id = s.id
+        session.add(order)
+        session.commit()
+
+        return {"ok": True, "checkout_url": s.url, "id_order": order.id_order}
 
 @app.get("/orders/{id_order}")
 def get_order(id_order: int, user: Usuario = Depends(get_current_user)):
