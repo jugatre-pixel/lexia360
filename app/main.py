@@ -235,7 +235,18 @@ class Document(SQLModel, table=True):
 
 
 class ChecklistItem(SQLModel, table=True):
-    class Product(SQLModel, table=True):
+    
+    id_item: int | None = Field(default=None, primary_key=True)
+    id_document: int = Field(index=True, foreign_key="document.id_document")
+
+    titulo: str
+    descripcion: str | None = None
+    completado: bool = Field(default=False, index=True)
+
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    completado_en: datetime | None = None
+
+class Product(SQLModel, table=True):
     id_product: int | None = Field(default=None, primary_key=True)
     activo: bool = Field(default=True, index=True)
 
@@ -286,16 +297,6 @@ class Order(SQLModel, table=True):
 
     creado_en: datetime = Field(default_factory=datetime.utcnow)
     pagado_en: datetime | None = None
-
-    id_item: int | None = Field(default=None, primary_key=True)
-    id_document: int = Field(index=True, foreign_key="document.id_document")
-
-    titulo: str
-    descripcion: str | None = None
-    completado: bool = Field(default=False, index=True)
-
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
-    completado_en: datetime | None = None
 
 
 # ============================================================
