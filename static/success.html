@@ -1,1 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Pago confirmado</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+</head>
+<body>
+<main class="container">
+  <h2>✅ Pago confirmado</h2>
+  <p>Estamos finalizando tu documento...</p>
+
+  <p id="msg"></p>
+  <div id="actions" style="display:none;">
+    <a id="docLink" role="button" href="#">Ver documento</a>
+    <a role="button" class="secondary" href="/static/documentos.html">Ver documentos</a>
+    <a role="button" class="contrast" href="/static/dashboard.html">Dashboard</a>
+  </div>
+</main>
+
+<script>
+const api = location.origin;
+const token = localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
+
+const order_id = new URLSearchParams(location.search).get("order_id");
+if(!order_id) location.href="/static/dashboard.html";
+
+function setMsg(t, ok=true){
+  const el=document.getElementById("msg");
+  el.textContent=t||"";
+  el.style.color = ok ? "" : "crimson";
+}
+
+async function poll(){
+  setMsg("Comprobando estado del pedido...");
+  for(let i=0;i<12;i++){
+    const r = await fetch(`${api}/orders/${order_id}`, { headers:{ Authorization:`Bearer ${token}` }});
+    if(r.status===401) return location.href="/static/index.html";
+    const d = await r.json().catch(()=>({}));
+
+    if(r.ok && d.estado === "paid" && d.id_document){
+      setMsg("✅ Documento listo.");
+      document.getElementById("docLink").href = `/static/document.html?id=${d.id_document}`;
+      document.getElementById("actions").style.display="block";
+      return;
+    }
+
+    await new Promise(res=>setTimeout(res, 1000));
+  }
+  setMsg("Pago confirmado, pero el documento aún no aparece. Revisa en Documentos en 1 minuto.", false);
+  document.getElementById("actions").style.display="block";
+  document.getElementById("docLink").href = "/static/documentos.html";
+}
+
+poll();
+</script>
+</body>
+</html>
 
