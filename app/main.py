@@ -347,6 +347,13 @@ class LeaseCreate(BaseModel):
 
 
 class CheckoutCreate(BaseModel):
+    product_id: int
+    inmueble_id: int | None = None
+    # para futuras compras sin inmueble (p.ej. burofax)
+    input: dict | None = None
+
+
+class CheckoutCreate(BaseModel):
     template_slug: str
     template_version: int | None = 1
     inmueble_id: int | None = None
