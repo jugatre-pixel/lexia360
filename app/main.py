@@ -235,6 +235,58 @@ class Document(SQLModel, table=True):
 
 
 class ChecklistItem(SQLModel, table=True):
+    class Product(SQLModel, table=True):
+    id_product: int | None = Field(default=None, primary_key=True)
+    activo: bool = Field(default=True, index=True)
+
+    # "lease_mvp", "burofax", etc.
+    code: str = Field(index=True, unique=True)
+    name: str
+    description: str | None = None
+
+    currency: str = Field(default="eur")
+    unit_amount_cents: int  # 19900 = 199,00€
+
+    # clave para saber qué plantilla genera
+    template_code: str = Field(default="lease_mvp", index=True)
+
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Template(SQLModel, table=True):
+    id_template: int | None = Field(default=None, primary_key=True)
+    activo: bool = Field(default=True, index=True)
+
+    code: str = Field(index=True, unique=True)  # "lease_mvp"
+    version: int = Field(default=1)
+
+    tipo: str = Field(default="lease")  # coincide con Document.tipo
+    titulo: str = Field(default="Documento")
+
+    # defaults para payload/checklist
+    default_payload_json: str = Field(default="{}")
+    checklist_json: str = Field(default="[]")
+
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Order(SQLModel, table=True):
+    id_order: int | None = Field(default=None, primary_key=True)
+    id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
+    id_product: int = Field(index=True, foreign_key="product.id_product")
+
+    status: str = Field(default="pending", index=True)  # pending | paid | canceled
+
+    stripe_session_id: str | None = Field(default=None, index=True)
+    stripe_payment_intent: str | None = Field(default=None, index=True)
+
+    # datos para la generación del doc
+    inmueble_id: int | None = Field(default=None, index=True)
+    input_json: str = Field(default="{}")
+
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    pagado_en: datetime | None = None
+
     id_item: int | None = Field(default=None, primary_key=True)
     id_document: int = Field(index=True, foreign_key="document.id_document")
 
