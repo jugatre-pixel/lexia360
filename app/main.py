@@ -1036,22 +1036,28 @@ def status():
             "documentos": docs_count,
             "version": APP_VERSION,
         }
-  @app.get("/products")
-def get_products(user: Usuario = Depends(get_current_user)):
+@app.get("/products")
+def list_products():
     with Session(engine, expire_on_commit=False) as session:
-        prods = session.exec(
-            select(Product).where(Product.activo == True).order_by(Product.id_product.asc())
+        products = session.exec(
+            select(Product)
+            .where(Product.activo == True)
+            .order_by(Product.id_product.asc())
         ).all()
-        return [{
-            "id_product": p.id_product,
-            "code": p.code,
-            "name": p.name,
-            "description": p.description,
-            "currency": p.currency,
-            "unit_amount_cents": p.unit_amount_cents,
-            "price_display": f"{p.unit_amount_cents/100:.2f} {p.currency.upper()}",
-            "template_code": p.template_code
-        } for p in prods]
+
+        return [
+            {
+                "id_product": p.id_product,
+                "code": p.code,
+                "name": p.name,
+                "description": p.description,
+                "currency": p.currency,
+                "unit_amount_cents": p.unit_amount_cents,
+                "template_code": p.template_code,
+            }
+            for p in products
+        ]
+
 
 # ============================================================
 # ROUTES (CATÁLOGO)
