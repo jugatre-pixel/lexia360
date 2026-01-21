@@ -14,6 +14,7 @@ email-validator
 
 # PDF
 reportlab
-stripe
+stripe==10.12.0
+
 
 jinja2
