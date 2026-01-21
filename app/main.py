@@ -201,7 +201,6 @@ class Document(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
     # versionado por plantilla
-    template_code: str | None = Field(default=None, index=True)
     template_version: int | None = Field(default=None)
     order_id: int | None = Field(default=None, index=True)
     render_hash: str | None = Field(default=None, index=True)
