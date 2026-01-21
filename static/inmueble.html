@@ -2,8 +2,16 @@
 <html lang="es">
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Inmueble</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <!-- Opcional: si separas frontend/backend:
+  <meta name="api-base" content="https://tu-api.com"> -->
+  <style>
+    .muted{ color:#667085; font-size:13px; }
+    pre{ background:#0b1220; color:#f6f7fb; padding:12px; border-radius:12px; }
+    .grid{ gap:12px; }
+  </style>
 </head>
 <body>
 <nav class="container-fluid">
@@ -11,11 +19,13 @@
   <ul>
     <li><a href="/static/dashboard.html">Dashboard</a></li>
     <li><a href="/static/inmuebles.html">Inmuebles</a></li>
+    <li><a href="#" onclick="logout(); return false;">Salir</a></li>
   </ul>
 </nav>
 
 <main class="container">
-  <h2 id="title">Cargando...</h2>
+  <h2 id="title" style="margin-bottom:6px;">Cargando...</h2>
+  <div class="muted" style="margin-bottom:14px;">Vista técnica (debug) + PDF tokenizado.</div>
 
   <article>
     <header><strong>Datos (debug)</strong></header>
@@ -31,56 +41,80 @@
 </main>
 
 <script>
-const api = location.origin;
-const token = localStorage.getItem("token");
-if(!token) location.href="/static/index.html";
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const api = getApiBase();
 
-const id = new URLSearchParams(location.search).get("id");
-if(!id) location.href="/static/inmuebles.html";
-
-function setMsg(t, ok=true){
-  const el=document.getElementById("msg");
-  el.textContent=t || "";
-  el.style.color = ok ? "" : "crimson";
-}
-
-async function authFetch(url, options={}){
-  options.headers = options.headers || {};
-  options.headers["Authorization"] = `Bearer ${token}`;
-  return fetch(url, options);
-}
-
-async function load(){
-  setMsg("Cargando inmueble...");
-  const r = await authFetch(`${api}/inmuebles/${id}`);
-  if(r.status===401) return location.href="/static/index.html";
-  if(!r.ok){
-    setMsg("No se pudo cargar el inmueble", false);
-    return;
+  function token(){ return localStorage.getItem("token"); }
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    location.href="/static/index.html";
   }
 
-  const d = await r.json();
-  document.getElementById("title").textContent = d.direccion || `Inmueble ${id}`;
-  document.getElementById("data").textContent = JSON.stringify(d, null, 2);
+  const t = token();
+  if(!t) logout();
 
-  // ✅ pedir token para PDF y montar link con ?t=
-  const rt = await authFetch(`${api}/inmuebles/${id}/pdf-token`);
-  if(!rt.ok){
-    setMsg("No se pudo generar token PDF", false);
-    return;
+  const id = new URLSearchParams(location.search).get("id");
+  if(!id) location.href="/static/inmuebles.html";
+
+  function setMsg(text, ok=true){
+    const el = document.getElementById("msg");
+    el.textContent = text || "";
+    el.style.color = ok ? "" : "crimson";
   }
-  const jt = await rt.json();
-  const pdfUrl = `${api}/inmuebles/${id}/pdf?t=${encodeURIComponent(jt.token)}`;
-  const a = document.getElementById("pdf");
-  a.href = pdfUrl;
 
-  // botón contrato (lo dejamos preparado)
-  document.getElementById("wizardLease").href = `/static/wizard_lease.html?inmueble_id=${encodeURIComponent(id)}`;
+  async function authFetch(url, options={}){
+    options.headers = options.headers || {};
+    options.headers["Authorization"] = `Bearer ${token()}`;
+    return fetch(url, options);
+  }
 
-  setMsg("");
-}
+  async function load(){
+    try{
+      setMsg("Cargando inmueble...");
 
-load();
+      const r = await authFetch(`${api}/inmuebles/${encodeURIComponent(id)}`);
+      if(r.status===401) return logout();
+      if(!r.ok){
+        setMsg("No se pudo cargar el inmueble", false);
+        return;
+      }
+
+      const d = await r.json();
+      document.getElementById("title").textContent = d.direccion || `Inmueble ${id}`;
+      document.getElementById("data").textContent = JSON.stringify(d, null, 2);
+
+      // token para PDF y link ?t=
+      const rt = await authFetch(`${api}/inmuebles/${encodeURIComponent(id)}/pdf-token`);
+      if(rt.status===401) return logout();
+      if(!rt.ok){
+        setMsg("No se pudo generar token PDF", false);
+        return;
+      }
+
+      const jt = await rt.json().catch(()=>({}));
+      if(!jt.token){
+        setMsg("Token PDF inválido", false);
+        return;
+      }
+
+      const pdfUrl = `${api}/inmuebles/${encodeURIComponent(id)}/pdf?t=${encodeURIComponent(jt.token)}`;
+      document.getElementById("pdf").href = pdfUrl;
+
+      // Wizard lease con preselección del inmueble
+      document.getElementById("wizardLease").href =
+        `/static/wizard_lease.html?inmueble_id=${encodeURIComponent(id)}`;
+
+      setMsg("");
+    }catch(e){
+      setMsg("⚠️ Error de red al cargar el inmueble.", false);
+    }
+  }
+
+  load();
 </script>
 </body>
 </html>
