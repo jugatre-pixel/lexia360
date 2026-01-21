@@ -2,110 +2,85 @@
 <html lang="es">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Inmueble</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
 </head>
 <body>
+<nav class="container-fluid">
+  <ul><li><strong>Inmueble</strong></li></ul>
+  <ul>
+    <li><a href="/static/dashboard.html">Dashboard</a></li>
+    <li><a href="/static/inmuebles.html">Inmuebles</a></li>
+  </ul>
+</nav>
+
 <main class="container">
-  <nav>
-    <ul>
-      <li><strong>Lexia360</strong></li>
-    </ul>
-    <ul>
-      <li><a href="/static/dashboard.html">Dashboard</a></li>
-      <li><a href="/static/inmuebles.html">Inmuebles</a></li>
-      <li><a href="/static/papelera.html">Papelera</a></li>
-      <li><a href="/static/wizard.html">Nuevo expediente</a></li>
-    </ul>
-  </nav>
+  <h2 id="title">Cargando...</h2>
 
-  <h2 id="title" style="margin-top:16px;">Inmueble</h2>
-  <p class="muted" id="meta" style="opacity:.75;"></p>
+  <article>
+    <header><strong>Datos (debug)</strong></header>
+    <pre id="data" style="max-height: 360px; overflow:auto;"></pre>
+  </article>
 
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0;">
-    <a id="pdf" role="button" href="#" aria-busy="true">Preparando PDF...</a>
-    <button class="secondary" onclick="copyJson()">Copiar JSON</button>
-    <button class="contrast" onclick="logout()">Salir</button>
+  <div class="grid">
+    <a id="pdf" role="button" class="secondary" href="#" target="_blank" rel="noopener">Descargar PDF</a>
+    <a id="wizardLease" role="button" href="#">Generar contrato (Lease)</a>
   </div>
 
-  <details open>
-    <summary>JSON (debug)</summary>
-    <pre id="data" style="max-height:520px; overflow:auto;"></pre>
-  </details>
+  <p id="msg" style="margin-top:12px;"></p>
 </main>
 
 <script>
-  const api = location.origin;
-  const token = localStorage.getItem("token");
-  if(!token) location.href="/static/index.html";
+const api = location.origin;
+const token = localStorage.getItem("token");
+if(!token) location.href="/static/index.html";
 
-  const id = new URLSearchParams(location.search).get("id");
-  if(!id) location.href="/static/inmuebles.html";
+const id = new URLSearchParams(location.search).get("id");
+if(!id) location.href="/static/inmuebles.html";
 
-  function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    location.href="/static/index.html";
+function setMsg(t, ok=true){
+  const el=document.getElementById("msg");
+  el.textContent=t || "";
+  el.style.color = ok ? "" : "crimson";
+}
+
+async function authFetch(url, options={}){
+  options.headers = options.headers || {};
+  options.headers["Authorization"] = `Bearer ${token}`;
+  return fetch(url, options);
+}
+
+async function load(){
+  setMsg("Cargando inmueble...");
+  const r = await authFetch(`${api}/inmuebles/${id}`);
+  if(r.status===401) return location.href="/static/index.html";
+  if(!r.ok){
+    setMsg("No se pudo cargar el inmueble", false);
+    return;
   }
 
-  async function safeJson(res){
-    try { return await res.json(); } catch { return {}; }
+  const d = await r.json();
+  document.getElementById("title").textContent = d.direccion || `Inmueble ${id}`;
+  document.getElementById("data").textContent = JSON.stringify(d, null, 2);
+
+  // ✅ pedir token para PDF y montar link con ?t=
+  const rt = await authFetch(`${api}/inmuebles/${id}/pdf-token`);
+  if(!rt.ok){
+    setMsg("No se pudo generar token PDF", false);
+    return;
   }
+  const jt = await rt.json();
+  const pdfUrl = `${api}/inmuebles/${id}/pdf?t=${encodeURIComponent(jt.token)}`;
+  const a = document.getElementById("pdf");
+  a.href = pdfUrl;
 
-  async function load(){
-    // 1) Cargar inmueble (con Authorization)
-    const r = await fetch(`${api}/inmuebles/${id}`, {
-      headers:{ Authorization:`Bearer ${token}` }
-    });
-    if(r.status===401) return logout();
+  // botón contrato (lo dejamos preparado)
+  document.getElementById("wizardLease").href = `/static/wizard_lease.html?inmueble_id=${encodeURIComponent(id)}`;
 
-    const d = await safeJson(r);
-    if(!r.ok){
-      document.getElementById("title").textContent = "Error";
-      document.getElementById("data").textContent = JSON.stringify(d, null, 2);
-      return;
-    }
+  setMsg("");
+}
 
-    document.getElementById("title").textContent = d.direccion || `Inmueble ${id}`;
-    document.getElementById("meta").textContent = `${d.municipio || ""}${d.comunidad_autonoma ? " · " + d.comunidad_autonoma : ""}`.trim();
-    document.getElementById("data").textContent = JSON.stringify(d, null, 2);
-
-    // 2) Pedir token de PDF (con Authorization)
-    const tRes = await fetch(`${api}/inmuebles/${id}/pdf-token`, {
-      headers:{ Authorization:`Bearer ${token}` }
-    });
-    if(tRes.status===401) return logout();
-
-    const tData = await safeJson(tRes);
-    const btn = document.getElementById("pdf");
-
-    if(!tRes.ok || !tData.token){
-      btn.setAttribute("aria-busy","false");
-      btn.textContent = "No se pudo preparar el PDF";
-      btn.href = "#";
-      return;
-    }
-
-    // 3) Link sin headers pero con token en query -> ya NO habrá 401
-    btn.setAttribute("aria-busy","false");
-    btn.textContent = "Descargar PDF";
-    btn.href = `${api}/inmuebles/${id}/pdf?t=${encodeURIComponent(tData.token)}`;
-    btn.target = "_blank";
-    btn.rel = "noopener";
-  }
-
-  async function copyJson(){
-    const text = document.getElementById("data").textContent || "";
-    try{
-      await navigator.clipboard.writeText(text);
-      alert("✅ JSON copiado");
-    }catch(e){
-      alert("⚠️ No se pudo copiar (permiso del navegador).");
-    }
-  }
-
-  load();
+load();
 </script>
 </body>
 </html>
