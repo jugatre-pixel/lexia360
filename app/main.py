@@ -1388,6 +1388,77 @@ async def stripe_webhook(request: Request):
         db.commit()
 
     return {"ok": True}
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request, stripe_signature: str | None = Header(default=None, alias="Stripe-Signature")):
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="STRIPE_WEBHOOK_SECRET no configurada en Secret Files")
+
+    body = await request.body()
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload=body,
+            sig_header=stripe_signature,
+            secret=STRIPE_WEBHOOK_SECRET
+        )
+    except Exception:
+        raise HTTPException(status_code=400, detail="Webhook inválido (firma)")
+
+    # Solo nos importa el pago finalizado
+    if event["type"] == "checkout.session.completed":
+        session_obj = event["data"]["object"]
+        order_id = (session_obj.get("metadata") or {}).get("order_id")
+
+        if order_id:
+            with Session(engine, expire_on_commit=False) as db:
+                order = db.exec(select(Order).where(Order.id_order == int(order_id))).first()
+                if order and order.status != "paid":
+                    order.status = "paid"
+                    order.pagado_en = datetime.utcnow()
+                    order.stripe_payment_intent = session_obj.get("payment_intent")
+                    db.add(order)
+                    db.commit()
+
+                    # (MVP) Generar documento automáticamente tras pago
+                    # 1) producto -> template_code
+                    product = db.exec(select(Product).where(Product.id_product == order.id_product)).first()
+                    if product:
+                        tpl = db.exec(
+                            select(Template)
+                            .where(Template.code == product.template_code)
+                            .where(Template.activo == True)
+                            .order_by(Template.version.desc())
+                        ).first()
+
+                        if tpl:
+                            # crea Document
+                            doc = Document(
+                                id_usuario=order.id_usuario,
+                                id_inmueble=order.inmueble_id,
+                                tipo=tpl.tipo,
+                                titulo=f"{tpl.titulo} · v{tpl.version}",
+                                estado="generado",
+                                payload_json=tpl.default_payload_json or "{}"
+                            )
+                            db.add(doc)
+                            db.commit()
+                            db.refresh(doc)
+
+                            # checklist por plantilla
+                            try:
+                                items = json.loads(tpl.checklist_json or "[]")
+                            except Exception:
+                                items = []
+
+                            for it in items:
+                                db.add(ChecklistItem(
+                                    id_document=doc.id_document,
+                                    titulo=(it.get("titulo") or "Item"),
+                                    descripcion=(it.get("descripcion") or None),
+                                ))
+                            db.commit()
+
+    return {"ok": True}
 
 
 # ============================================================
