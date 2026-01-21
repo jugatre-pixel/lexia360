@@ -1,1 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Productos</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+</head>
+<body>
+<nav class="container-fluid">
+  <ul><li><strong>Lexia360</strong></li></ul>
+  <ul>
+    <li><a href="/static/dashboard.html">Dashboard</a></li>
+    <li><a href="/static/inmuebles.html">Inmuebles</a></li>
+    <li><a href="/static/documentos.html">Documentos</a></li>
+  </ul>
+</nav>
+
+<main class="container">
+  <h2>Catálogo</h2>
+  <p>Elige un producto y continúa al pago.</p>
+
+  <div id="list"></div>
+
+  <p id="msg" style="margin-top:10px;"></p>
+</main>
+
+<script>
+const api = location.origin;
+const token = localStorage.getItem("token");
+
+function fmt(cents, cur){
+  const eur = (cents/100).toFixed(2);
+  return `${eur} ${String(cur||"EUR").toUpperCase()}`;
+}
+function setMsg(t, ok=true){
+  const el = document.getElementById("msg");
+  el.textContent = t || "";
+  el.style.color = ok ? "" : "crimson";
+}
+function esc(s){
+  return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+async function load(){
+  setMsg("Cargando productos...");
+  const r = await fetch(api + "/products");
+  const data = await r.json().catch(()=>[]);
+  if(!r.ok){
+    setMsg("No se pudo cargar /products", false);
+    return;
+  }
+
+  const wrap = document.getElementById("list");
+  wrap.innerHTML = "";
+
+  if(!Array.isArray(data) || data.length===0){
+    wrap.innerHTML = "<p>No hay productos publicados.</p>";
+    setMsg("");
+    return;
+  }
+
+  data.forEach(p=>{
+    const card = document.createElement("article");
+    card.innerHTML = `
+      <header><strong>${esc(p.titulo)}</strong></header>
+      <p><b>Precio:</b> ${fmt(p.precio_cents, p.moneda)} · <small>Plantilla ${esc(p.slug)} v${p.version}</small></p>
+      <footer>
+        <button onclick="start('${esc(p.slug)}', ${p.version})">Empezar</button>
+      </footer>
+    `;
+    wrap.appendChild(card);
+  });
+
+  setMsg("");
+}
+
+function start(slug, version){
+  if(!token){
+    // si no está logueado, lo mandas al login
+    location.href = "/static/index.html";
+    return;
+  }
+  // Para este MVP, usamos un “wizard checkout” simple basado en tu wizard_lease
+  location.href = `/static/wizard_checkout.html?slug=${encodeURIComponent(slug)}&version=${encodeURIComponent(version)}`;
+}
+
+load();
+</script>
+</body>
+</html>
 
