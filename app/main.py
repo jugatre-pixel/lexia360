@@ -296,6 +296,43 @@ def _autofix_schema():
         """)).first()
         if exists_doc_payload and not exists_doc_payload:
             conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
+            # document.estado
+            exists_doc_estado = conn.execute(text("""
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='document' AND column_name='estado'
+            """)).first()
+            if not exists_doc_estado:
+                conn.execute(text("ALTER TABLE document ADD COLUMN estado VARCHAR(32) DEFAULT 'generado'"))
+                conn.execute(text("UPDATE document SET estado = 'generado' WHERE estado IS NULL"))
+                conn.execute(text("ALTER TABLE document ALTER COLUMN estado SET NOT NULL"))
+
+            # document.titulo
+            exists_doc_titulo = conn.execute(text("""
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='document' AND column_name='titulo'
+            """)).first()
+            if not exists_doc_titulo:
+                conn.execute(text("ALTER TABLE document ADD COLUMN titulo TEXT DEFAULT ''"))
+                conn.execute(text("UPDATE document SET titulo = '' WHERE titulo IS NULL"))
+                conn.execute(text("ALTER TABLE document ALTER COLUMN titulo SET NOT NULL"))
+
+            # document.tipo
+            exists_doc_tipo = conn.execute(text("""
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='document' AND column_name='tipo'
+            """)).first()
+            if not exists_doc_tipo:
+                conn.execute(text("ALTER TABLE document ADD COLUMN tipo VARCHAR(64) DEFAULT 'lease'"))
+                conn.execute(text("UPDATE document SET tipo = 'lease' WHERE tipo IS NULL"))
+                conn.execute(text("ALTER TABLE document ALTER COLUMN tipo SET NOT NULL"))
+
+            # document.id_inmueble (por si la tabla se creó sin FK)
+            exists_doc_inm = conn.execute(text("""
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='document' AND column_name='id_inmueble'
+            """)).first()
+            if not exists_doc_inm:
+                conn.execute(text("ALTER TABLE document ADD COLUMN id_inmueble INTEGER NULL"))
 
 
 @app.on_event("startup")
