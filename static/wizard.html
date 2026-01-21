@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Wizard · Contrato de arrendamiento</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <!-- Opcional: si separas frontend/backend, fija aquí el API:
+       <meta name="api-base" content="https://tu-api.com"> -->
   <style>
     :root{
       --brand:#0b5fff; --brand2:#5b8cff;
@@ -92,6 +94,7 @@
       border:1px solid var(--border);
       background:#fff;text-decoration:none;color:var(--ink);
       font-weight:950;
+      cursor:pointer;
     }
     .linkbtn.primary{
       background:linear-gradient(135deg,var(--brand),var(--brand2));
@@ -102,7 +105,7 @@
 <body>
   <div class="topbar">
     <div class="wrap toprow">
-      <a class="brand" href="/static/dashboard.html">
+      <a class="brand" href="/static/dashboard.html" aria-label="Volver al dashboard">
         <div class="badge">⚖️</div>
         <div>Lexia360</div>
       </a>
@@ -112,7 +115,7 @@
         <a class="chip" href="/static/inmuebles.html">Inmuebles</a>
         <a class="chip active" href="/static/wizard.html">Wizard</a>
         <a class="chip" href="/static/papelera.html">Papelera</a>
-        <button class="btn" onclick="logout()">Salir</button>
+        <button class="btn" type="button" onclick="logout()">Salir</button>
       </div>
     </div>
   </div>
@@ -131,25 +134,25 @@
   <section class="wrap">
     <div class="grid">
       <div class="card">
-        <div id="alert" class="alert"></div>
+        <div id="alert" class="alert" role="status" aria-live="polite"></div>
 
         <!-- STEP 1 -->
         <div id="step1">
           <h3 style="margin:0 0 8px;">Selecciona un inmueble</h3>
           <div class="muted2">El contrato se vincula a un expediente (inmueble).</div>
 
-          <label style="margin-top:10px;">Inmueble</label>
+          <label for="inmuebleSelect" style="margin-top:10px;">Inmueble</label>
           <select id="inmuebleSelect"></select>
 
           <div class="divider"></div>
 
           <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-            <a class="linkbtn" href="/static/inmueble.html">Ver ficha (si tienes id)</a>
-            <button class="linkbtn primary" onclick="next(2)">Continuar</button>
+            <a class="linkbtn" href="/static/inmuebles.html">Ver / gestionar inmuebles</a>
+            <button class="linkbtn primary" type="button" onclick="next(2)">Continuar</button>
           </div>
 
           <div class="small" style="margin-top:10px;">
-            ¿No tienes inmuebles? Crea uno en <a href="/static/inmueble.html">Nuevo expediente</a> (o desde Inmuebles).
+            ¿No tienes inmuebles? Crea uno desde <a href="/static/wizard.html">Nuevo expediente</a> (o desde Inmuebles).
           </div>
         </div>
 
@@ -160,30 +163,30 @@
 
           <div class="row" style="margin-top:10px;">
             <div>
-              <label>Arrendatario (nombre)</label>
-              <input id="arrNombre" type="text" placeholder="Nombre y apellidos"/>
+              <label for="arrNombre">Arrendatario (nombre)</label>
+              <input id="arrNombre" type="text" placeholder="Nombre y apellidos" autocomplete="name"/>
             </div>
             <div>
-              <label>Arrendatario (DNI/NIE)</label>
-              <input id="arrDni" type="text" placeholder="00000000X"/>
+              <label for="arrDni">Arrendatario (DNI/NIE)</label>
+              <input id="arrDni" type="text" placeholder="00000000X" inputmode="text"/>
             </div>
           </div>
 
           <div class="row" style="margin-top:10px;">
             <div>
-              <label>Fecha inicio</label>
+              <label for="fechaInicio">Fecha inicio</label>
               <input id="fechaInicio" type="date"/>
             </div>
             <div>
-              <label>Duración (meses)</label>
+              <label for="duracionMeses">Duración (meses)</label>
               <input id="duracionMeses" type="number" min="1" step="1" value="12"/>
             </div>
           </div>
 
           <div class="divider"></div>
           <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between;">
-            <button class="linkbtn" onclick="next(1)">Atrás</button>
-            <button class="linkbtn primary" onclick="next(3)">Continuar</button>
+            <button class="linkbtn" type="button" onclick="next(1)">Atrás</button>
+            <button class="linkbtn primary" type="button" onclick="next(3)">Continuar</button>
           </div>
         </div>
 
@@ -197,8 +200,8 @@
 
           <div class="divider"></div>
           <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between;">
-            <button class="linkbtn" onclick="next(2)">Atrás</button>
-            <button class="linkbtn primary" onclick="createDocument()">Generar contrato</button>
+            <button class="linkbtn" type="button" onclick="next(2)">Atrás</button>
+            <button class="linkbtn primary" type="button" onclick="createDocument()">Generar contrato</button>
           </div>
         </div>
 
@@ -225,7 +228,7 @@
           <div class="divider"></div>
 
           <b>Checklist</b>
-          <div class="muted2">Sprint siguiente: marcar completado + auditoría.</div>
+          <div class="muted2">Sprint siguiente: marcar completado + auditoría (ya lo soporta el backend).</div>
           <div id="checklist" style="margin-top:10px; display:grid; gap:10px;"></div>
         </div>
 
@@ -258,20 +261,30 @@
   </section>
 
 <script>
-  const apiUrl = location.origin;
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const apiUrl = getApiBase();
 
   function token(){ return localStorage.getItem("token"); }
   function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+
   function logout(){
-    localStorage.removeItem("token"); localStorage.removeItem("email");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
     window.location.href="/static/index.html";
   }
+
   function setAlert(msg, ok=true){
     const el = document.getElementById("alert");
     el.className = "alert " + (ok ? "ok" : "err");
     el.textContent = msg || "";
   }
-  async function safeJson(res){ try{return await res.json();}catch{return {};} }
+
+  async function safeJson(res){
+    try{ return await res.json(); }catch{ return {}; }
+  }
 
   function setStep(n){
     ["s1","s2","s3","s4"].forEach((id, idx)=>{
@@ -294,9 +307,14 @@
   async function guard(){
     const t = token();
     if(!t){ logout(); return false; }
-    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-    if(res.status===401){ logout(); return false; }
-    return res.ok;
+    try{
+      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+      if(res.status===401){ logout(); return false; }
+      return res.ok;
+    }catch(e){
+      logout();
+      return false;
+    }
   }
 
   async function loadInmuebles(){
@@ -344,8 +362,8 @@
     const f = document.getElementById("fechaInicio").value;
     const fecha_inicio = f ? f : null;
 
-    const dur = Number(document.getElementById("duracionMeses").value || "12");
-    const duracion_meses = dur > 0 ? dur : 12;
+    const durRaw = Number(document.getElementById("duracionMeses").value || "12");
+    const duracion_meses = (Number.isFinite(durRaw) && durRaw >= 1) ? Math.floor(durRaw) : 12;
 
     return { inmueble_id, arrendatario_nombre, arrendatario_dni, fecha_inicio, duracion_meses };
   }
@@ -379,8 +397,12 @@
         return;
       }
     }
-   ôt
     if(n===3){
+      const p = collect();
+      if(!p.inmueble_id){
+        setAlert("Selecciona un inmueble.", false);
+        return;
+      }
       buildReview();
     }
     setAlert("");
@@ -412,8 +434,7 @@
     createdDocId = data.id_document;
     document.getElementById("docId").textContent = createdDocId;
 
-    const pdfUrl = `${apiUrl}/documents/${createdDocId}/pdf`;
-    document.getElementById("pdfLink").href = pdfUrl;
+    document.getElementById("pdfLink").href = `${apiUrl}/documents/${createdDocId}/pdf`;
 
     setAlert("✅ Contrato generado.");
     setTimeout(()=>setAlert(""), 900);
@@ -444,8 +465,9 @@
     for(const it of items){
       const el = document.createElement("div");
       el.className = "check";
+      const done = !!it.completado;
       el.innerHTML = `
-        <b>☐ ${esc(it.titulo)}</b>
+        <b>${done ? "☑" : "☐"} ${esc(it.titulo)}</b>
         <div class="muted2">${esc(it.descripcion || "")}</div>
       `;
       box.appendChild(el);
@@ -456,9 +478,10 @@
   (async function init(){
     const ok = await guard();
     if(!ok) return;
-    // default fecha inicio = hoy
+
     const today = new Date().toISOString().slice(0,10);
     document.getElementById("fechaInicio").value = today;
+
     await loadInmuebles();
     setStep(1);
   })();
