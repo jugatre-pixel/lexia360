@@ -1,59 +1,152 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/>
-<title>Lexia360 · Inmuebles</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lexia360 · Inmuebles</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <!-- Opcional: si separas frontend/backend:
+  <meta name="api-base" content="https://tu-api.com"> -->
+  <style>
+    .muted{ color:#667085; font-size:13px; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    button{ border-radius:10px; }
+  </style>
 </head>
 <body>
 <nav class="container-fluid">
   <ul><li><strong>Inmuebles</strong></li></ul>
   <ul>
     <li><a href="/static/dashboard.html">Dashboard</a></li>
-    <li><a href="/static/wizard.html">Nuevo</a></li>
+    <li><a href="/static/wizard.html">Nuevo expediente</a></li>
     <li><a href="/static/papelera.html">Papelera</a></li>
+    <li><a href="#" onclick="logout(); return false;">Salir</a></li>
   </ul>
 </nav>
 
 <main class="container">
+  <h2 style="margin-bottom:6px;">Tus inmuebles</h2>
+  <div class="muted" style="margin-bottom:14px;">Gestión de expedientes (activos).</div>
+
+  <article id="msg" class="muted" style="display:none;"></article>
+
   <table>
     <thead>
-      <tr><th>ID</th><th>Dirección</th><th>Acciones</th></tr>
+      <tr>
+        <th>ID</th>
+        <th>Dirección</th>
+        <th>Municipio</th>
+        <th>CCAA</th>
+        <th>Acciones</th>
+      </tr>
     </thead>
     <tbody id="rows"></tbody>
   </table>
 </main>
 
 <script>
-const api = location.origin;
-const token = localStorage.getItem("token");
-if(!token) location.href="/static/index.html";
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const api = getApiBase();
 
-async function load(){
-  const r = await fetch(api+"/inmuebles",{headers:{Authorization:`Bearer ${token}`}});
-  if(r.status===401) location.href="/static/index.html";
-  const data = await r.json();
-  const tbody = document.getElementById("rows");
-  tbody.innerHTML="";
-  data.forEach(i=>{
-    tbody.innerHTML+=`
-      <tr>
-        <td>${i.id_inmueble}</td>
-        <td>${i.direccion}</td>
-        <td>
-          <a href="/static/inmueble.html?id=${i.id_inmueble}">Ver</a>
-          <button onclick="del(${i.id_inmueble})">Eliminar</button>
-        </td>
-      </tr>`;
-  });
-}
+  function token(){ return localStorage.getItem("token"); }
+  function logout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    location.href="/static/index.html";
+  }
 
-async function del(id){
-  if(!confirm("¿Enviar a papelera?")) return;
-  await fetch(api+"/inmuebles/"+id,{method:"DELETE",headers:{Authorization:`Bearer ${token}`}});
+  function setMsg(text){
+    const el = document.getElementById("msg");
+    if(!text){
+      el.style.display = "none";
+      el.textContent = "";
+      return;
+    }
+    el.style.display = "block";
+    el.textContent = text;
+  }
+
+  async function authFetch(url, options={}){
+    const t = token();
+    if(!t) { logout(); return null; }
+    options.headers = options.headers || {};
+    options.headers["Authorization"] = `Bearer ${t}`;
+    return fetch(url, options);
+  }
+
+  function makeTd(text){
+    const td = document.createElement("td");
+    td.textContent = text ?? "—";
+    return td;
+  }
+
+  async function load(){
+    try{
+      const r = await authFetch(`${api}/inmuebles`);
+      if(!r) return;
+      if(r.status===401) return logout();
+
+      const data = await r.json().catch(()=>[]);
+      const tbody = document.getElementById("rows");
+      tbody.innerHTML = "";
+
+      if(!Array.isArray(data) || data.length === 0){
+        setMsg("No tienes inmuebles activos. Crea uno con “Nuevo expediente”.");
+        return;
+      }
+      setMsg("");
+
+      for(const i of data){
+        const tr = document.createElement("tr");
+
+        tr.appendChild(makeTd(i.id_inmueble));
+        tr.appendChild(makeTd(i.direccion));
+        tr.appendChild(makeTd(i.municipio));
+        tr.appendChild(makeTd(i.comunidad_autonoma));
+
+        const tdActions = document.createElement("td");
+        const wrap = document.createElement("div");
+        wrap.className = "actions";
+
+        const a = document.createElement("a");
+        a.href = `/static/inmueble.html?id=${encodeURIComponent(i.id_inmueble)}`;
+        a.textContent = "Ver";
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "Eliminar";
+        btn.onclick = () => del(i.id_inmueble);
+
+        wrap.appendChild(a);
+        wrap.appendChild(btn);
+        tdActions.appendChild(wrap);
+
+        tr.appendChild(tdActions);
+        tbody.appendChild(tr);
+      }
+    }catch(e){
+      setMsg("⚠️ No se pudo cargar la lista de inmuebles.");
+    }
+  }
+
+  async function del(id){
+    if(!confirm("¿Enviar a papelera?")) return;
+    try{
+      const r = await authFetch(`${api}/inmuebles/${encodeURIComponent(id)}`, { method:"DELETE" });
+      if(!r) return;
+      if(r.status===401) return logout();
+      await load();
+    }catch(e){
+      setMsg("⚠️ No se pudo eliminar (papelera).");
+    }
+  }
+
+  // init
+  if(!token()) logout();
   load();
-}
-load();
 </script>
 </body>
 </html>
