@@ -363,6 +363,46 @@ class CheckoutCreate(BaseModel):
 # ============================================================
 # STARTUP + AUTO FIX SCHEMA
 # ============================================================
+def seed_products_and_templates():
+    with Session(engine, expire_on_commit=False) as session:
+        # Template lease_mvp v1
+        tpl = session.exec(select(Template).where(Template.code == "lease_mvp").where(Template.version == 1)).first()
+        if not tpl:
+            base_items = [
+                {"titulo": "Verificar identidad del arrendatario", "descripcion": "DNI/NIE en vigor y coincidencia de datos."},
+                {"titulo": "Comprobar titularidad / autorización", "descripcion": "Nota simple o autorización si no es titular."},
+                {"titulo": "Inventario y estado de la vivienda", "descripcion": "Fotos + listado de enseres (si aplica)."},
+                {"titulo": "Entrega de llaves", "descripcion": "Acta de entrega / recepción."},
+                {"titulo": "Depósito de fianza", "descripcion": "Gestión conforme normativa autonómica (si aplica)."},
+            ]
+            tpl = Template(
+                code="lease_mvp",
+                version=1,
+                tipo="lease",
+                titulo="Contrato de arrendamiento (MVP)",
+                default_payload_json="{}",
+                checklist_json=json.dumps(base_items, ensure_ascii=False),
+                activo=True,
+            )
+            session.add(tpl)
+            session.commit()
+
+        # Product “Contrato MVP”
+        prod = session.exec(select(Product).where(Product.code == "lease_mvp")).first()
+        if not prod:
+            prod = Product(
+                code="lease_mvp",
+                name="Contrato de arrendamiento (MVP)",
+                description="Genera contrato + checklist base. Ideal para empezar.",
+                currency="eur",
+                unit_amount_cents=4900,  # 49,00 €
+                template_code="lease_mvp",
+                activo=True,
+            )
+            session.add(prod)
+            session.commit()
+
+
 def _col_exists(conn, table: str, column: str) -> bool:
     r = conn.execute(text("""
         SELECT 1 FROM information_schema.columns
@@ -485,6 +525,11 @@ def on_startup():
             session.commit()
 
     print("✅ STARTUP OK ->", APP_VERSION)
+  
+    try:
+        seed_products_and_templates()
+    except Exception as e:
+        print("⚠️ Seed products/templates falló:", e)
 
 
 # ============================================================
@@ -963,6 +1008,7 @@ def head_root():
 
 @app.get("/status")
 def status():
+    
     with Session(engine, expire_on_commit=False) as session:
         def scalar(q: str) -> int:
             v = session.exec(text(q)).one()
@@ -989,7 +1035,22 @@ def status():
             "documentos": docs_count,
             "version": APP_VERSION,
         }
-
+  @app.get("/products")
+def get_products(user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        prods = session.exec(
+            select(Product).where(Product.activo == True).order_by(Product.id_product.asc())
+        ).all()
+        return [{
+            "id_product": p.id_product,
+            "code": p.code,
+            "name": p.name,
+            "description": p.description,
+            "currency": p.currency,
+            "unit_amount_cents": p.unit_amount_cents,
+            "price_display": f"{p.unit_amount_cents/100:.2f} {p.currency.upper()}",
+            "template_code": p.template_code
+        } for p in prods]
 
 # ============================================================
 # ROUTES (CATÁLOGO)
