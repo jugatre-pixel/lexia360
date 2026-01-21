@@ -406,6 +406,40 @@ def _autofix_schema():
             conn.execute(text("ALTER TABLE template ADD COLUMN estado VARCHAR(32) DEFAULT 'published'"))
             conn.execute(text("UPDATE template SET estado = 'published' WHERE estado IS NULL"))
             conn.execute(text("ALTER TABLE template ALTER COLUMN estado SET NOT NULL"))
+        # ------------------------------------------------------------
+        # ✅ FIX: template.code (tu BD venía con slug pero tu código usa code)
+        # ------------------------------------------------------------
+        if _table_exists(conn, "template") and not _col_exists(conn, "template", "code"):
+            conn.execute(text("ALTER TABLE template ADD COLUMN code TEXT NULL"))
+
+            # Si existe slug, copiamos slug -> code
+            if _col_exists(conn, "template", "slug"):
+                conn.execute(text("UPDATE template SET code = slug WHERE code IS NULL"))
+            else:
+                # Si no hay slug, ponemos un valor genérico para evitar NULLs
+                conn.execute(text("UPDATE template SET code = 'template_' || id_template::text WHERE code IS NULL"))
+
+            conn.execute(text("ALTER TABLE template ALTER COLUMN code SET NOT NULL"))
+            try:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_template_code_version ON template (code, version)"))
+            except Exception:
+                pass
+
+        # Opcional: si tu modelo/seed usa estas columnas y tu BD no las tiene aún
+        if _table_exists(conn, "template") and not _col_exists(conn, "template", "tipo"):
+            conn.execute(text("ALTER TABLE template ADD COLUMN tipo VARCHAR(32) DEFAULT 'lease'"))
+            conn.execute(text("UPDATE template SET tipo = 'lease' WHERE tipo IS NULL"))
+            conn.execute(text("ALTER TABLE template ALTER COLUMN tipo SET NOT NULL"))
+
+        if _table_exists(conn, "template") and not _col_exists(conn, "template", "default_payload_json"):
+            conn.execute(text("ALTER TABLE template ADD COLUMN default_payload_json TEXT DEFAULT '{}'"))
+            conn.execute(text("UPDATE template SET default_payload_json = '{}' WHERE default_payload_json IS NULL"))
+            conn.execute(text("ALTER TABLE template ALTER COLUMN default_payload_json SET NOT NULL"))
+
+        if _table_exists(conn, "template") and not _col_exists(conn, "template", "checklist_json"):
+            conn.execute(text("ALTER TABLE template ADD COLUMN checklist_json TEXT DEFAULT '[]'"))
+            conn.execute(text("UPDATE template SET checklist_json = '[]' WHERE checklist_json IS NULL"))
+            conn.execute(text("ALTER TABLE template ALTER COLUMN checklist_json SET NOT NULL"))
 
         # ------------------------------------------------------------
         # ✅ FIX: product.activo (por si tu /products filtra por activo)
