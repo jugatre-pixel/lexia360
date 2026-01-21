@@ -6,240 +6,99 @@
   <title>Lexia360 · Checkout</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
   <style>
-    :root{ --brand:#0b5fff; --muted:#667085; --border:#e6e8ef; --danger:#b42318; --ok:#027a48; }
-    body{ margin:0; background:#f6f7fb; }
-    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
-    .wrap{ max-width:980px; margin:0 auto; padding:16px 18px; }
-    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
-    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; }
-    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
-    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
-    .card{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); margin-top:14px; }
-    .muted{ color:var(--muted); }
-    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    @media(max-width:900px){ .row{ grid-template-columns:1fr; } }
-    input, select{ border-radius:12px !important; }
-    .toast{ margin-top:10px; font-weight:900; font-size:13px; }
-    .toast.ok{ color:var(--ok); }
-    .toast.err{ color:var(--danger); }
-    .price{ font-weight:1000; }
+    body{ background:#f6f7fb; }
+    .wrap{ max-width:980px; margin:0 auto; padding:18px; }
+    .card{ background:#fff; border:1px solid #e6e8ef; border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
+    .grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+    @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+    .muted{ color:#667085; }
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap top">
-    <a class="brand" href="/static/dashboard.html">
-      <div class="badge">⚖️</div>
-      <div>Lexia360</div>
-    </a>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn" href="/static/productos.html">🛒 Catálogo</a>
-      <a class="btn" href="/static/documentos.html">📄 Documentos</a>
-      <button class="btn" onclick="logout()">Salir</button>
-    </div>
-  </div>
-</header>
+  <main class="wrap">
+    <h2>Comprar documento</h2>
+    <p class="muted">Elige un producto y paga con Stripe. Después se genera tu documento automáticamente.</p>
 
-<main class="wrap">
-  <section class="card">
-    <h3 style="margin:0 0 6px;" id="title">Checkout</h3>
-    <div class="muted" id="subtitle">Cargando producto…</div>
+    <article class="card">
+      <label>Inmueble (opcional para este producto)</label>
+      <input id="inmuebleId" type="number" placeholder="Ej: 12" />
 
-    <div id="toast" class="toast"></div>
+      <hr/>
 
-    <hr/>
-
-    <div class="row">
-      <div>
-        <label>Selecciona inmueble *</label>
-        <select id="inmuebleId"></select>
-      </div>
-      <div>
-        <label>Precio</label>
-        <input id="precio" type="text" disabled />
-      </div>
-    </div>
-
-    <!-- Campos MVP tipo lease -->
-    <div class="row" style="margin-top:10px;">
-      <div>
-        <label>Arrendatario (nombre)</label>
-        <input id="arrNombre" type="text" placeholder="Nombre y apellidos"/>
-      </div>
-      <div>
-        <label>DNI/NIE</label>
-        <input id="arrDni" type="text" placeholder="12345678X"/>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div>
-        <label>Fecha inicio</label>
-        <input id="fechaInicio" type="date"/>
-      </div>
-      <div>
-        <label>Duración (meses)</label>
-        <input id="duracion" type="number" min="1" placeholder="12"/>
-      </div>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:14px;">
-      <button class="btn primary" id="payBtn" onclick="pay()">Pagar y generar</button>
-    </div>
-
-    <p class="muted" style="margin-top:10px;font-size:13px;">
-      Al pagar, se creará tu documento automáticamente y aparecerá en “Documentos”.
-    </p>
-  </section>
-</main>
+      <div id="msg" class="muted"></div>
+      <div id="products" class="grid"></div>
+    </article>
+  </main>
 
 <script>
-const api = location.origin;
-const token = localStorage.getItem("token");
-if(!token) location.href="/static/index.html";
+  const api = location.origin;
+  const token = localStorage.getItem("token");
+  if(!token) location.href="/static/index.html";
 
-const params = new URLSearchParams(location.search);
-const slug = params.get("slug");
-const version = Number(params.get("version") || 1);
+  const msg = document.getElementById("msg");
+  const box = document.getElementById("products");
 
-let product = null;
+  function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token}` }; }
 
-function logout(){
-  localStorage.removeItem("token");
-  localStorage.removeItem("email");
-  location.href="/static/index.html";
-}
+  function setMsg(t){ msg.textContent = t || ""; }
 
-function setToast(text, ok=true){
-  const el = document.getElementById("toast");
-  el.className = "toast " + (ok ? "ok" : "err");
-  el.textContent = text || "";
-  if(text){
-    setTimeout(()=>{ el.textContent=""; }, 2600);
-  }
-}
-
-function fmt(cents, cur){
-  const eur = (Number(cents||0)/100).toFixed(2);
-  return `${eur} ${(cur||"EUR").toUpperCase()}`;
-}
-
-async function safeJson(res){ try{ return await res.json(); }catch{ return {}; } }
-
-async function loadProduct(){
-  if(!slug){
-    setToast("Falta slug en la URL.", false);
-    return;
-  }
-  const r = await fetch(api + "/products");
-  const data = await safeJson(r);
-  if(!r.ok){
-    setToast("No se pudo cargar /products", false);
-    return;
-  }
-  product = (Array.isArray(data) ? data : []).find(p => p.slug === slug && Number(p.version) === Number(version));
-  if(!product){
-    setToast("Producto no encontrado (slug/version).", false);
-    return;
-  }
-
-  document.getElementById("title").textContent = product.titulo || "Checkout";
-  document.getElementById("subtitle").textContent = `Plantilla: ${product.slug} v${product.version}`;
-  document.getElementById("precio").value = fmt(product.precio_cents, product.moneda);
-}
-
-async function loadInmuebles(){
-  try{
-    const r = await fetch(api + "/inmuebles", { headers:{ Authorization:`Bearer ${token}` }});
-    if(r.status===401) return logout();
-    const data = await safeJson(r);
-    const sel = document.getElementById("inmuebleId");
-    sel.innerHTML = "";
-
-    if(!Array.isArray(data) || data.length===0){
-      sel.innerHTML = `<option value="">(No tienes inmuebles, crea uno primero)</option>`;
-      setToast("Crea un inmueble antes de comprar.", false);
-      document.getElementById("payBtn").disabled = true;
+  async function loadProducts(){
+    setMsg("Cargando catálogo...");
+    const r = await fetch(api + "/products", { headers: authHeaders() });
+    if(r.status===401) return location.href="/static/index.html";
+    const data = await r.json().catch(()=>[]);
+    if(!r.ok){
+      setMsg("No se pudo cargar /products");
       return;
     }
 
-    data.forEach(i=>{
-      const opt = document.createElement("option");
-      opt.value = i.id_inmueble;
-      opt.textContent = `#${i.id_inmueble} · ${i.direccion}`;
-      sel.appendChild(opt);
+    box.innerHTML = "";
+    if(!Array.isArray(data) || data.length===0){
+      setMsg("No hay productos activos.");
+      return;
+    }
+
+    setMsg("");
+
+    data.forEach(p=>{
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <h4 style="margin:0 0 6px;">${p.name}</h4>
+        <div class="muted" style="margin-bottom:10px;">${p.description || ""}</div>
+        <b>${p.price_display}</b>
+        <div style="margin-top:12px;">
+          <button onclick="buy(${p.id_product})">Pagar con Stripe</button>
+        </div>
+      `;
+      box.appendChild(div);
     });
-
-  }catch(e){
-    setToast("⚠️ No se pudo cargar inmuebles.", false);
-  }
-}
-
-async function pay(){
-  if(!product){
-    setToast("Producto no cargado.", false);
-    return;
-  }
-  const inmueble_id = Number(document.getElementById("inmuebleId").value || 0);
-  if(!inmueble_id){
-    setToast("Selecciona un inmueble.", false);
-    return;
   }
 
-  const arrendatario_nombre = document.getElementById("arrNombre").value.trim() || null;
-  const arrendatario_dni = document.getElementById("arrDni").value.trim() || null;
+  async function buy(product_id){
+    const inmueble_id_raw = document.getElementById("inmuebleId").value;
+    const inmueble_id = inmueble_id_raw ? Number(inmueble_id_raw) : null;
 
-  const fechaInicio = document.getElementById("fechaInicio").value;
-  const fecha_inicio = fechaInicio ? fechaInicio : null;
-
-  const durRaw = document.getElementById("duracion").value;
-  const duracion_meses = durRaw ? Number(durRaw) : null;
-
-  const payload = { inmueble_id, arrendatario_nombre, arrendatario_dni, fecha_inicio, duracion_meses };
-
-  try{
-    setToast("Creando checkout…");
+    setMsg("Creando checkout...");
     const r = await fetch(api + "/checkout/create", {
       method:"POST",
-      headers:{
-        "Authorization": `Bearer ${token}`,
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify({
-        template_slug: product.slug,
-        template_version: product.version,
-        inmueble_id,
-        payload
-      })
+      headers: authHeaders({ "Content-Type":"application/json" }),
+      body: JSON.stringify({ product_id, inmueble_id })
     });
 
-    if(r.status===401) return logout();
-    const data = await safeJson(r);
+    if(r.status===401) return location.href="/static/index.html";
+    const data = await r.json().catch(()=>({}));
 
     if(!r.ok){
-      setToast(data.detail || "Error creando checkout.", false);
+      setMsg(data.detail || "Error creando checkout.");
       return;
     }
 
-    if(!data.checkout_url){
-      setToast("No se recibió checkout_url.", false);
-      return;
-    }
-
-    // Redirige a Stripe Checkout
+    // redirige a Stripe
     window.location.href = data.checkout_url;
-
-  }catch(e){
-    setToast("⚠️ No se pudo conectar.", false);
   }
-}
 
-(async function init(){
-  await loadProduct();
-  await loadInmuebles();
-})();
+  loadProducts();
 </script>
 </body>
 </html>
-
