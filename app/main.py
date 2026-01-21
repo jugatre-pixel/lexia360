@@ -97,7 +97,6 @@ async def catch_exceptions(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception:
-        # Log a consola (server logs). Evita devolver stacktrace al cliente.
         traceback.print_exc()
         raise
 
@@ -113,7 +112,7 @@ if os.path.exists("static"):
 class Usuario(SQLModel, table=True):
     id_usuario: int | None = Field(default=None, primary_key=True)
     nombre: str
-    email: str = Field(index=True)  # ver autofix: intentamos crear UNIQUE si se puede
+    email: str = Field(index=True)
     hashed_password: str
     rol: str = Field(default="cliente")  # cliente | admin
     creado_en: datetime = Field(default_factory=datetime.utcnow)
@@ -282,7 +281,6 @@ def _autofix_schema():
             try:
                 conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email ON usuario (email)"))
             except Exception:
-                # si hay duplicados históricos, no rompemos el arranque
                 pass
 
         # rulerun.fecha_analisis
@@ -297,26 +295,39 @@ def _autofix_schema():
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
-        # ---- FIX CRÍTICO: document.* (tu versión tenía un if imposible) ----
+        # document.* (robust)
         if _table_exists(conn, "document"):
+            # payload_json robust: NOT NULL + DEFAULT '{}' + backfill
             if not _col_exists(conn, "document", "payload_json"):
-                conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
+                conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT"))
+            # Ensure default and not null even if already existed
+            conn.execute(text("UPDATE document SET payload_json = '{}' WHERE payload_json IS NULL"))
+            conn.execute(text("ALTER TABLE document ALTER COLUMN payload_json SET DEFAULT '{}'"))
+            try:
+                conn.execute(text("ALTER TABLE document ALTER COLUMN payload_json SET NOT NULL"))
+            except Exception:
+                # If some DB providers balk due to existing nulls (already updated), ignore
+                pass
+
             if not _col_exists(conn, "document", "estado"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN estado VARCHAR(32) DEFAULT 'generado'"))
                 conn.execute(text("UPDATE document SET estado = 'generado' WHERE estado IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN estado SET NOT NULL"))
+
             if not _col_exists(conn, "document", "titulo"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN titulo TEXT DEFAULT ''"))
                 conn.execute(text("UPDATE document SET titulo = '' WHERE titulo IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN titulo SET NOT NULL"))
+
             if not _col_exists(conn, "document", "tipo"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN tipo VARCHAR(64) DEFAULT 'lease'"))
                 conn.execute(text("UPDATE document SET tipo = 'lease' WHERE tipo IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN tipo SET NOT NULL"))
+
             if not _col_exists(conn, "document", "id_inmueble"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN id_inmueble INTEGER NULL"))
 
-        # checklistitem.completado_en (por si venía de una versión anterior)
+        # checklistitem.completado_en
         if _table_exists(conn, "checklistitem") and not _col_exists(conn, "checklistitem", "completado_en"):
             conn.execute(text("ALTER TABLE checklistitem ADD COLUMN completado_en TIMESTAMP NULL"))
 
@@ -357,9 +368,6 @@ def create_pdf_token(user_id: int, inmueble_id: int) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_pdf_token(token: str) -> Optional[Tuple[int, int]]:
-    """
-    Devuelve (user_id, inmueble_id) si es válido, si no None.
-    """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         sub = payload.get("sub", "")
@@ -454,7 +462,12 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
-    resultados["semaforo"] = "ROJO" if (zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]) else "VERDE"
+    resultados["semaforo"] = "ROJO" if (
+        zona_tensionada
+        and resultados["renta_maxima_mvp"] is not None
+        and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]
+    ) else "VERDE"
+
     return resultados, alertas
 
 
@@ -801,10 +814,10 @@ def head_root():
 def status():
     with Session(engine, expire_on_commit=False) as session:
         def scalar(q: str) -> int:
-            v = session.exec(text(q)).one()
-            if isinstance(v, int):
-                return int(v)
-            return int(v[0])
+            row = session.exec(text(q)).one()
+            if isinstance(row, int):
+                return int(row)
+            return int(row[0])
 
         users_count = scalar("SELECT COUNT(*) FROM usuario")
         zonas_count = scalar("SELECT COUNT(*) FROM zonatensionada")
@@ -859,7 +872,9 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
         user = session.exec(select(Usuario).where(Usuario.email == email)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    token = create_access_token(user.email)
+        user_email = user.email  # ✅ keep primitive outside session
+
+    token = create_access_token(user_email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
 @app.get("/me")
@@ -972,6 +987,13 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
 
 @app.delete("/inmuebles/{id_inmueble}/purge")
 def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
+    """
+    ✅ FIX: Purge now deletes:
+      - checklist items for docs linked to the inmueble
+      - documents linked to the inmueble
+      - ruleruns linked to the inmueble
+      - the inmueble itself
+    """
     with Session(engine, expire_on_commit=False) as session:
         inm = session.exec(
             select(Inmueble)
@@ -983,7 +1005,24 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
         if not inm:
             raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
 
+        # 1) Delete checklist items for documents of this inmueble
+        session.exec(text("""
+            DELETE FROM checklistitem
+            WHERE id_document IN (
+                SELECT id_document FROM document WHERE id_inmueble = :iid AND id_usuario = :uid
+            )
+        """), {"iid": id_inmueble, "uid": user.id_usuario})
+
+        # 2) Delete documents linked to inmueble
+        session.exec(text("""
+            DELETE FROM document
+            WHERE id_inmueble = :iid AND id_usuario = :uid
+        """), {"iid": id_inmueble, "uid": user.id_usuario})
+
+        # 3) Delete ruleruns
         session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
+
+        # 4) Delete inmueble
         session.delete(inm)
         session.commit()
 
@@ -1255,10 +1294,12 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
 
         inm_payload = {}
         if doc.id_inmueble:
+            # ✅ FIX: only ACTIVE inmuebles, consistent with the rest
             inm = session.exec(
                 select(Inmueble)
                 .where(Inmueble.id_inmueble == doc.id_inmueble)
                 .where(Inmueble.id_usuario == user.id_usuario)
+                .where(Inmueble.activo == True)
             ).first()
             if inm:
                 inm_payload = inmueble_to_out(session, inm)
@@ -1296,19 +1337,17 @@ def list_documents(
 
         out = []
         for d in docs:
-            total = session.exec(
+            total_row = session.exec(
                 text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id"),
                 {"id": d.id_document}
             ).one()
-            if not isinstance(total, int):
-                total = total[0]
+            total = int(total_row if isinstance(total_row, int) else total_row[0])
 
-            done = session.exec(
+            done_row = session.exec(
                 text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id AND completado = TRUE"),
                 {"id": d.id_document}
             ).one()
-            if not isinstance(done, int):
-                done = done[0]
+            done = int(done_row if isinstance(done_row, int) else done_row[0])
 
             out.append({
                 "id_document": d.id_document,
@@ -1317,8 +1356,8 @@ def list_documents(
                 "titulo": d.titulo,
                 "estado": d.estado,
                 "creado_en": d.creado_en.isoformat(),
-                "checklist_total": int(total),
-                "checklist_done": int(done),
+                "checklist_total": total,
+                "checklist_done": done,
             })
 
         return out
