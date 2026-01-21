@@ -1236,7 +1236,7 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
         if not inm:
             raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
 
-        session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
+        session.execute(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
         session.delete(inm)
         session.commit()
 
