@@ -3,6 +3,8 @@ import json
 import traceback
 import secrets
 import io
+import hmac
+import hashlib
 from datetime import datetime, timedelta, date
 from typing import Optional, Tuple
 
@@ -10,13 +12,15 @@ from fastapi import FastAPI, HTTPException, Depends, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from sqlmodel import SQLModel, Field, Session, select, create_engine
 from sqlalchemy import text
 from sqlalchemy.sql import or_
+
+import stripe
 
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -26,7 +30,7 @@ from reportlab.lib.units import mm
 # ============================================================
 # CONFIG
 # ============================================================
-APP_VERSION = os.getenv("APP_VERSION", "lexia360-v16-documents-checklist")
+APP_VERSION = os.getenv("APP_VERSION", "lexia360-v17-catalog-checkout-templates")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if not DATABASE_URL:
@@ -58,6 +62,14 @@ pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # auto_error=False para permitir endpoints PDF con token ?t=... sin Authorization
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
+
+# Stripe
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip()  # ej: https://tuapp.onrender.com
+
+if STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
 
 
 def load_secret_from_env_or_file(env_name: str, file_path: str) -> str:
@@ -114,7 +126,7 @@ class Usuario(SQLModel, table=True):
     nombre: str
     email: str = Field(index=True)
     hashed_password: str
-    rol: str = Field(default="cliente")  # cliente | admin
+    rol: str = Field(default="cliente")
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -135,8 +147,6 @@ class Inmueble(SQLModel, table=True):
     renta_anterior: float | None = None
 
     creado_en: datetime = Field(default_factory=datetime.utcnow)
-
-    # soft delete
     activo: bool = Field(default=True, index=True)
 
 
@@ -167,6 +177,42 @@ class ZonaTensionada(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
+class Template(SQLModel, table=True):
+    id_template: int | None = Field(default=None, primary_key=True)
+    slug: str = Field(index=True)
+    version: int = Field(index=True, default=1)
+    titulo: str
+    estado: str = Field(default="published", index=True)  # draft | published
+    schema_json: str = Field(default="{}")               # campos del wizard
+    contenido: str = Field(default="")                   # (futuro) plantilla Jinja/HTML/MD
+    precio_cents: int = Field(default=4900)
+    moneda: str = Field(default="eur")
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Order(SQLModel, table=True):
+    id_order: int | None = Field(default=None, primary_key=True)
+    id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
+
+    template_slug: str = Field(index=True)
+    template_version: int = Field(default=1)
+
+    estado: str = Field(default="created", index=True)  # created | paid | failed | refunded
+    amount_cents: int = Field(default=0)
+    currency: str = Field(default="eur")
+
+    stripe_checkout_session_id: str | None = Field(default=None, index=True)
+    stripe_payment_intent_id: str | None = Field(default=None, index=True)
+
+    payload_json: str = Field(default="{}")   # respuestas wizard (guardadas antes de pago)
+    metadata_json: str = Field(default="{}")
+
+    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    pagado_en: datetime | None = None
+
+    id_document: int | None = Field(default=None, index=True)  # se rellena al crear el documento tras pago
+
+
 class Document(SQLModel, table=True):
     id_document: int | None = Field(default=None, primary_key=True)
     id_usuario: int = Field(index=True, foreign_key="usuario.id_usuario")
@@ -178,6 +224,12 @@ class Document(SQLModel, table=True):
 
     payload_json: str = Field(default="{}")
     creado_en: datetime = Field(default_factory=datetime.utcnow)
+
+    # NUEVO: versionado por plantilla
+    template_slug: str | None = Field(default=None, index=True)
+    template_version: int | None = Field(default=None)
+    order_id: int | None = Field(default=None, index=True)
+    render_hash: str | None = Field(default=None, index=True)  # sha256(template+payload)
 
 
 class ChecklistItem(SQLModel, table=True):
@@ -240,6 +292,13 @@ class LeaseCreate(BaseModel):
     duracion_meses: int | None = None
 
 
+class CheckoutCreate(BaseModel):
+    template_slug: str
+    template_version: int | None = 1
+    inmueble_id: int | None = None
+    payload: dict = {}
+
+
 # ============================================================
 # STARTUP + AUTO FIX SCHEMA
 # ============================================================
@@ -260,9 +319,6 @@ def _table_exists(conn, table: str) -> bool:
     return r is not None
 
 def _autofix_schema():
-    """
-    No sustituye Alembic, pero evita roturas típicas en MVP.
-    """
     with engine.begin() as conn:
         # usuario.creado_en
         if _table_exists(conn, "usuario") and not _col_exists(conn, "usuario", "creado_en"):
@@ -276,7 +332,7 @@ def _autofix_schema():
             conn.execute(text("UPDATE usuario SET rol = 'cliente' WHERE rol IS NULL"))
             conn.execute(text("ALTER TABLE usuario ALTER COLUMN rol SET NOT NULL"))
 
-        # Intentar (best-effort) hacer email UNIQUE
+        # unique email best-effort
         if _table_exists(conn, "usuario"):
             try:
                 conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email ON usuario (email)"))
@@ -295,41 +351,43 @@ def _autofix_schema():
             conn.execute(text("UPDATE inmueble SET activo = TRUE WHERE activo IS NULL"))
             conn.execute(text("ALTER TABLE inmueble ALTER COLUMN activo SET NOT NULL"))
 
-        # document.* (robust)
+        # document columns
         if _table_exists(conn, "document"):
-            # payload_json robust: NOT NULL + DEFAULT '{}' + backfill
             if not _col_exists(conn, "document", "payload_json"):
-                conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT"))
-            # Ensure default and not null even if already existed
-            conn.execute(text("UPDATE document SET payload_json = '{}' WHERE payload_json IS NULL"))
-            conn.execute(text("ALTER TABLE document ALTER COLUMN payload_json SET DEFAULT '{}'"))
-            try:
-                conn.execute(text("ALTER TABLE document ALTER COLUMN payload_json SET NOT NULL"))
-            except Exception:
-                # If some DB providers balk due to existing nulls (already updated), ignore
-                pass
-
+                conn.execute(text("ALTER TABLE document ADD COLUMN payload_json TEXT DEFAULT '{}'"))
             if not _col_exists(conn, "document", "estado"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN estado VARCHAR(32) DEFAULT 'generado'"))
                 conn.execute(text("UPDATE document SET estado = 'generado' WHERE estado IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN estado SET NOT NULL"))
-
             if not _col_exists(conn, "document", "titulo"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN titulo TEXT DEFAULT ''"))
                 conn.execute(text("UPDATE document SET titulo = '' WHERE titulo IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN titulo SET NOT NULL"))
-
             if not _col_exists(conn, "document", "tipo"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN tipo VARCHAR(64) DEFAULT 'lease'"))
                 conn.execute(text("UPDATE document SET tipo = 'lease' WHERE tipo IS NULL"))
                 conn.execute(text("ALTER TABLE document ALTER COLUMN tipo SET NOT NULL"))
-
             if not _col_exists(conn, "document", "id_inmueble"):
                 conn.execute(text("ALTER TABLE document ADD COLUMN id_inmueble INTEGER NULL"))
+
+            # NUEVO: template/version/order/hash
+            if not _col_exists(conn, "document", "template_slug"):
+                conn.execute(text("ALTER TABLE document ADD COLUMN template_slug TEXT NULL"))
+            if not _col_exists(conn, "document", "template_version"):
+                conn.execute(text("ALTER TABLE document ADD COLUMN template_version INTEGER NULL"))
+            if not _col_exists(conn, "document", "order_id"):
+                conn.execute(text("ALTER TABLE document ADD COLUMN order_id INTEGER NULL"))
+            if not _col_exists(conn, "document", "render_hash"):
+                conn.execute(text("ALTER TABLE document ADD COLUMN render_hash TEXT NULL"))
 
         # checklistitem.completado_en
         if _table_exists(conn, "checklistitem") and not _col_exists(conn, "checklistitem", "completado_en"):
             conn.execute(text("ALTER TABLE checklistitem ADD COLUMN completado_en TIMESTAMP NULL"))
+
+        # orders.id_document (por si ya existía orders sin esa col)
+        if _table_exists(conn, "order") and not _col_exists(conn, "order", "id_document"):
+            conn.execute(text("ALTER TABLE \"order\" ADD COLUMN id_document INTEGER NULL"))
+
 
 @app.on_event("startup")
 def on_startup():
@@ -338,6 +396,33 @@ def on_startup():
         _autofix_schema()
     except Exception as e:
         print("⚠️ Autofix schema falló:", e)
+
+    # Seed mínimo de catálogo (si no existe)
+    with Session(engine, expire_on_commit=False) as session:
+        existing = session.exec(select(Template).where(Template.slug == "lease_vivienda_habitual").where(Template.version == 1)).first()
+        if not existing:
+            schema = {
+                "fields": [
+                    {"name": "inmueble_id", "type": "number", "required": True},
+                    {"name": "arrendatario_nombre", "type": "text", "required": False},
+                    {"name": "arrendatario_dni", "type": "text", "required": False},
+                    {"name": "fecha_inicio", "type": "date", "required": False},
+                    {"name": "duracion_meses", "type": "number", "required": False},
+                ]
+            }
+            t = Template(
+                slug="lease_vivienda_habitual",
+                version=1,
+                titulo="Contrato de arrendamiento (Vivienda habitual) · MVP",
+                estado="published",
+                schema_json=json.dumps(schema, ensure_ascii=False),
+                contenido="(placeholder)",
+                precio_cents=4900,
+                moneda="eur",
+            )
+            session.add(t)
+            session.commit()
+
     print("✅ STARTUP OK ->", APP_VERSION)
 
 
@@ -462,12 +547,7 @@ def evaluar_reglas(session: Session, inmueble: Inmueble, fecha_analisis: date) -
     resultados["fianza_minima"] = inmueble.renta_propuesta
     alertas.append(f"Fianza mínima: {inmueble.renta_propuesta}€ (1 mensualidad).")
 
-    resultados["semaforo"] = "ROJO" if (
-        zona_tensionada
-        and resultados["renta_maxima_mvp"] is not None
-        and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]
-    ) else "VERDE"
-
+    resultados["semaforo"] = "ROJO" if (zona_tensionada and resultados["renta_maxima_mvp"] is not None and inmueble.renta_propuesta > resultados["renta_maxima_mvp"]) else "VERDE"
     return resultados, alertas
 
 
@@ -547,6 +627,10 @@ def document_to_out(session: Session, doc: Document) -> dict:
         "titulo": doc.titulo,
         "estado": doc.estado,
         "creado_en": doc.creado_en.isoformat(),
+        "template_slug": doc.template_slug,
+        "template_version": doc.template_version,
+        "order_id": doc.order_id,
+        "render_hash": doc.render_hash,
         "payload": payload,
         "checklist": [{
             "id_item": it.id_item,
@@ -759,6 +843,12 @@ def generar_pdf_contrato_arrendamiento(doc: dict, inmueble: dict) -> bytes:
     line("Contrato de arrendamiento (MVP)", 12, bold=True, gap=7)
     line(f"Documento ID: {doc.get('id_document')}", 9, gap=5)
     line(f"Generado: {doc.get('creado_en')}", 9, gap=5)
+
+    if doc.get("template_slug"):
+        line(f"Plantilla: {doc.get('template_slug')} v{doc.get('template_version')}", 9, gap=5)
+    if doc.get("render_hash"):
+        line(f"Hash: {doc.get('render_hash')[:16]}...", 9, gap=5)
+
     hr()
 
     line("1) Partes", 11, bold=True, gap=6.2)
@@ -814,10 +904,10 @@ def head_root():
 def status():
     with Session(engine, expire_on_commit=False) as session:
         def scalar(q: str) -> int:
-            row = session.exec(text(q)).one()
-            if isinstance(row, int):
-                return int(row)
-            return int(row[0])
+            v = session.exec(text(q)).one()
+            if isinstance(v, int):
+                return int(v)
+            return int(v[0])
 
         users_count = scalar("SELECT COUNT(*) FROM usuario")
         zonas_count = scalar("SELECT COUNT(*) FROM zonatensionada")
@@ -838,6 +928,38 @@ def status():
             "documentos": docs_count,
             "version": APP_VERSION,
         }
+
+
+# ============================================================
+# ROUTES (CATÁLOGO)
+# ============================================================
+@app.get("/products")
+def products():
+    with Session(engine, expire_on_commit=False) as session:
+        items = session.exec(
+            select(Template)
+            .where(Template.estado == "published")
+            .order_by(Template.slug, Template.version.desc())
+        ).all()
+
+        # devolvemos solo la última versión por slug
+        latest = {}
+        for t in items:
+            key = t.slug
+            if key not in latest:
+                latest[key] = t
+
+        out = []
+        for t in latest.values():
+            out.append({
+                "slug": t.slug,
+                "version": t.version,
+                "titulo": t.titulo,
+                "precio_cents": t.precio_cents,
+                "moneda": t.moneda,
+                "schema": json.loads(t.schema_json or "{}"),
+            })
+        return out
 
 
 # ============================================================
@@ -872,14 +994,215 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
         user = session.exec(select(Usuario).where(Usuario.email == email)).first()
         if not user or not verify_password(form.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-        user_email = user.email  # ✅ keep primitive outside session
-
-    token = create_access_token(user_email)
+    token = create_access_token(user.email)
     return {"access_token": token, "token_type": "bearer", "version": APP_VERSION}
 
 @app.get("/me")
 def me(user: Usuario = Depends(get_current_user)):
     return {"id_usuario": user.id_usuario, "email": user.email, "rol": user.rol, "version": APP_VERSION}
+
+
+# ============================================================
+# CHECKOUT (Stripe)
+# ============================================================
+def _require_stripe():
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe no configurado: falta STRIPE_SECRET_KEY")
+    if not PUBLIC_BASE_URL:
+        raise HTTPException(status_code=500, detail="Falta PUBLIC_BASE_URL (ej: https://tuapp.onrender.com)")
+    return True
+
+def _render_hash(template_slug: str, template_version: int, payload: dict) -> str:
+    raw = json.dumps({"template_slug": template_slug, "template_version": template_version, "payload": payload}, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+@app.post("/checkout/create")
+def checkout_create(body: CheckoutCreate, user: Usuario = Depends(get_current_user)):
+    _require_stripe()
+    slug = (body.template_slug or "").strip()
+    ver = int(body.template_version or 1)
+    if not slug:
+        raise HTTPException(status_code=400, detail="template_slug es obligatorio")
+
+    with Session(engine, expire_on_commit=False) as session:
+        tpl = session.exec(
+            select(Template)
+            .where(Template.slug == slug)
+            .where(Template.version == ver)
+            .where(Template.estado == "published")
+        ).first()
+        if not tpl:
+            raise HTTPException(status_code=404, detail="Producto no encontrado o no publicado")
+
+        # Order (created)
+        order = Order(
+            id_usuario=user.id_usuario,
+            template_slug=tpl.slug,
+            template_version=tpl.version,
+            estado="created",
+            amount_cents=int(tpl.precio_cents),
+            currency=tpl.moneda,
+            payload_json=json.dumps(body.payload or {}, ensure_ascii=False, default=str),
+            metadata_json=json.dumps({"inmueble_id": body.inmueble_id}, ensure_ascii=False),
+        )
+        session.add(order)
+        session.commit()
+        session.refresh(order)
+
+        success_url = f"{PUBLIC_BASE_URL}/static/success.html?order_id={order.id_order}"
+        cancel_url = f"{PUBLIC_BASE_URL}/static/cancel.html?order_id={order.id_order}"
+
+        # Stripe checkout
+        try:
+            checkout = stripe.checkout.Session.create(
+                mode="payment",
+                success_url=success_url,
+                cancel_url=cancel_url,
+                line_items=[{
+                    "price_data": {
+                        "currency": tpl.moneda,
+                        "product_data": {"name": tpl.titulo},
+                        "unit_amount": int(tpl.precio_cents),
+                    },
+                    "quantity": 1,
+                }],
+                metadata={
+                    "order_id": str(order.id_order),
+                    "user_id": str(user.id_usuario),
+                    "template_slug": tpl.slug,
+                    "template_version": str(tpl.version),
+                }
+            )
+        except Exception as e:
+            order.estado = "failed"
+            session.add(order)
+            session.commit()
+            raise HTTPException(status_code=500, detail=f"Stripe error: {type(e).__name__}: {str(e)}")
+
+        order.stripe_checkout_session_id = checkout.get("id")
+        session.add(order)
+        session.commit()
+
+        return {"ok": True, "order_id": order.id_order, "checkout_url": checkout.get("url")}
+
+
+@app.get("/orders/{id_order}")
+def get_order(id_order: int, user: Usuario = Depends(get_current_user)):
+    with Session(engine, expire_on_commit=False) as session:
+        o = session.exec(
+            select(Order)
+            .where(Order.id_order == id_order)
+            .where(Order.id_usuario == user.id_usuario)
+        ).first()
+        if not o:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+
+        return {
+            "id_order": o.id_order,
+            "estado": o.estado,
+            "amount_cents": o.amount_cents,
+            "currency": o.currency,
+            "id_document": o.id_document,
+            "template_slug": o.template_slug,
+            "template_version": o.template_version,
+            "creado_en": o.creado_en.isoformat(),
+            "pagado_en": o.pagado_en.isoformat() if o.pagado_en else None,
+        }
+
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    _require_stripe()
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="Falta STRIPE_WEBHOOK_SECRET")
+
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload=payload,
+            sig_header=sig_header,
+            secret=STRIPE_WEBHOOK_SECRET,
+        )
+    except Exception:
+        raise HTTPException(status_code=400, detail="Webhook inválido")
+
+    # Solo nos importa checkout.session.completed
+    if event.get("type") != "checkout.session.completed":
+        return {"ok": True}
+
+    session_obj = event["data"]["object"]
+    meta = session_obj.get("metadata") or {}
+    order_id = int(meta.get("order_id") or 0)
+
+    if not order_id:
+        return {"ok": True}
+
+    with Session(engine, expire_on_commit=False) as db:
+        order = db.exec(select(Order).where(Order.id_order == order_id)).first()
+        if not order:
+            return {"ok": True}
+
+        # idempotencia: si ya está paid y tiene documento, no rehacemos
+        if order.estado == "paid" and order.id_document:
+            return {"ok": True}
+
+        order.estado = "paid"
+        order.pagado_en = datetime.utcnow()
+        order.stripe_payment_intent_id = session_obj.get("payment_intent")
+
+        # Cargar payload wizard
+        try:
+            payload_data = json.loads(order.payload_json or "{}")
+        except Exception:
+            payload_data = {}
+
+        # Si viene inmueble_id por metadata, lo usamos
+        inm_id = None
+        try:
+            md = json.loads(order.metadata_json or "{}")
+            inm_id = md.get("inmueble_id")
+        except Exception:
+            inm_id = None
+
+        # Crear documento ligado al pedido
+        rh = _render_hash(order.template_slug, int(order.template_version), payload_data)
+
+        doc = Document(
+            id_usuario=order.id_usuario,
+            id_inmueble=inm_id,
+            tipo="lease" if order.template_slug.startswith("lease") else "document",
+            titulo="Documento generado (pago confirmado)",
+            estado="generado",
+            payload_json=json.dumps(payload_data, ensure_ascii=False, default=str),
+            template_slug=order.template_slug,
+            template_version=int(order.template_version),
+            order_id=order.id_order,
+            render_hash=rh
+        )
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+
+        # Checklist base
+        base_items = [
+            ("Verificar identidad del arrendatario", "DNI/NIE en vigor y coincidencia de datos."),
+            ("Comprobar titularidad / autorización", "Nota simple o autorización si no es titular."),
+            ("Inventario y estado de la vivienda", "Fotos + listado de enseres (si aplica)."),
+            ("Entrega de llaves", "Acta de entrega / recepción."),
+            ("Depósito de fianza", "Gestión conforme normativa autonómica (si aplica)."),
+        ]
+        for t_, d_ in base_items:
+            db.add(ChecklistItem(id_document=doc.id_document, titulo=t_, descripcion=d_))
+        db.commit()
+
+        # Link en order
+        order.id_document = doc.id_document
+        db.add(order)
+        db.commit()
+
+    return {"ok": True}
 
 
 # ============================================================
@@ -987,13 +1310,6 @@ def restaurar_inmueble(id_inmueble: int, user: Usuario = Depends(get_current_use
 
 @app.delete("/inmuebles/{id_inmueble}/purge")
 def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    """
-    ✅ FIX: Purge now deletes:
-      - checklist items for docs linked to the inmueble
-      - documents linked to the inmueble
-      - ruleruns linked to the inmueble
-      - the inmueble itself
-    """
     with Session(engine, expire_on_commit=False) as session:
         inm = session.exec(
             select(Inmueble)
@@ -1005,33 +1321,11 @@ def borrar_definitivo(id_inmueble: int, user: Usuario = Depends(get_current_user
         if not inm:
             raise HTTPException(status_code=404, detail="Solo se puede borrar definitivo desde la papelera")
 
-        # 1) Delete checklist items for documents of this inmueble
-        session.exec(text("""
-            DELETE FROM checklistitem
-            WHERE id_document IN (
-                SELECT id_document FROM document WHERE id_inmueble = :iid AND id_usuario = :uid
-            )
-        """), {"iid": id_inmueble, "uid": user.id_usuario})
-
-        # 2) Delete documents linked to inmueble
-        session.exec(text("""
-            DELETE FROM document
-            WHERE id_inmueble = :iid AND id_usuario = :uid
-        """), {"iid": id_inmueble, "uid": user.id_usuario})
-
-        # 3) Delete ruleruns
         session.exec(text("DELETE FROM rulerun WHERE id_inmueble = :iid"), {"iid": id_inmueble})
-
-        # 4) Delete inmueble
         session.delete(inm)
         session.commit()
 
     return {"ok": True, "mensaje": "🧨 Borrado definitivo completado"}
-
-# alias por compatibilidad con tu HTML
-@app.delete("/inmuebles/{id_inmueble}/hard")
-def borrar_definitivo_alias(id_inmueble: int, user: Usuario = Depends(get_current_user)):
-    return borrar_definitivo(id_inmueble, user)
 
 @app.post("/inmuebles")
 def crear_inmueble(payload: InmuebleCreate, user: Usuario = Depends(get_current_user)):
@@ -1132,11 +1426,6 @@ def inmueble_pdf(
     t: str | None = Query(default=None),
     bearer: str | None = Depends(oauth2_scheme),
 ):
-    """
-    Descarga PDF:
-    - Con Authorization Bearer normal -> OK
-    - Sin Authorization, usando token en query ?t=... -> OK
-    """
     if bearer:
         user = get_current_user(bearer)
         with Session(engine, expire_on_commit=False) as session:
@@ -1221,54 +1510,6 @@ def update_checklist_item(
             "completado_en": item.completado_en.isoformat() if item.completado_en else None
         }
 
-@app.post("/documents/lease")
-def create_lease_document(payload: LeaseCreate, user: Usuario = Depends(get_current_user)):
-    with Session(engine, expire_on_commit=False) as session:
-        inm = session.exec(
-            select(Inmueble)
-            .where(Inmueble.id_inmueble == payload.inmueble_id)
-            .where(Inmueble.id_usuario == user.id_usuario)
-            .where(Inmueble.activo == True)
-        ).first()
-        if not inm:
-            raise HTTPException(status_code=404, detail="Inmueble no encontrado")
-
-        doc = Document(
-            id_usuario=user.id_usuario,
-            id_inmueble=inm.id_inmueble,
-            tipo="lease",
-            titulo="Contrato de arrendamiento (MVP)",
-            estado="generado",
-            payload_json=json.dumps(payload.model_dump(), ensure_ascii=False, default=str),
-        )
-        session.add(doc)
-        session.commit()
-        session.refresh(doc)
-
-        base_items = [
-            ("Verificar identidad del arrendatario", "DNI/NIE en vigor y coincidencia de datos."),
-            ("Comprobar titularidad / autorización", "Nota simple o autorización si no es titular."),
-            ("Inventario y estado de la vivienda", "Fotos + listado de enseres (si aplica)."),
-            ("Entrega de llaves", "Acta de entrega / recepción."),
-            ("Depósito de fianza", "Gestión conforme normativa autonómica (si aplica)."),
-        ]
-        for t_, d_ in base_items:
-            session.add(ChecklistItem(
-                id_document=doc.id_document,
-                titulo=t_,
-                descripcion=d_
-            ))
-        session.commit()
-
-        return {
-            "ok": True,
-            "id_document": doc.id_document,
-            "id_inmueble": doc.id_inmueble,
-            "tipo": doc.tipo,
-            "titulo": doc.titulo,
-            "version": APP_VERSION
-        }
-
 @app.get("/documents/{id_document}")
 def get_document(id_document: int, user: Usuario = Depends(get_current_user)):
     with Session(engine, expire_on_commit=False) as session:
@@ -1294,12 +1535,10 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
 
         inm_payload = {}
         if doc.id_inmueble:
-            # ✅ FIX: only ACTIVE inmuebles, consistent with the rest
             inm = session.exec(
                 select(Inmueble)
                 .where(Inmueble.id_inmueble == doc.id_inmueble)
                 .where(Inmueble.id_usuario == user.id_usuario)
-                .where(Inmueble.activo == True)
             ).first()
             if inm:
                 inm_payload = inmueble_to_out(session, inm)
@@ -1317,18 +1556,11 @@ def get_document_pdf(id_document: int, user: Usuario = Depends(get_current_user)
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)
 
 
-# ============================================================
-# ROUTES (DOCUMENTS LIST)
-# ============================================================
 @app.get("/documents")
 def list_documents(
     inmueble_id: int | None = None,
     user: Usuario = Depends(get_current_user)
 ):
-    """
-    Lista documentos del usuario.
-    Opcional: filtrar por inmueble_id.
-    """
     with Session(engine, expire_on_commit=False) as session:
         q = select(Document).where(Document.id_usuario == user.id_usuario)
         if inmueble_id is not None:
@@ -1337,17 +1569,19 @@ def list_documents(
 
         out = []
         for d in docs:
-            total_row = session.exec(
+            total = session.exec(
                 text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id"),
                 {"id": d.id_document}
             ).one()
-            total = int(total_row if isinstance(total_row, int) else total_row[0])
+            if not isinstance(total, int):
+                total = total[0]
 
-            done_row = session.exec(
+            done = session.exec(
                 text("SELECT COUNT(*) FROM checklistitem WHERE id_document = :id AND completado = TRUE"),
                 {"id": d.id_document}
             ).one()
-            done = int(done_row if isinstance(done_row, int) else done_row[0])
+            if not isinstance(done, int):
+                done = done[0]
 
             out.append({
                 "id_document": d.id_document,
@@ -1356,8 +1590,11 @@ def list_documents(
                 "titulo": d.titulo,
                 "estado": d.estado,
                 "creado_en": d.creado_en.isoformat(),
-                "checklist_total": total,
-                "checklist_done": done,
+                "template_slug": d.template_slug,
+                "template_version": d.template_version,
+                "order_id": d.order_id,
+                "checklist_total": int(total),
+                "checklist_done": int(done),
             })
 
         return out
