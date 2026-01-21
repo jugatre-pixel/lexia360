@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Documentos</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <!-- Opcional:
+  <meta name="api-base" content="https://tu-api.com"> -->
   <style>
     :root{
       --brand:#0b5fff; --brand2:#5b8cff;
@@ -46,6 +48,7 @@
       background:rgba(255,255,255,.06);
       color:#fff;padding:10px 14px;border-radius:12px;
       font-weight:900;cursor:pointer;
+      text-decoration:none; display:inline-flex; align-items:center; gap:8px;
     }
     .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent}
     .hero{padding:28px 0 10px;}
@@ -84,7 +87,7 @@
         <a class="chip" href="/static/wizard.html">Wizard</a>
         <a class="chip" href="/static/papelera.html">Papelera</a>
         <a class="chip active" href="/static/documentos.html">Documentos</a>
-        <button class="btn" onclick="logout()">Salir</button>
+        <button class="btn" type="button" onclick="logout()">Salir</button>
       </div>
     </div>
   </div>
@@ -102,8 +105,8 @@
           <div class="muted2">Últimos 50 documentos del usuario.</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn" onclick="load()">Actualizar</button>
-          <a href="/static/wizard_lease.html" role="button" class="primary">+ Generar contrato</a>
+          <button class="btn" type="button" onclick="load()">Actualizar</button>
+          <a class="btn primary" href="/static/wizard_lease.html">+ Generar contrato</a>
         </div>
       </div>
 
@@ -133,35 +136,54 @@
   <div id="toast" class="toast"></div>
 
 <script>
-  const apiUrl = location.origin;
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const apiUrl = getApiBase();
 
   function token(){ return localStorage.getItem("token"); }
   function authHeaders(extra={}){ return { ...extra, "Authorization": `Bearer ${token()}` }; }
+
   function guard(){
     const t = token();
     if(!t){ window.location.href="/static/index.html"; return false; }
     return true;
   }
+
   function logout(){
-    localStorage.removeItem("token"); localStorage.removeItem("email");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
     window.location.href="/static/index.html";
   }
+
   function toast(msg){
     const el=document.getElementById("toast");
-    el.textContent=msg; el.classList.add("show");
+    el.textContent=msg;
+    el.classList.add("show");
     setTimeout(()=>el.classList.remove("show"), 4200);
   }
+
   async function safeJson(res){ try{return await res.json();}catch{return {};} }
-  function escapeHtml(s){
-    return (s??"").toString()
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-  }
 
   function pillEstado(estado){
     const e = (estado||"").toLowerCase();
-    if(e==="generado") return `<span class="pill warn">generado</span>`;
-    return `<span class="pill ok">${escapeHtml(estado||"—")}</span>`;
+    if(e==="generado") return { cls:"pill warn", text:"generado" };
+    return { cls:"pill ok", text: (estado||"—") };
+  }
+
+  function tdText(tr, text){
+    const td = document.createElement("td");
+    td.textContent = text ?? "—";
+    tr.appendChild(td);
+    return td;
+  }
+
+  function tdHtml(tr, node){
+    const td = document.createElement("td");
+    td.appendChild(node);
+    tr.appendChild(td);
+    return td;
   }
 
   function render(docs){
@@ -169,32 +191,69 @@
     tbody.innerHTML = "";
     document.getElementById("empty").style.display = (docs.length===0) ? "block" : "none";
 
-    docs.forEach(d=>{
-      const pct = d.checklist_total ? Math.round((d.checklist_done / d.checklist_total)*100) : 0;
+    for(const d of docs){
+      const tr = document.createElement("tr");
 
-      tbody.innerHTML += `
-        <tr>
-          <td><b>${d.id_document}</b></td>
-          <td>${escapeHtml(d.titulo || "—")}</td>
-          <td><span class="pill">${escapeHtml(d.tipo || "—")}</span></td>
-          <td>${pillEstado(d.estado)}</td>
-          <td>${d.checklist_done}/${d.checklist_total} (${pct}%)</td>
-          <td class="muted2">${escapeHtml((d.creado_en||"").replace("T"," ").slice(0,19))}</td>
-          <td>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <a class="secondary" href="/static/documento.html?id=${d.id_document}" role="button">Ver</a>
-              <button class="btn" onclick="downloadPdf(${d.id_document})">PDF</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    });
+      const tdId = document.createElement("td");
+      const b = document.createElement("b");
+      b.textContent = String(d.id_document ?? "—");
+      tdId.appendChild(b);
+      tr.appendChild(tdId);
+
+      tdText(tr, d.titulo || "—");
+
+      const tipo = document.createElement("span");
+      tipo.className = "pill";
+      tipo.textContent = d.tipo || "—";
+      tdHtml(tr, tipo);
+
+      const est = pillEstado(d.estado);
+      const st = document.createElement("span");
+      st.className = est.cls;
+      st.textContent = est.text;
+      tdHtml(tr, st);
+
+      const total = Number(d.checklist_total || 0);
+      const done = Number(d.checklist_done || 0);
+      const pct = total ? Math.round((done/total)*100) : 0;
+      tdText(tr, `${done}/${total} (${pct}%)`);
+
+      const created = (d.creado_en || "").replace("T"," ").slice(0,19);
+      const tdCreated = document.createElement("td");
+      tdCreated.className = "muted2";
+      tdCreated.textContent = created || "—";
+      tr.appendChild(tdCreated);
+
+      const tdAct = document.createElement("td");
+      const box = document.createElement("div");
+      box.style.display = "flex";
+      box.style.gap = "8px";
+      box.style.flexWrap = "wrap";
+
+      const a = document.createElement("a");
+      a.className = "btn";
+      a.href = `/static/documento.html?id=${encodeURIComponent(d.id_document)}`;
+      a.textContent = "Ver";
+
+      const pdfBtn = document.createElement("button");
+      pdfBtn.className = "btn";
+      pdfBtn.type = "button";
+      pdfBtn.textContent = "PDF";
+      pdfBtn.onclick = () => downloadPdf(d.id_document);
+
+      box.appendChild(a);
+      box.appendChild(pdfBtn);
+      tdAct.appendChild(box);
+      tr.appendChild(tdAct);
+
+      tbody.appendChild(tr);
+    }
   }
 
   async function downloadPdf(id){
     if(!guard()) return;
     try{
-      const res = await fetch(`${apiUrl}/documents/${id}/pdf`, { headers: authHeaders() });
+      const res = await fetch(`${apiUrl}/documents/${encodeURIComponent(id)}/pdf`, { headers: authHeaders() });
       if(res.status===401){ logout(); return; }
       if(!res.ok){ const j=await safeJson(res); toast(j.detail||"No se pudo generar el PDF"); return; }
 
