@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lexia360 · Dashboard</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+  <!-- Opcional: si separas frontend/backend, fija aquí el API:
+       <meta name="api-base" content="https://tu-api.com"> -->
   <style>
     :root{
       --brand:#0b5fff; --brand2:#5b8cff;
@@ -72,17 +74,17 @@
 <body>
   <div class="nav">
     <div class="wrap nav-row">
-      <a class="logo" href="/static/dashboard.html">
+      <a class="logo" href="/static/dashboard.html" aria-label="Ir al dashboard">
         <div class="badge">⚖️</div>
         <div>Lexia360</div>
       </a>
       <div class="nav-actions">
         <span id="who" style="color:rgba(255,255,255,.85); font-weight:900;"></span>
-        <button class="btn" onclick="go('/static/wizard.html')">Nuevo expediente</button>
-        <button class="btn" onclick="go('/static/wizard_lease.html')">Contrato (Lease)</button>
-        <button class="btn" onclick="go('/static/inmuebles.html')">Inmuebles</button>
-        <button class="btn" onclick="go('/static/papelera.html')">Papelera</button>
-        <button class="btn primary" onclick="logout()">Salir</button>
+        <button class="btn" type="button" onclick="go('/static/wizard.html')">Nuevo expediente</button>
+        <button class="btn" type="button" onclick="go('/static/wizard_lease.html')">Contrato (Lease)</button>
+        <button class="btn" type="button" onclick="go('/static/inmuebles.html')">Inmuebles</button>
+        <button class="btn" type="button" onclick="go('/static/papelera.html')">Papelera</button>
+        <button class="btn primary" type="button" onclick="logout()">Salir</button>
       </div>
     </div>
   </div>
@@ -108,29 +110,29 @@
           Nota: “Docs” incluye contratos (lease) y lo que añadamos después (burofax, etc.).
         </div>
 
-        <div id="sysMsg" class="msg"></div>
+        <div id="sysMsg" class="msg" role="status" aria-live="polite"></div>
       </div>
 
       <div class="card">
         <h3 style="margin:0 0 10px;">Atajos</h3>
         <div class="muted2" style="margin-bottom:10px;">Acciones rápidas.</div>
 
-        <button class="linkbtn" onclick="go('/static/wizard.html')">
+        <button class="linkbtn" type="button" onclick="go('/static/wizard.html')">
           <span>📁 Crear expediente <small>(inmueble + análisis)</small></span>
           <span>→</span>
         </button>
 
-        <button class="linkbtn" onclick="go('/static/wizard_lease.html')">
+        <button class="linkbtn" type="button" onclick="go('/static/wizard_lease.html')">
           <span>📄 Generar contrato <small>(Lease MVP)</small></span>
           <span>→</span>
         </button>
 
-        <button class="linkbtn" onclick="go('/static/inmuebles.html')">
+        <button class="linkbtn" type="button" onclick="go('/static/inmuebles.html')">
           <span>🏠 Gestionar inmuebles</span>
           <span>→</span>
         </button>
 
-        <button class="linkbtn" onclick="go('/static/papelera.html')">
+        <button class="linkbtn" type="button" onclick="go('/static/papelera.html')">
           <span>🗑️ Ver papelera</span>
           <span>→</span>
         </button>
@@ -139,41 +141,61 @@
   </section>
 
 <script>
-  const apiUrl = location.origin;
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const apiUrl = getApiBase();
 
   function token(){ return localStorage.getItem("token"); }
   function authHeaders(){ return { "Authorization": `Bearer ${token()}` }; }
   function go(path){ window.location.href = path; }
+
   function logout(){
     localStorage.removeItem("token");
     localStorage.removeItem("email");
     window.location.href="/static/index.html";
   }
+
   function setText(id, v){ document.getElementById(id).textContent = (v ?? "—"); }
+  async function safeJson(res){ try{ return await res.json(); } catch { return {}; } }
 
   async function guard(){
     const t = token();
     if(!t){ logout(); return false; }
-    const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
-    if(res.status === 401){ logout(); return false; }
-    if(!res.ok){ return false; }
-    const me = await res.json().catch(()=>null);
-    document.getElementById("who").textContent = me?.email || localStorage.getItem("email") || "";
-    return true;
+    try{
+      const res = await fetch(`${apiUrl}/me`, { headers: authHeaders() });
+      if(res.status === 401){ logout(); return false; }
+      if(!res.ok){ return false; }
+      const me = await safeJson(res);
+      document.getElementById("who").textContent = me?.email || localStorage.getItem("email") || "";
+      return true;
+    }catch(e){
+      // backend caído o red bloqueada
+      return false;
+    }
   }
 
   async function loadStatus(){
     const msg = document.getElementById("sysMsg");
     msg.textContent = "";
+    msg.className = "msg";
+
     try{
       const res = await fetch(`${apiUrl}/status`, { headers: authHeaders() });
       if(res.status===401){ logout(); return; }
-      const data = await res.json().catch(()=>null);
+      const data = await safeJson(res);
 
-      setText("k_users", data?.usuarios_registrados ?? "—");
-      setText("k_inm", data?.inmuebles_activos ?? "—");
-      setText("k_trash", data?.inmuebles_eliminados ?? "—");
-      setText("k_docs", data?.documentos ?? "—");
+      if(!res.ok){
+        msg.className = "msg error";
+        msg.textContent = data.detail || "⚠️ No se pudo cargar /status.";
+        return;
+      }
+
+      setText("k_users", data.usuarios_registrados);
+      setText("k_inm", data.inmuebles_activos);
+      setText("k_trash", data.inmuebles_eliminados);
+      setText("k_docs", data.documentos);
 
       msg.className = "msg ok";
       msg.textContent = "✅ Estado cargado.";
@@ -186,7 +208,7 @@
 
   (async function init(){
     const ok = await guard();
-    if(!ok) return;
+    if(!ok) { logout(); return; }
     await loadStatus();
   })();
 </script>
