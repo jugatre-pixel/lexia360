@@ -5,69 +5,156 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Lexia360 · Documento</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <!-- Opcional: si separas frontend/backend:
+  <meta name="api-base" content="https://tu-api.com"> -->
   <style>
-    :root{ --bg:#f6f7fb; --card:#fff; --border:#e6e8ef; --muted:#667085; --brand:#0b5fff; }
-    body{ margin:0; background:var(--bg); }
-    header{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(12px); border-bottom:1px solid var(--border); }
-    .wrap{ max-width:1100px; margin:0 auto; padding:16px 18px; }
-    .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; font-weight:1000; }
-    .badge{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#5b8cff); display:flex; align-items:center; justify-content:center; color:#fff; }
-    .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:900; text-decoration:none; color:inherit; }
-    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(16,24,40,.07); }
-    .muted{ color:var(--muted); }
-    .small{ font-size:13px; }
-    .pill{ display:inline-block; padding:6px 10px; border:1px solid var(--border); border-radius:999px; font-weight:900; font-size:12px; background:#fff; }
+    :root{
+      --brand:#0b5fff; --brand2:#5b8cff;
+      --bg:#0b1220; --muted:rgba(255,255,255,.74);
+      --card:#fff; --border:#e6e8ef; --shadow:0 18px 44px rgba(16,24,40,.12);
+      --ink:#101828; --muted2:#667085;
+      --ok:#027a48; --danger:#b42318;
+    }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 520px at 20% 0%, rgba(11,95,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 90% 10%, rgba(91,140,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0f1a33 46%, #f6f7fb 46%, #f6f7fb 100%);
+    }
+    .wrap{ max-width:1050px; margin:0 auto; padding:18px; }
+    .nav{
+      position:sticky; top:0; z-index:30;
+      background:rgba(11,18,32,.55);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .nav-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .logo{ display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:1000; }
+    .badge{ width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2)); box-shadow:0 14px 28px rgba(11,95,255,.22);
+    }
+    .btn{
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#fff; padding:10px 14px; border-radius:12px; font-weight:900; cursor:pointer;
+      text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    }
+    .btn.primary{ background:linear-gradient(135deg,var(--brand),var(--brand2)); border-color:transparent; }
+    .hero{ padding:20px 0 10px; }
+    .headline{ color:#fff; font-size:28px; line-height:1.1; margin:0 0 6px; font-weight:1000; }
+    .sub{ color:var(--muted); margin:0; font-size:14px; }
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      padding:16px; box-shadow:var(--shadow);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      font-size:12px; padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border); background:#fff; font-weight:1000; color:#111827;
+    }
+    .muted2{ color:var(--muted2); font-size:13px; }
+    .msg{ margin-top:10px; font-weight:900; font-size:13px; }
+    .msg.ok{ color:var(--ok); }
+    .msg.err{ color:var(--danger); }
+    pre{
+      margin:0; white-space:pre-wrap; word-break:break-word;
+      background:#0b1220; color:#e6edf7;
+      border-radius:14px; padding:12px; border:1px solid rgba(255,255,255,.08);
+      font-size:12px;
+    }
+    .list{ display:grid; gap:10px; margin-top:10px; }
+    .item{
+      border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff;
+      display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
+    }
+    .left{ display:flex; gap:10px; align-items:flex-start; }
+    .check{
+      width:20px; height:20px; border-radius:6px; border:2px solid #cfd4e4;
+      display:inline-flex; align-items:center; justify-content:center; font-weight:1000;
+      margin-top:2px;
+    }
+    .check.done{ border-color:#027a48; color:#027a48; }
+    .t{ font-weight:1000; color:var(--ink); }
+    .d{ color:var(--muted2); font-size:13px; margin-top:3px; }
+    .smallbtn{
+      border:1px solid #e6e8ef; background:#fff; border-radius:12px; padding:8px 10px;
+      font-weight:900; cursor:pointer;
+    }
+    .smallbtn[disabled]{ opacity:.6; cursor:not-allowed; }
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap top">
-    <a class="brand" href="/static/dashboard.html">
-      <div class="badge">⚖️</div>
-      <div>Lexia360</div>
-    </a>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn" href="/static/documentos.html">📄 Documentos</a>
-      <a class="btn" href="/static/inmuebles.html">🏠 Inmuebles</a>
-      <button class="btn" onclick="logout()">Cerrar sesión</button>
+  <div class="nav">
+    <div class="wrap nav-row">
+      <a class="logo" href="/static/dashboard.html" aria-label="Ir al dashboard">
+        <div class="badge">⚖️</div><div>Lexia360</div>
+      </a>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn" href="/static/documentos.html">📄 Documentos</a>
+        <a class="btn" href="/static/inmuebles.html">🏠 Inmuebles</a>
+        <a class="btn" id="backToInmueble" href="/static/inmuebles.html">↩︎ Volver</a>
+        <button class="btn primary" type="button" onclick="logout()">Salir</button>
+      </div>
     </div>
   </div>
-</header>
 
-<main class="wrap">
-  <section class="card">
-    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-      <div>
-        <h3 style="margin:0;" id="title">Documento</h3>
-        <div class="muted small" id="meta"></div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn primary" onclick="downloadPdf()">Descargar PDF</button>
-      </div>
-    </div>
-
-    <hr/>
-
-    <h4 style="margin:0 0 8px;">Checklist</h4>
-    <div class="muted small" style="margin-bottom:10px;">(MVP: solo lectura. En el siguiente paso lo hacemos editable.)</div>
-    <div id="checklist"></div>
-
-    <hr/>
-
-    <details>
-      <summary>Debug JSON</summary>
-      <pre id="json" style="margin-top:10px;"></pre>
-    </details>
+  <section class="wrap hero">
+    <h1 class="headline" id="title">Documento</h1>
+    <p class="sub">Contrato + checklist persistente (marcas guardadas en backend).</p>
   </section>
-</main>
+
+  <section class="wrap">
+    <div class="card">
+      <div class="row">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <span class="pill" id="pill_doc">Doc: —</span>
+          <span class="pill" id="pill_tipo">Tipo: —</span>
+          <span class="pill" id="pill_estado">Estado: —</span>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="downloadPdf()">📄 PDF</button>
+          <button class="btn" type="button" onclick="reload()">Actualizar</button>
+        </div>
+      </div>
+
+      <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+      <hr/>
+
+      <h3 style="margin:0 0 6px;">Checklist</h3>
+      <div class="muted2">Marca cada tarea y se guardará automáticamente (PATCH).</div>
+
+      <div id="list" class="list"></div>
+
+      <hr/>
+
+      <details>
+        <summary>Ver JSON (debug)</summary>
+        <div style="margin-top:10px;">
+          <pre id="json">—</pre>
+        </div>
+      </details>
+    </div>
+  </section>
 
 <script>
-  const api = location.origin;
-  const token = localStorage.getItem("token");
-  if(!token) location.href="/static/index.html";
+  function getApiBase(){
+    const meta = document.querySelector('meta[name="api-base"]');
+    return (meta && meta.content) ? meta.content.replace(/\/+$/,'') : location.origin;
+  }
+  const api = getApiBase();
+
+  function token(){ return localStorage.getItem("token"); }
+  const t = token();
+  if(!t) location.href="/static/index.html";
+
+  const id = new URLSearchParams(location.search).get("id");
+  if(!id) location.href="/static/documentos.html";
+
+  let doc = null;
+  let busyItems = new Set();
 
   function logout(){
     localStorage.removeItem("token");
@@ -75,70 +162,184 @@
     location.href="/static/index.html";
   }
 
-  const id = new URLSearchParams(location.search).get("id");
-  if(!id) location.href="/static/documentos.html";
-
-  async function safeJson(res){ try{return await res.json();}catch{return {};} }
-  function esc(s){
-    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  function authHeaders(extra={}){
+    return { ...extra, "Authorization": `Bearer ${token()}` };
   }
 
-  let doc = null;
+  function setMsg(text, ok=true){
+    const el = document.getElementById("msg");
+    el.className = "msg " + (ok ? "ok" : "err");
+    el.textContent = text || "";
+  }
 
-  async function load(){
-    const r = await fetch(`${api}/documents/${id}`, { headers:{ Authorization:`Bearer ${token}` }});
-    if(r.status===401) return logout();
-    const d = await safeJson(r);
-    if(!r.ok){ alert(d.detail || "No se pudo cargar el documento"); return; }
+  async function safeJson(res){
+    try{ return await res.json(); }catch{ return {}; }
+  }
 
-    doc = d;
+  function esc(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
 
-    document.getElementById("title").textContent = d.titulo || `Documento ${id}`;
-    document.getElementById("meta").innerHTML = `
-      <span class="pill">${esc(d.tipo)}</span>
-      <span class="pill">${esc(d.estado)}</span>
-      <span class="muted small"> · ID ${d.id_document} · Inmueble ${d.id_inmueble ?? "—"} · ${esc((d.creado_en||"").replace("T"," ").slice(0,19))}</span>
-    `;
+  function render(){
+    document.getElementById("title").textContent = doc?.titulo ? doc.titulo : "Documento";
+    document.getElementById("pill_doc").textContent = `Doc: ${doc?.id_document ?? "—"}`;
+    document.getElementById("pill_tipo").textContent = `Tipo: ${doc?.tipo ?? "—"}`;
+    document.getElementById("pill_estado").textContent = `Estado: ${doc?.estado ?? "—"}`;
+    document.getElementById("json").textContent = JSON.stringify(doc, null, 2);
 
-    const wrap = document.getElementById("checklist");
-    wrap.innerHTML = "";
+    if(doc?.id_inmueble){
+      document.getElementById("backToInmueble").href = `/static/inmueble.html?id=${encodeURIComponent(doc.id_inmueble)}`;
+    }
 
-    (d.checklist || []).forEach(it=>{
-      wrap.innerHTML += `
-        <label style="display:flex;align-items:flex-start;gap:10px;">
-          <input type="checkbox" ${it.completado ? "checked" : ""} disabled />
-          <span>
-            <b>${esc(it.titulo)}</b><br/>
-            <span class="muted small">${esc(it.descripcion || "")}</span>
-          </span>
-        </label>
-      `;
-    });
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+    const items = Array.isArray(doc?.checklist) ? doc.checklist : [];
 
-    document.getElementById("json").textContent = JSON.stringify(d, null, 2);
+    if(items.length === 0){
+      const empty = document.createElement("div");
+      empty.className = "muted2";
+      empty.textContent = "Sin items de checklist.";
+      list.appendChild(empty);
+      return;
+    }
+
+    for(const it of items){
+      const done = it.completado === true;
+      const isBusy = busyItems.has(it.id_item);
+
+      const div = document.createElement("div");
+      div.className = "item";
+
+      const left = document.createElement("div");
+      left.className = "left";
+
+      const chk = document.createElement("div");
+      chk.className = "check" + (done ? " done" : "");
+      chk.textContent = done ? "✓" : "";
+
+      const textBox = document.createElement("div");
+
+      const title = document.createElement("div");
+      title.className = "t";
+      title.textContent = it.titulo ?? "—";
+
+      const desc = document.createElement("div");
+      desc.className = "d";
+      desc.textContent = it.descripcion ?? "";
+
+      const when = document.createElement("div");
+      when.className = "d";
+      when.textContent = it.completado_en ? ("Completado: " + it.completado_en) : "";
+
+      textBox.appendChild(title);
+      textBox.appendChild(desc);
+      textBox.appendChild(when);
+
+      left.appendChild(chk);
+      left.appendChild(textBox);
+
+      const right = document.createElement("div");
+      const btn = document.createElement("button");
+      btn.className = "smallbtn";
+      btn.type = "button";
+      btn.disabled = isBusy;
+      btn.textContent = isBusy ? "Guardando..." : (done ? "Marcar pendiente" : "Marcar hecho");
+      btn.onclick = () => toggle(it.id_item, done);
+      right.appendChild(btn);
+
+      div.appendChild(left);
+      div.appendChild(right);
+
+      list.appendChild(div);
+    }
+  }
+
+  async function toggle(id_item, currentlyDone){
+    if(!doc) return;
+    busyItems.add(id_item);
+    render();
+
+    const next = !currentlyDone;
+
+    try{
+      const r = await fetch(`${api}/documents/${encodeURIComponent(doc.id_document)}/checklist/${encodeURIComponent(id_item)}`, {
+        method:"PATCH",
+        headers: authHeaders({ "Content-Type":"application/json" }),
+        body: JSON.stringify({ completado: next })
+      });
+
+      if(r.status===401) return logout();
+      const d = await safeJson(r);
+
+      if(!r.ok){
+        setMsg(d.detail || "No se pudo actualizar el checklist.", false);
+        return;
+      }
+
+      const it = (doc.checklist || []).find(x => x.id_item === id_item);
+      if(it){
+        it.completado = d.completado;
+        it.completado_en = d.completado_en;
+      }
+
+      setMsg("✅ Checklist actualizado.", true);
+      setTimeout(()=>setMsg(""), 900);
+
+    }catch(e){
+      setMsg("⚠️ Error de conexión actualizando checklist.", false);
+    }finally{
+      busyItems.delete(id_item);
+      render();
+    }
+  }
+
+  async function reload(){
+    setMsg("");
+    try{
+      const r = await fetch(`${api}/documents/${encodeURIComponent(id)}`, { headers: authHeaders() });
+      if(r.status===401) return logout();
+      const d = await safeJson(r);
+      if(!r.ok){
+        setMsg(d.detail || "No se pudo cargar el documento", false);
+        return;
+      }
+      doc = d;
+      render();
+      setMsg("✅ Documento cargado.", true);
+      setTimeout(()=>setMsg(""), 900);
+    }catch(e){
+      setMsg("⚠️ Error de conexión cargando documento.", false);
+    }
   }
 
   async function downloadPdf(){
     try{
-      const res = await fetch(`${api}/documents/${id}/pdf`, { headers:{ Authorization:`Bearer ${token}` }});
-      if(res.status===401) return logout();
-      if(!res.ok){ const j=await safeJson(res); alert(j.detail||"No se pudo generar el PDF"); return; }
-
-      const blob = await res.blob();
+      const r = await fetch(`${api}/documents/${encodeURIComponent(id)}/pdf`, { headers: authHeaders() });
+      if(r.status===401) return logout();
+      if(!r.ok){
+        const d = await safeJson(r);
+        setMsg(d.detail || "No se pudo generar el PDF.", false);
+        return;
+      }
+      const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `lexia360_document_${id}.pdf`;
+      a.download = `lexia360_documento_${id}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+      URL.revokeObjectURL(url);
+      setMsg("✅ PDF descargado.", true);
+      setTimeout(()=>setMsg(""), 900);
     }catch(e){
-      alert("⚠️ Error de conexión");
+      setMsg("⚠️ Error de conexión al descargar PDF.", false);
     }
   }
 
-  load();
+  reload();
 </script>
 </body>
 </html>
