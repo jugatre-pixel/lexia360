@@ -5,6 +5,8 @@ import secrets
 import io
 import hmac
 import hashlib
+import stripe
+from fastapi import Header
 from datetime import datetime, timedelta, date
 from typing import Optional, Tuple
 
